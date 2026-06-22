@@ -1,0 +1,37 @@
+{
+  "name": "@rmartz/root",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check:file-length": "tsx scripts/check-file-length.ts",
+    "check:okf": "tsx scripts/check-okf-frontmatter.ts",
+    "ci": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run check:file-length && pnpm run check:okf && pnpm run test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "@typescript-eslint/eslint-plugin": "^8.8.0",
+    "@typescript-eslint/parser": "^8.8.0",
+    "eslint": "^9.12.0",
+    "eslint-import-resolver-typescript": "^3.6.3",
+    "eslint-plugin-boundaries": "^5.0.0",
+    "eslint-plugin-import": "^2.31.0",
+    "gray-matter": "^4.0.3",
+    "prettier": "^3.3.3",
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.0",
+    "turbo": "^2.1.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

@@ -1,0 +1,38 @@
+name: Release
+
+# Publishes changed packages to GitHub Packages on a version tag (e.g. v0.1.0).
+# Each package publishes independently — `pnpm -r publish` skips any package
+# whose current version is already on the registry, so bump only what changed.
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # required to publish to GitHub Packages
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@rmartz'
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm run build
+
+      - name: Publish to GitHub Packages
+        run: pnpm -r publish --no-git-checks --access restricted
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

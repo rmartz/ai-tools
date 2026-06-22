@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the file-length ratchet needs the merge base
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Lint (incl. layer boundaries + max-lines)
+        run: pnpm run lint
+
+      - name: Format check
+        run: pnpm run format:check
+
+      - name: File-length ratchet
+        run: pnpm run check:file-length -- --base origin/${{ github.base_ref || 'main' }}
+
+      - name: OKF docs frontmatter
+        run: pnpm run check:okf
+
+      - name: Test
+        run: pnpm run test
