@@ -11,6 +11,8 @@ export interface BoundedOptions {
   timeoutMs: number;
   cwd?: string;
   env?: NodeJS.ProcessEnv;
+  /** Text written to the child's stdin, then closed. Used for `gh api --input -` bodies. */
+  input?: string;
 }
 
 /**
@@ -43,6 +45,13 @@ export function boundedRun(
         /* already gone */
       }
     }, options.timeoutMs);
+
+    if (options.input !== undefined && child.stdin) {
+      // Swallow EPIPE if the child exits before consuming stdin.
+      child.stdin.on('error', () => {});
+      child.stdin.write(options.input);
+      child.stdin.end();
+    }
 
     child.stdout.on('data', (chunk: Buffer) => (stdout += chunk.toString()));
     child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()));

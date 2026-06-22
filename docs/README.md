@@ -10,7 +10,7 @@ task. Every page except this index carries OKF frontmatter (`type`, `title`,
 | Layer | Package                 | Page                                      |
 | ----- | ----------------------- | ----------------------------------------- |
 | 0     | `@rmartz/agent-runtime` | [agent-runtime](scripts/agent-runtime.md) |
-| 0     | `@rmartz/github`        | _(add when migrated)_                     |
+| 0     | `@rmartz/github`        | [github](scripts/github.md)               |
 
 ## Guidance
 
