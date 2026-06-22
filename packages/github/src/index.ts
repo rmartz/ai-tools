@@ -1,8 +1,19 @@
 export { fetchPrSummary } from './pr-summary.js';
 export type { PrSummary } from './pr-summary.js';
 
-export { ghCall, issueNumber } from './gh-call.js';
+export { ghCall, issueNumber, currentRepo } from './gh-call.js';
 export type { Transport, GhCallOptions, Sleeper } from './gh-call.js';
+
+export { computePrDiff } from './pr-diff.js';
+export type { PrDiffOptions } from './pr-diff.js';
+
+export { gatherRepoStatus } from './repo-status.js';
+export type {
+  RepoStatus,
+  RepoStatusMilestone,
+  RepoStatusIssue,
+  RepoStatusPr,
+} from './repo-status.js';
 
 export { findOpenIssue, createIssue, addIssueComment, addAssignees } from './issue-ops.js';
 export type { FindOpenIssueOptions, CreateIssueOptions } from './issue-ops.js';

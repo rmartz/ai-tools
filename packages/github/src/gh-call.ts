@@ -74,6 +74,16 @@ export async function ghCall(
   return null;
 }
 
+/** Resolve the current `owner/repo` from the git remote via `gh`, or `null`. */
+export async function currentRepo(opts: GhCallOptions = {}): Promise<string | null> {
+  const out = await ghCall(
+    { argv: ['gh', 'repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner'] },
+    null,
+    opts,
+  );
+  return out && out.trim() ? out.trim() : null;
+}
+
 /** Normalize an issue/PR number or URL to its numeric string, or `null`. */
 export function issueNumber(ref: string | number): string | null {
   const s = String(ref);

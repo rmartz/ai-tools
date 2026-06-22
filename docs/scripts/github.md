@@ -59,18 +59,44 @@ in `gh-call.ts`.
   1–5 s; otherwise no-op. Returns immediately when state is absent or stale, so
   callers must never depend on it for correctness.
 
-### PR + Discussions (existing)
+### Read craft (`pr-summary.ts`, `pr-diff.ts`, `repo-status.ts`)
 
-- `fetchPrSummary(repo, prNumber)` — coordination-relevant PR metadata (reading
-  _craft_).
+- `fetchPrSummary(repo, prNumber)` — coordination-relevant PR metadata.
+- `computePrDiff(baseSha, headSha, repo?, { warn? })` — the review diff between
+  two commits, returned as formatted patch text. When the range contains a merge
+  commit it walks the branch's **first-parent chain** so a `main` pull doesn't
+  flood the diff: clean merges collapse to a one-line note, but any file the
+  merge changed relative to **both** parents (a conflict resolution / evil merge)
+  is surfaced with its patch. Falls back to a single unified diff when there is no
+  merge commit, the chain can't be reconstructed, or the compare is truncated
+  (>250 commits). `repo` defaults to the git remote (`currentRepo`).
+- `gatherRepoStatus({ cwd? })` — open issues (blocked/manual filtered, deps
+  parsed from the body), milestones, and open PRs with resolved closing-issue
+  numbers (same-repo closing refs → `feat/issue-<N>-*` branch → `Closes #N` body).
+  Keys are camelCase TS-native (not the Python snake_case).
+
+### Discussions (`discussions.ts`)
+
 - `findDiscussionByTitle` / `createDiscussion` / `addComment` / `markAnswer` /
   `listCategories` — the GraphQL Discussions client, targeting `rmartz/ai`.
 
-## Deferred to a later slice
+### Shared
 
-`submitReview` and `mergePullRequest` exist in the dotfiles `gh_issue_ops.py` but
-are PR _mechanics_ closer to PR Shepherd's domain; they are intentionally not
-ported into this foundation slice.
+- `currentRepo({ cwd? })` — resolve the current `owner/repo` from the git remote.
+
+## CLIs
+
+`ai-pr-summary`, `ai-pr-diff <base> <head> [owner/repo]`, `ai-repo-status` — thin
+`bin/` wrappers; all logic stays in the library.
+
+## Deferred / re-homing
+
+- `submitReview` / `mergePullRequest` (#13) — PR _mechanics_ closer to PR
+  Shepherd; not in this foundation.
+- `ci-status` (#10) and `branch-currency` (#11) — the dotfiles `ci_status.py` is a
+  pure classifier but consumes a PR-Shepherd GraphQL projection, and
+  `branch_currency.py` is outright orchestration (imports routing / merge /
+  tracking). Both are flagged for a topology decision before landing here.
 
 ## Testing
 

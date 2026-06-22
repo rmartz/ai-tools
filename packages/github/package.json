@@ -9,7 +9,9 @@
     }
   },
   "bin": {
-    "ai-pr-summary": "./dist/bin/pr-summary.js"
+    "ai-pr-summary": "./dist/bin/pr-summary.js",
+    "ai-pr-diff": "./dist/bin/pr-diff.js",
+    "ai-repo-status": "./dist/bin/repo-status.js"
   },
   "files": [
     "dist"
