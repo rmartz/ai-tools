@@ -93,10 +93,10 @@ in `gh-call.ts`.
 
 - `submitReview` / `mergePullRequest` (#13) — PR _mechanics_ closer to PR
   Shepherd; not in this foundation.
-- `ci-status` (#10) and `branch-currency` (#11) — the dotfiles `ci_status.py` is a
-  pure classifier but consumes a PR-Shepherd GraphQL projection, and
-  `branch_currency.py` is outright orchestration (imports routing / merge /
-  tracking). Both are flagged for a topology decision before landing here.
+- `ci-status` (#10) and `branch-currency` (#11) — **re-homed to PR Shepherd**, not
+  this repo (decided). `ci_status.py` consumes a PR-Shepherd GraphQL projection and
+  is already implemented natively in pr-shepherd Epic 10; `branch_currency.py` is
+  orchestration (imports routing / merge / tracking), owned by pr-shepherd #104.
 
 ## Testing
 
