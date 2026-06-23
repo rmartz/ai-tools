@@ -89,6 +89,15 @@ in `gh-call.ts`.
   failed — retry `resolveThread` without re-posting) / `'failed'`. Single-shot
   (no retry) so a non-idempotent reply POST is never duplicated.
 
+### PR-write primitives (`pr-ops.ts`)
+
+- `submitReview(repo, pr, event, { body? })` — submit a review (`APPROVE` /
+  `COMMENT` / `REQUEST_CHANGES`). Consumed by `@rmartz/pr-review` (#23).
+- `mergePullRequest(repo, pr, method?)` — the raw merge call, returning the merge
+  `sha` (or `true` when absent). The **gated, serialized** merge path (mutex,
+  idempotency, re-validation) is PR Shepherd's; this is only the primitive it
+  composes. Both are thin, label-free, gate-free client wrappers.
+
 ### Discussions (`discussions.ts`)
 
 - `findDiscussionByTitle` / `createDiscussion` / `addComment` / `markAnswer` /
@@ -105,10 +114,8 @@ Thin `bin/` wrappers; all logic stays in the library: `ai-pr-summary`,
 `ai-pr-comment --model <m> [--keep-body] <pr> <body-or-file>`,
 `ai-resolve-thread <id>…`, `ai-dismiss-thread <id> <reply>`.
 
-## Deferred / re-homing
+## Re-homing
 
-- `submitReview` / `mergePullRequest` (#13) — PR _mechanics_ closer to PR
-  Shepherd; not in this foundation.
 - `ci-status` (#10) and `branch-currency` (#11) — **re-homed to PR Shepherd**, not
   this repo (decided). `ci_status.py` consumes a PR-Shepherd GraphQL projection and
   is already implemented natively in pr-shepherd Epic 10; `branch_currency.py` is
