@@ -15,6 +15,12 @@ export type {
   RepoStatusPr,
 } from './repo-status.js';
 
+export { postPrComment, appendSignature } from './pr-comment.js';
+export type { PostPrCommentOptions } from './pr-comment.js';
+
+export { resolveThread, dismissThread } from './threads.js';
+export type { DismissResult } from './threads.js';
+
 export { findOpenIssue, createIssue, addIssueComment, addAssignees } from './issue-ops.js';
 export type { FindOpenIssueOptions, CreateIssueOptions } from './issue-ops.js';
 

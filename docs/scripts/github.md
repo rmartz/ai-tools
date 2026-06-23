@@ -75,6 +75,20 @@ in `gh-call.ts`.
   numbers (same-repo closing refs → `feat/issue-<N>-*` branch → `Closes #N` body).
   Keys are camelCase TS-native (not the Python snake_case).
 
+### Write craft (`pr-comment.ts`, `threads.ts`)
+
+- `postPrComment(repo, pr, body, { model?, skillMeta? })` — post a plain comment
+  with the `_<model>_` signing footer and (optionally) a pre-rendered hidden
+  skill-meta marker. Transport is `addIssueComment` (REST-first + fallback);
+  soft-fails to `null`. The skill-meta marker renderer arrives with
+  `@rmartz/agent-runtime` skill-meta (#4); the param is wired ahead of it.
+- `resolveThread(threadId)` — resolve a review thread by its `PRRT_` node ID
+  (GraphQL; thread resolution has no REST equivalent).
+- `dismissThread(threadId, replyBody)` — **reply-before-resolve**: post a visible
+  reply, then resolve. Returns `'ok'` / `'reply_only'` (reply landed, resolve
+  failed — retry `resolveThread` without re-posting) / `'failed'`. Single-shot
+  (no retry) so a non-idempotent reply POST is never duplicated.
+
 ### Discussions (`discussions.ts`)
 
 - `findDiscussionByTitle` / `createDiscussion` / `addComment` / `markAnswer` /
@@ -86,8 +100,10 @@ in `gh-call.ts`.
 
 ## CLIs
 
-`ai-pr-summary`, `ai-pr-diff <base> <head> [owner/repo]`, `ai-repo-status` — thin
-`bin/` wrappers; all logic stays in the library.
+Thin `bin/` wrappers; all logic stays in the library: `ai-pr-summary`,
+`ai-pr-diff <base> <head> [owner/repo]`, `ai-repo-status`,
+`ai-pr-comment --model <m> [--keep-body] <pr> <body-or-file>`,
+`ai-resolve-thread <id>…`, `ai-dismiss-thread <id> <reply>`.
 
 ## Deferred / re-homing
 

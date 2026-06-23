@@ -11,7 +11,10 @@
   "bin": {
     "ai-pr-summary": "./dist/bin/pr-summary.js",
     "ai-pr-diff": "./dist/bin/pr-diff.js",
-    "ai-repo-status": "./dist/bin/repo-status.js"
+    "ai-repo-status": "./dist/bin/repo-status.js",
+    "ai-pr-comment": "./dist/bin/pr-comment.js",
+    "ai-resolve-thread": "./dist/bin/resolve-thread.js",
+    "ai-dismiss-thread": "./dist/bin/dismiss-thread.js"
   },
   "files": [
     "dist"
