@@ -80,8 +80,12 @@ in `gh-call.ts`.
 - `postPrComment(repo, pr, body, { model?, skillMeta? })` — post a plain comment
   with the `_<model>_` signing footer and (optionally) a pre-rendered hidden
   skill-meta marker. Transport is `addIssueComment` (REST-first + fallback);
-  soft-fails to `null`. The skill-meta marker renderer arrives with
-  `@rmartz/agent-runtime` skill-meta (#4); the param is wired ahead of it.
+  soft-fails to `null`. The marker is produced by `renderSkillMeta` in
+  `@rmartz/agent-runtime`; the `ai-pr-comment` CLI exposes it as
+  `--skill-meta <marker>`. **Resolving** the marker's fields (PR-head, the
+  dispatcher's skill-file hash, the coordinator transcript / start time) is the
+  dispatcher's job (PR Shepherd) — coordinator- and harness-specific — so this
+  layer renders and posts but does not auto-resolve.
 - `resolveThread(threadId)` — resolve a review thread by its `PRRT_` node ID
   (GraphQL; thread resolution has no REST equivalent).
 - `dismissThread(threadId, replyBody)` — **reply-before-resolve**: post a visible
