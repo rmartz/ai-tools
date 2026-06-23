@@ -39,11 +39,19 @@ library so PR Shepherd and the harness share one implementation.
 - Prettier + ESLint run in CI; there is no separate manual pass.
 - Tests are hermetic: mock real-world boundaries (`gh`, network, subprocess).
   Deny-by-default — a test that reaches the network is a bug.
+- **File naming is kebab-case everywhere** — source, tests, docs, and skill
+  markdown (`pr-diff.ts`, `skill-dispatch.test.ts`, `agent-runtime.md`,
+  `fix-review.md`). No `snake_case` and no `camelCase` filenames. The dotfiles
+  Python split of `foo-bar.py` (CLI) vs `foo_bar.py` (module) does **not** carry
+  over: a TS module and its CLI share one kebab-case stem (`pr-diff.ts` +
+  `bin/pr-diff.ts`). The only non-kebab filenames allowed are conventional
+  all-caps root meta files: `CLAUDE.md`, `README.md`, `LICENSE`.
 
 ## Docs
 
-- One OKF page under `docs/` per package and non-trivial CLI. Update it in the
-  same PR as the code change. `scripts/check-okf-frontmatter.ts` enforces valid
+- One OKF page per package and non-trivial CLI under `docs/packages/`; skill
+  pages live under `docs/skills/`. Update the page in the same PR as the code
+  change. `scripts/check-okf-frontmatter.ts` walks `docs/**` and enforces valid
   frontmatter and a `resource` that points at a real file.
 
 ## Branch & PR workflow
