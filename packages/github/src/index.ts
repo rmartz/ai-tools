@@ -1,6 +1,9 @@
 export { fetchPrSummary } from './pr-summary.js';
 export type { PrSummary } from './pr-summary.js';
 
+export { listPrReviews, listIssueComments } from './pr-reads.js';
+export type { PrReview, IssueComment } from './pr-reads.js';
+
 export { ghCall, issueNumber, currentRepo } from './gh-call.js';
 export type { Transport, GhCallOptions, Sleeper } from './gh-call.js';
 

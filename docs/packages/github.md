@@ -59,9 +59,14 @@ in `gh-call.ts`.
   1–5 s; otherwise no-op. Returns immediately when state is absent or stale, so
   callers must never depend on it for correctness.
 
-### Read craft (`pr-summary.ts`, `pr-diff.ts`, `repo-status.ts`)
+### Read craft (`pr-summary.ts`, `pr-reads.ts`, `pr-diff.ts`, `repo-status.ts`)
 
 - `fetchPrSummary(repo, prNumber)` — coordination-relevant PR metadata.
+- `listPrReviews(repo, prNumber)` — a PR's reviews, body text dropped (only
+  `{id, state, submittedAt, commitId, user}`), sorted most-recent first. REST-only
+  (review history has no clean `gh` subcommand fallback); soft-fails to `[]`.
+- `listIssueComments(repo, prNumber)` — the PR's conversation comments
+  (`{id, author, body}`) across all pages (`gh api --paginate`); soft-fails to `[]`.
 - `computePrDiff(baseSha, headSha, repo?, { warn? })` — the review diff between
   two commits, returned as formatted patch text. When the range contains a merge
   commit it walks the branch's **first-parent chain** so a `main` pull doesn't
