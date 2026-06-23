@@ -119,7 +119,9 @@ broader, harness-facing primitives. To avoid two parallel taxonomies: PR Shepher
 file** them into `rmartz/ai-reports`; align the anomaly-category enum + the
 event-record schema across the seam. The deprecated `coordinator-self-report`
 pattern (writing reports into PR Shepherd's own issues, e.g. PR Shepherd #168)
-should be retired in favor of `rmartz/ai-reports`.
+should be retired in favor of `rmartz/ai-reports`. **The proposed shared contract
+(anomaly enum + occurrence record + filing API + efficiency event) is in
+[Reporting event schema](reporting-schema.md) — pending your confirmation.**
 
 ## Seams PR Shepherd must supply (injection points)
 
