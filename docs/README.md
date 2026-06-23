@@ -11,6 +11,10 @@ task. Every page except this index carries OKF frontmatter (`type`, `title`,
 | ----- | ----------------------- | ------------------------------------------ |
 | 0     | `@rmartz/agent-runtime` | [agent-runtime](packages/agent-runtime.md) |
 | 0     | `@rmartz/github`        | [github](packages/github.md)               |
+| 1     | `@rmartz/worktree`      | [worktree](packages/worktree.md)           |
+| 1     | `@rmartz/verify`        | [verify](packages/verify.md)               |
+| 1     | `@rmartz/repo-hygiene`  | [repo-hygiene](packages/repo-hygiene.md)   |
+| 1     | `@rmartz/bootstrap`     | [bootstrap](packages/bootstrap.md)         |
 
 ## Guidance
 

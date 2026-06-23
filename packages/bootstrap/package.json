@@ -1,0 +1,38 @@
+{
+  "name": "@rmartz/bootstrap",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "ai-ensure-labels": "./dist/bin/ensure-labels.js",
+    "ai-ensure-project-config": "./dist/bin/ensure-project-config.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rmartz/ai-tools.git",
+    "directory": "packages/bootstrap"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rmartz/agent-runtime": "workspace:*",
+    "@rmartz/github": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0"
+  }
+}

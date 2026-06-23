@@ -1,0 +1,4 @@
+# Generated / build artifacts — Prettier must not own these.
+pnpm-lock.yaml
+**/dist/**
+**/.turbo/**

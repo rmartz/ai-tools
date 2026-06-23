@@ -1,0 +1,38 @@
+{
+  "name": "@rmartz/worktree",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "ai-new-worktree": "./dist/bin/new-worktree.js",
+    "ai-git-cleanup": "./dist/bin/git-cleanup.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rmartz/ai-tools.git",
+    "directory": "packages/worktree"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rmartz/agent-runtime": "workspace:*",
+    "@rmartz/github": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0"
+  }
+}
