@@ -151,6 +151,7 @@ export function classifyCommand(command: string): Check | null {
   if (head === 'tsc') return { category: 'typecheck', command, tool: 'tsc' };
   if (head === 'pytest') return { category: 'test', command, tool: 'pytest' };
   if (head === 'unittest') return { category: 'test', command, tool: 'unittest' };
+  if (head === 'vitest') return { category: 'test', command, tool: 'vitest' };
 
   // package.json script names (after stripping the package-manager prefix).
   const scriptCategory = SCRIPT_CATEGORIES[head];

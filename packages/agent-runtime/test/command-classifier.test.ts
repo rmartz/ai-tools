@@ -25,6 +25,9 @@ describe('classifyCommand', () => {
     // test
     ['pytest -q', 'test', 'pytest'],
     ['unittest', 'test', 'unittest'],
+    ['vitest', 'test', 'vitest'],
+    ['vitest run', 'test', 'vitest'],
+    ['pnpm exec vitest run', 'test', 'vitest'],
     // package.json script names (after stripping the package-manager prefix)
     ['pnpm run lint', 'lint', 'lint'],
     ['pnpm run typecheck', 'typecheck', 'typecheck'],

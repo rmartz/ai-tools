@@ -51,6 +51,18 @@ describe('selectChecks', () => {
     expect(checks.map((c) => c.tool)).toEqual(['prettier', 'lint', 'tsc', 'test']);
   });
 
+  it('selects a `pnpm exec vitest run` step as a test check', () => {
+    const yaml = `
+jobs:
+  j:
+    steps:
+      - run: pnpm install
+      - run: pnpm exec vitest run
+`;
+    const checks = selectChecks('/repo', fsFrom({ 'ci.yml': yaml }));
+    expect(checks).toEqual([{ category: 'test', command: 'pnpm exec vitest run', tool: 'vitest' }]);
+  });
+
   it('skips installs, deploys, and unrecognized commands', () => {
     const yaml = `
 jobs:
