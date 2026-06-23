@@ -15,6 +15,25 @@ task. Every page except this index carries OKF frontmatter (`type`, `title`,
 | 1     | `@rmartz/verify`        | [verify](packages/verify.md)               |
 | 1     | `@rmartz/repo-hygiene`  | [repo-hygiene](packages/repo-hygiene.md)   |
 | 1     | `@rmartz/bootstrap`     | [bootstrap](packages/bootstrap.md)         |
+| 2     | `@rmartz/pr-review`     | [pr-review](packages/pr-review.md)         |
+| 2     | `@rmartz/issues`        | [issues](packages/issues.md)               |
+| 2     | `@rmartz/reporting`     | [reporting](packages/reporting.md)         |
+
+`@rmartz/reporting`'s `anomaly` + `efficiency-audit` modules are deferred pending
+taxonomy coordination with PR Shepherd's self-observability work (see
+[PR Shepherd handoff](pr-shepherd-handoff.md)).
+
+## Skills
+
+Skill _definitions_ live in the top-level `skills/` directory; each has an OKF
+page under `docs/skills/`. Skills express judgment/craft and stay runner-agnostic
+about emission (see [PR Shepherd handoff](pr-shepherd-handoff.md)).
+
+| Skill                  | Page                                                   |
+| ---------------------- | ------------------------------------------------------ |
+| `review`               | [review](skills/review.md)                             |
+| `create-issue`         | [create-issue](skills/create-issue.md)                 |
+| `dependabot-fix-issue` | [dependabot-fix-issue](skills/dependabot-fix-issue.md) |
 
 ## Guidance
 
