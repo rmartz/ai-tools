@@ -31,12 +31,17 @@ Consumer setup:
 ```
 # .npmrc
 @rmartz:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}   # needs read:packages
+//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}   # needs read:packages
 ```
 
-Then `pnpm add @rmartz/agent-runtime @rmartz/github @rmartz/worktree …`. Every
-package is a library first; each also ships thin CLIs (`ai-*`) the harness can
-invoke, but PR Shepherd should import the library API.
+Standard env var is **`NODE_AUTH_TOKEN`** (the `actions/setup-node` convention),
+populated in CI from `secrets.GITHUB_TOKEN`. Every package is a library first;
+each also ships thin CLIs (`ai-*`), but PR Shepherd should import the library API.
+**Publish order PR Shepherd needs** (it asked): (1) `@rmartz/reporting` — unblocks
+wiring #109's `IssueFiler` to `reportAnomaly`; (2) `@rmartz/github`; (3)
+`@rmartz/agent-runtime`; (4) `@rmartz/verify` + `@rmartz/worktree` (lower urgency).
+Pin **exact** versions in PR Shepherd initially (no `^`) so a published breaking
+change can't silently break the daemon.
 
 ## Published API surface (what PR Shepherd composes)
 
@@ -168,13 +173,15 @@ From the migration ledger + dotfiles inventory §1 — start from
   **already implemented natively** in PR Shepherd Epic 10 (`#96` state-axis
   derivation, `#98` gate model, `#100` evaluate_gates).
 - **`branch_currency.py` → PR Shepherd** (ai-tools #11 closed, not ported). It is
-  orchestration (imports routing/merge/tracking), owned by PR Shepherd **`#104`**
-  (merge path; it already has a branch-currency acceptance criterion). Two edge
-  cases to carry over (noted on `#104`): (1) **never `update-branch` a Dependabot
-  PR** — it creates a foreign web-flow commit Dependabot then refuses to rebase;
-  (2) **fail fast on operator-actionable update failures** (missing OAuth scope /
-  bad credentials / insufficient permission / unauthorized SSO can never succeed
-  on retry).
+  orchestration (imports routing/merge/tracking), owned by PR Shepherd **`#104`**.
+  Status (confirmed 2026-06-23): the **predicate** is merged
+  (`src/engine/merge/branchCurrency.ts` → `needsBranchSync`), but the two edge
+  cases are **required-but-pending** in the merge-execution path (current
+  `drive-to-merge` calls `update-branch` directly): (1) **never `update-branch` a
+  Dependabot PR** — it creates a foreign web-flow commit Dependabot then refuses to
+  rebase; (2) **fail fast on operator-actionable update failures** (missing OAuth
+  scope / bad credentials / insufficient permission / unauthorized SSO can never
+  succeed on retry).
 - **`submitReview` + `mergePullRequest` KEPT in `@rmartz/github`** as thin,
   label-free, gate-free primitives. PR Shepherd composes `mergePullRequest` inside
   its gated, serialized merge path (`#104`) rather than reimplementing the raw

@@ -1,89 +1,95 @@
 ---
 type: Design
 title: Reporting event schema (anomaly + efficiency)
-description: Proposed shared contract for the ai-tools ↔ PR Shepherd reporting seam — the anomaly-category enum, the occurrence record, the filing API, and the efficiency-event schema. Pending PR Shepherd (#109) confirmation.
-tags: [reporting, anomaly, efficiency, pr-shepherd, schema, proposal]
+description: Agreed shared contract for the ai-tools ↔ PR Shepherd reporting seam — the anomaly-category enum, the occurrence record, the filing API, and the efficiency-event schema. Confirmed by PR Shepherd 2026-06-23.
+tags: [reporting, anomaly, efficiency, pr-shepherd, schema, contract]
 ---
 
-# Reporting event schema (anomaly + efficiency) — proposal
+# Reporting event schema (anomaly + efficiency)
 
-`@rmartz/reporting`'s `anomaly` and `efficiency-audit` modules (ai-tools #29/#30,
-**deferred** until this is agreed) overlap PR Shepherd's open self-observability
-work (**#109**). To avoid two parallel taxonomies, this defines the shared
-contract. **Status: proposal — pending PR Shepherd confirmation** (see the open
-questions at the end). See [PR Shepherd handoff](pr-shepherd-handoff.md) for the
-broader delegation contract.
+The shared contract for `@rmartz/reporting`'s `anomaly` (#29) and
+`efficiency-audit` (#30) modules, which overlap PR Shepherd's self-observability
+(#109) / circuit-breaker (#107) work. **Status: agreed — PR Shepherd confirmed
+2026-06-23** (grounded in merged PR Shepherd code: #104 merge/branch-currency,
+#107 breakers, #109 observability, #151 skill-outcome). See
+[PR Shepherd handoff](pr-shepherd-handoff.md) for the broader delegation contract.
 
 ## The seam (who emits, who files)
 
-- **PR Shepherd #109 detects** engine-internal anomalies over its own event
-  stream and **emits an `AnomalyOccurrence`**.
+- **PR Shepherd detects** engine anomalies and **emits an `AnomalyOccurrence`**;
+  #109 files through an injectable **`IssueFiler` seam** (deduped by
+  `Anomaly.dedupeKey`). PR Shepherd implements `IssueFiler` as an adapter over
+  `@rmartz/reporting.reportAnomaly`, mapping its `AnomalyKind` → `category`/
+  `subject`, once the package is published.
 - **ai-tools `@rmartz/reporting` files it** — it owns the category→ledger-title
   mapping and the find-or-create-or-append I/O into **`rmartz/ai-reports`**
-  (`tracking` label). PR Shepherd does **not** write reports into its own issues;
-  the deprecated `coordinator-self-report` pattern (PR Shepherd #168) is retired.
-- Harness/agents (outside PR Shepherd) emit the same record shape for
-  harness-observed anomalies (flaky tests, failed local validation) directly via
-  `@rmartz/reporting`.
+  (`tracking` label). PR Shepherd never writes reports into its own issues; the
+  deprecated `coordinator-self-report` pattern (PR Shepherd #168) is retired.
+- Harness/agents emit the same record shape for harness-observed anomalies
+  (flaky tests, failed local validation) directly via `@rmartz/reporting`.
 
-So the contract is three things: the **category enum**, the **occurrence record**,
-and the **filing API**. ai-tools is the single authority for category→title so
-both sides dedup onto identical ledgers.
+ai-tools is the single authority for category→title, so both sides dedup onto
+identical ledgers.
 
 ## AnomalyCategory (closed enum, kebab-case)
 
-| Category                  | Emitter          | Stable ledger title (ai-tools-owned)                           |
-| ------------------------- | ---------------- | -------------------------------------------------------------- |
-| `same-action-reroute`     | PR Shepherd #109 | `tracking: same-action reroute (same-action-reroute)`          |
-| `max-iterations`          | PR Shepherd #109 | `tracking: coordinator max iterations (max-iterations)`        |
-| `human-intervention`      | PR Shepherd #109 | `tracking: human intervention required (human-intervention)`   |
-| `premature-exit`          | PR Shepherd #109 | `tracking: skill ended prematurely (premature-exit:<subject>)` |
-| `merge-failure`           | PR Shepherd #109 | `tracking: merge failure (merge-failure)`                      |
-| `duration-outlier`        | PR Shepherd #109 | `tracking: step duration outlier (duration-outlier)`           |
-| `mass-blocking`           | PR Shepherd #109 | `tracking: mass PR blocking (mass-blocking)`                   |
-| `flaky-test`              | harness/agents   | `tracking: flaky test (flaky-test)`                            |
-| `failed-local-validation` | harness/agents   | `tracking: failed local validation (failed-local-validation)`  |
+| Category                  | Emitter (PR Shepherd layer)               | Stable ledger title (ai-tools-owned)                               |
+| ------------------------- | ----------------------------------------- | ------------------------------------------------------------------ |
+| `duration-outlier`        | #109 observability                        | `tracking: step duration outlier (duration-outlier)`               |
+| `merge-failure`           | #109 observability                        | `tracking: merge failure (merge-failure)`                          |
+| `mass-blocking`           | #109 observability                        | `tracking: mass PR blocking (mass-blocking)`                       |
+| `timeout-then-fast-retry` | #109 observability                        | `tracking: step timeout then fast retry (timeout-then-fast-retry)` |
+| `fix-review-loop`         | #109 observability                        | `tracking: non-converging fix-review loop (fix-review-loop)`       |
+| `high-retry-rate`         | #109 observability                        | `tracking: high step retry rate (high-retry-rate)`                 |
+| `ci-budget-exhausted`     | #107 breaker layer                        | `tracking: CI budget exhausted (ci-budget-exhausted)`              |
+| `main-broken`             | #107 breaker layer                        | `tracking: main branch broken (main-broken)`                       |
+| `same-action-reroute`     | gate/convergence (#105) — not wired yet   | `tracking: same-action reroute (same-action-reroute)`              |
+| `max-iterations`          | convergence (Escalate) — not wired yet    | `tracking: coordinator max iterations (max-iterations)`            |
+| `human-intervention`      | gate (hard_reject / Park) — not wired yet | `tracking: human intervention required (human-intervention)`       |
+| `flaky-test`              | harness/agents                            | `tracking: flaky test (flaky-test)`                                |
+| `failed-local-validation` | harness/agents                            | `tracking: failed local validation (failed-local-validation)`      |
 
 Notes:
 
-- The `(<category>)` suffix is the stable dedup key (mirrors the dotfiles
-  `… (anomaly)` convention). Identical title ⇒ same ledger.
-- **`premature-exit` consolidation:** the dotfiles kept three categories
-  (`premature_exit_review` / `_fix_review` / `_merge`) → three ledgers. Since the
-  Skill Outcome Protocol now makes "no outcome record ⇒ retry" uniform across
-  skills, this proposes **one** `premature-exit` category with the skill carried
-  in `occurrence.subject`, and the title template appends `:<subject>` so
-  per-skill ledgers are preserved (`premature-exit:review`,
-  `premature-exit:merge`) without three enum members. _Open question 1._
-- The dotfiles `AUTO_CREATE_TRACKING_CATEGORIES` distinction (self-bootstrap the
-  ledger on first occurrence vs. degrade to a per-PR issue) collapses here:
-  ai-reports is the ledger host, so **every** category find-or-create-or-appends
-  its ledger on first occurrence.
+- The `(<category>)` suffix is the stable dedup key. Identical title ⇒ same ledger.
+- **`premature-exit`** is folded into the emitters above — the Skill Outcome
+  Protocol (#151) makes "no outcome record ⇒ retry" uniform, so a premature exit
+  surfaces via `timeout-then-fast-retry` / `high-retry-rate` rather than its own
+  category. (The three dotfiles `premature_exit_*` categories are retired.)
+- The `… — not wired yet` rows are valid PR Shepherd concepts in the
+  gate/convergence layer (`detectSameActionLoop` #105, `resolveConvergence →
+Escalate`, `SkillOutcome.hard_reject` / gate `Park`) but do **not** emit
+  occurrences yet. The slugs are reserved.
+- `#107` breakers latch/quarantine at runtime and #109 emits nothing when they
+  trip; PR Shepherd emits these two from the **breaker layer** (strongest
+  "systemically wrong" signal). `main-broken` carries the bad SHA in `evidence`.
 
 ## AnomalyOccurrence record
 
 ```ts
 interface AnomalyOccurrence {
   category: AnomalyCategory; // closed enum above
-  subject?: string; // refines the ledger (e.g. the skill for premature-exit): kebab-case
+  subject?: string; // refines the ledger (kebab-case), e.g. skill name for fix-review-loop
   summary: string; // one-line human description
   detail?: string; // longer body: what was observed, where, expected vs actual
-  sourceRepo: string; // 'owner/repo' the anomaly occurred in
-  pr?: number;
-  evidence?: Record<string, string | number>; // structured specifics (retryCount, durationMs, blockedCount, …)
-  // correlation (all optional; supply what the emitter has):
-  runId?: string; // PR Shepherd run id
-  stepInstanceId?: string; // PR Shepherd step instance
+  sourceRepo: string; // 'owner/repo'  (PR Shepherd maps from its `repo`)
+  pr?: number; //          (PR Shepherd maps from its `prNumber`)
+  evidence?: Record<string, string | number>; // structured specifics (retryCount, badSha, durationMs, …)
+  // correlation (all optional; supply what the emitter has — names match PR Shepherd verbatim):
+  runId?: string;
+  stepInstanceId?: string;
   headSha?: string;
-  transcriptId?: string; // dispatched-agent transcript
-  engineVersion?: string; // PR Shepherd build (≈ dotfiles coordinatorSha)
-  timestamp: string; // ISO-8601 UTC
+  gitHash?: string; // provenance: commit the PR Shepherd bundle was built from
+  skillVersion?: string; // optional skill-def version
+  transcriptId?: string; // dispatched-agent transcript (not persisted by PR Shepherd; from run context when available)
+  timestamp: string; // ISO-8601 UTC (PR Shepherd converts its epoch-ms EventRecord.createdAt at emit)
 }
 ```
 
-This extends `@rmartz/reporting`'s existing `OccurrenceMeta`
-(`sourceRepo`/`coordinatorSha`/`skill`/`pr`/`transcriptId`/`skillMeta`); the
-correlation fields above are its superset for the PR Shepherd engine.
+Envelope mapping (PR Shepherd record → this wire format): `repo → sourceRepo`,
+`prNumber → pr`, epoch-ms `createdAt → ISO timestamp`. `runId` / `stepInstanceId`
+/ `headSha` / `gitHash` / `skillVersion` are verbatim from `SkillOutcomeRecord` /
+`EventRecord`.
 
 ## Filing API
 
@@ -95,20 +101,20 @@ function reportAnomaly(
 ): Promise<string | null>; // ledger URL, or null (soft-fail)
 ```
 
-`reportAnomaly` maps `category` (+ `subject`) → the stable title, renders the
-occurrence body via the existing `formatOccurrence` header, and calls
-`reportToTracking` (find-or-create-or-append). **PR Shepherd passes a category +
-occurrence; it never constructs the title.** Also shipped as the
+Maps `category` (+ `subject`) → the stable title, renders the body via the
+existing `formatOccurrence` header, and calls `reportToTracking`
+(find-or-create-or-append). **PR Shepherd's `IssueFiler` adapter passes a
+category + occurrence; it never constructs the title.** Also shipped as the
 `ai-report-anomaly` CLI for non-TS emitters.
 
-## EfficiencyEvent schema (lighter half)
+## EfficiencyEvent schema
 
-PR Shepherd already records per-step timing (the four buckets:
-claude / active / schedule-wait / external-wait) and per-merge metrics over its
-own runs (#109 / ARCHITECTURE Timing Metrics). ai-tools `efficiency-audit` (#30)
-is a **deterministic profiler of PR history** (preventable CI failures, redundant
-reviews, flakes). To avoid double-implementing detectors, the proposed shared
-per-PR record:
+**Mode (agreed): ai-tools derives the counts standalone** from GitHub PR history
+(a cross-repo, all-PRs profiler — PR Shepherd's "derive-from-GitHub / never
+durably store" principle means its event stream is not a historical archive).
+PR Shepherd may **optionally enrich** a record with `durationsMs` for runs it
+drove (timing GitHub can't reconstruct), via the same emit seam as anomalies — it
+does **not** emit the counts (that would double-implement detectors).
 
 ```ts
 interface EfficiencyEvent {
@@ -116,6 +122,7 @@ interface EfficiencyEvent {
   sourceRepo: string;
   mergedAt?: string; // ISO-8601
   counts: {
+    // derived by @rmartz/efficiency-audit from GitHub history:
     reviewIterations: number;
     fixReviewIterations: number;
     ciRuns: number;
@@ -125,33 +132,46 @@ interface EfficiencyEvent {
     mergeAttempts: number;
   };
   durationsMs?: {
-    claude: number;
-    active: number;
-    scheduleWait: number;
-    externalWait: number;
+    // optional PR-Shepherd enrichment; names match its StepMetricsSchema 1:1:
+    claude: number; // claudeMs
+    active: number; // activeMs
+    scheduleWait: number; // scheduleWaitMs
+    externalWait: number; // externalWaitMs
   };
 }
 ```
 
-Two modes, to be decided (_open question 3_): (a) PR Shepherd #109 **emits**
-`EfficiencyEvent`s and `efficiency-audit` ingests them; (b) `efficiency-audit`
-**derives** the counts standalone from GitHub PR history and PR Shepherd keeps its
-own runtime telemetry separate. The field names above are the contract either way.
+Caveat: at merge granularity PR Shepherd's `MergeEfficiencyMetrics` surfaces only
+`claudeMs` + `externalWaitMs`; all four buckets exist at step/run level.
 
-## Open questions for PR Shepherd (#109)
+## PR Shepherd vocabulary (confirmed, verbatim from merged code)
 
-1. **`premature-exit` consolidation** — OK to collapse the three dotfiles
-   categories into one + `subject`, with per-skill ledgers via the title
-   template? Or keep distinct categories?
-2. **Category coverage** — does #109 detect engine anomalies **not** in the enum
-   above (e.g. CI-budget-exhausted, main-broken from the circuit breakers #107)?
-   If so, propose the slug + ledger title.
-3. **Efficiency mode** — (a) emit `EfficiencyEvent`s for ai-tools to ingest, or
-   (b) ai-tools derives standalone? And are the four duration buckets the right
-   shared names?
-4. **Correlation field names** — confirm `runId` / `stepInstanceId` / `headSha` /
-   `engineVersion` match PR Shepherd's actual identifiers (align names so there is
-   one vocabulary, not two).
-5. **Filing direction** — confirm #109 detectors call `reportAnomaly` (→
-   ai-reports) rather than writing into PR Shepherd issues, and that #168's
-   `coordinator-self-report` pattern is retired.
+- **`SkillOutcome`**: `approve`, `error`, `hard_reject`, `no_op`, `soft_reject`.
+- **`SkillOutcomeRecord`**: `skill, skillVersion, gitHash, outcome, runId,
+stepInstanceId, headSha, timestamp` (ISO). Marker `<!-- skill-outcome: {json} -->`
+  (distinct from the `skill-meta` marker).
+- **`EventType`**: `run_started/completed/blocked`, `step_started/completed/
+failed/retried`, `merge_completed/failed`.
+- **`EventRecord`**: `id, runId, repo, prNumber, headSha?, decidingGate?,
+eventType, stepInstanceId?, attempts, outcome?, logs[], createdAt` (epoch-ms).
+- **`AnomalyKind`**: `duration_outlier, fix_review_loop, high_retry_rate,
+mass_blocking, merge_failure, timeout_then_fast_retry`;
+  `Anomaly = { kind, dedupeKey, title, body }`. PR Shepherd's `IssueFiler` adapter
+  maps `AnomalyKind` (snake_case) → this enum's `category` (kebab-case).
+- **Timing**: step `{ claudeMs, activeMs, scheduleWaitMs, externalWaitMs }`; run
+  `{ total*Ms }`; merge `MergeEfficiencyMetrics { runId, repo, prNumber, headSha?,
+wallClockMs, claudeMs, externalWaitMs, reviewCycles, retries, mergedFirstTry }`.
+
+## Resolutions (PR Shepherd, 2026-06-23)
+
+1. **premature-exit** — collapsed (retired); surfaces via `timeout-then-fast-retry`
+   / `high-retry-rate`. ✅
+2. **Coverage** — added `timeout-then-fast-retry`, `fix-review-loop`,
+   `high-retry-rate` (#109) + `ci-budget-exhausted`, `main-broken` (#107). ✅
+3. **Efficiency** — ai-tools derives counts standalone; PR Shepherd optionally
+   enriches `durationsMs`. Four bucket names match 1:1. ✅
+4. **Correlation** — `runId`/`stepInstanceId`/`headSha` exact; `engineVersion →
+gitHash`; added optional `skillVersion`; envelope mappings documented. ✅
+5. **Filing** — #109 calls `reportAnomaly` via its `IssueFiler` seam; #168
+   retired. ✅ (Wiring is a PR Shepherd follow-up, gated on publishing
+   `@rmartz/reporting`.)
