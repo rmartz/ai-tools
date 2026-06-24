@@ -10,7 +10,9 @@
   },
   "bin": {
     "ai-report-to-tracking": "./dist/bin/report-to-tracking.js",
-    "ai-extract-friction": "./dist/bin/extract-friction.js"
+    "ai-extract-friction": "./dist/bin/extract-friction.js",
+    "ai-report-anomaly": "./dist/bin/report-anomaly.js",
+    "ai-efficiency-audit": "./dist/bin/efficiency-audit.js"
   },
   "files": [
     "dist"

@@ -1,9 +1,9 @@
 ---
 type: Library
 title: reporting
-description: Layer-2 composed reporting — tracking-issue ledgers (find-or-create-or-append) and transcript friction extraction.
+description: Layer-2 composed reporting — tracking-issue ledgers, transcript friction extraction, anomaly filing, and PR efficiency auditing.
 resource: packages/reporting/src/index.ts
-tags: [composed, reporting, tracking, friction, transcripts]
+tags: [composed, reporting, tracking, friction, anomaly, efficiency, transcripts]
 ---
 
 # @rmartz/reporting
@@ -12,10 +12,12 @@ Layer-2 composed package for **reporting** recurring agent observations. It
 composes the layer-0 `@rmartz/github` issue ops and `@rmartz/agent-runtime`
 transcript reader; nothing here knows about PR Shepherd's gate/verdict labels.
 
-This round ships two concerns — **tracking** and **friction**. Two further
-concerns (`anomaly` and `efficiency-audit`) are **deferred** pending cross-repo
-schema coordination with PR Shepherd (rmartz/pr-shepherd#109); they have no
-files or exports yet.
+It ships four concerns — **tracking**, **friction**, **anomaly**, and
+**efficiency-audit**. The latter two implement the agreed cross-repo contract in
+[`docs/reporting-schema.md`](../reporting-schema.md) (confirmed with PR Shepherd
+2026-06-23): ai-tools owns the category→ledger-title mapping and derives
+efficiency counts standalone, while PR Shepherd emits occurrences / optionally
+enriches `durationsMs` through this package's seams.
 
 ## Tracking ledgers (`tracking.ts`)
 
@@ -113,10 +115,99 @@ ai-extract-friction [--days N] <transcript.jsonl> [<transcript.jsonl> ...]
 Takes explicit transcript paths (discovery is the caller's responsibility) and
 prints the report. `--days N` labels the heading only.
 
-## Deferred (pending pr-shepherd#109)
+## Anomaly reporting (`anomaly.ts`)
 
-- **`anomaly`** — same-action-reroute / max-iterations anomaly reporting.
-- **`efficiency-audit`** — post-run efficiency / mass-blocking self-reports.
+The ai-tools-owned bridge from an `AnomalyOccurrence` (emitted by PR Shepherd's
+`IssueFiler` adapter or by the harness for flaky tests / failed local
+validation) to a tracking ledger in `rmartz/ai-reports`. ai-tools is the
+**single authority** for the category(+subject)→ledger-title mapping, so every
+emitter dedups onto identical ledgers. The wire contract — the `AnomalyCategory`
+slugs, the stable titles, and the `AnomalyOccurrence` field names — is fixed by
+[`docs/reporting-schema.md`](../reporting-schema.md).
 
-Both depend on schema details still being coordinated with PR Shepherd, so they
-are intentionally not built here yet — no files, no barrel exports.
+`AnomalyCategory` is a **closed enum** of 13 kebab-case slugs (the schema table).
+`premature-exit` is **retired** — it surfaces via `timeout-then-fast-retry` /
+`high-retry-rate` and is not a category; an unknown slug soft-fails to `null`
+rather than throwing at the seam.
+
+`reportAnomaly`:
+
+1. Maps `category` (+ optional kebab-case `subject`) → the stable ledger title
+   via `ledgerTitle`. A subject is appended as a `: <subject>` suffix so a
+   refined occurrence (e.g. `fix-review-loop` for `/review`) routes to its own
+   ledger while keeping the shared category dedup key.
+2. Projects the occurrence's correlation fields onto the standardized
+   occurrence header (`sourceRepo`, `gitHash` → coordinator sha, `pr`,
+   `transcriptId`), with the remaining specifics (run id, step instance, head
+   SHA, skill version, and structured `evidence`) rendered into the body.
+3. Calls `reportToTracking` (find-or-create-or-append) into `rmartz/ai-reports`
+   by default.
+
+### API
+
+- `reportAnomaly(occ, opts?) => Promise<string | null>` — ledger URL, or `null`
+  on soft-fail (including the defensive unknown-category path). `opts`: `repo`
+  (ledger repo, defaults to `rmartz/ai-reports`), `cwd`.
+- `ledgerTitle(category, subject?) => string | null` — the stable title, or
+  `null` for an unknown category.
+- `AnomalyCategory`, `AnomalyOccurrence`, `ReportAnomalyOptions` types.
+
+### CLI — `ai-report-anomaly`
+
+```
+ai-report-anomaly --category <slug> --summary <text> --source-repo <owner/repo> \
+  --timestamp <iso> [--subject <s>] [--detail <text>] [--pr <n>] \
+  [--git-hash <sha>] [--head-sha <sha>] [--run-id <id>] [--step-instance-id <id>] \
+  [--skill-version <v>] [--transcript <id>] [--repo <ledger owner/repo>]
+```
+
+For non-TS emitters. Prints the ledger URL on success; exits non-zero on an
+unknown category or filing failure.
+
+## PR efficiency audit (`efficiency-audit.ts` + `efficiency-derive.ts`)
+
+Derives an `EfficiencyEvent` for a PR **standalone** from GitHub history — a
+cross-repo, all-PRs profiler. ai-tools owns the count detectors; PR Shepherd
+never emits the counts (that would double-implement them) but may **optionally
+enrich** the event with `durationsMs` for runs it drove (timing GitHub can't
+reconstruct), which this module merges in verbatim and never computes. Reframes
+the dotfiles `pr_efficiency_audit.py` profiler to the agreed `EfficiencyEvent`
+shape.
+
+The gh-history derivation lives in `efficiency-derive.ts` (the heavy seam);
+`efficiency-audit.ts` owns the public shape and API. All GitHub reads route
+through one injectable `GhReader` (default shells out via `boundedRun('gh',
+['api', …])`), so tests feed in-memory JSON and never touch the network.
+
+`counts` (always derived):
+
+- **reviewIterations** — `/review` verdicts (skill-meta marked).
+- **fixReviewIterations** — author (non-merge, non-web-flow) commits.
+- **ciRuns** — distinct GA checks across non-merge commits.
+- **preventableCiFailures** — locally-runnable checks (lint, format, tsc, black,
+  pytest, …) that failed; excluded checks (e2e, integration, Vercel, …) are never
+  counted.
+- **redundantReviews** — `/review` posted twice on the same SHA.
+- **flakyRetries** — a check that failed then passed at the same SHA.
+- **mergeAttempts** — branch-sync merge commits + 1 for the PR merge.
+
+### API
+
+- `auditPrEfficiency(pr, opts?) => Promise<EfficiencyEvent>` — `opts`: `repo`
+  (defaults to the git remote), `mergedAt`, `durationsMs` (partial enrichment,
+  merged 1:1 with missing buckets defaulting to `0`), `reader`, `call`.
+- `deriveCounts(repo, pr, reader?) => Promise<EfficiencyCounts>` — the raw
+  detector.
+- `ghReader` — the default shelling reader.
+- `EfficiencyEvent`, `EfficiencyCounts`, `EfficiencyDurationsMs`,
+  `AuditPrEfficiencyOptions`, `GhReader` types.
+
+### CLI — `ai-efficiency-audit`
+
+```
+ai-efficiency-audit <pr> [--repo <owner/repo>] [--merged-at <iso>]
+```
+
+Prints the derived `EfficiencyEvent` as JSON. `durationsMs` enrichment is an
+in-process API affordance only (the CLI derives counts; it does not measure
+timing).
