@@ -135,7 +135,9 @@ Thin `bin/` wrappers; all logic stays in the library: `ai-pr-summary`,
 Discussions (default repo `rmartz/ai`, category `q-a`) — the no-code path for the
 `discuss` / `discuss-curate` skills:
 `ai-discuss <title> <body-file> [--repo] [--category] [--model] [--project]`
-(find-or-create + signed comment), `ai-discussion-read <number|url> [--repo] [--json]`
+(find-or-create + signed comment), `ai-start-discussion <title> <question-body-file>
+[--repo] [--category]` (open a thread seeded with a _question_ → prints the number to
+fan out `/discuss <n>`), `ai-discussion-read <number|url> [--repo] [--json]`
 (readable thread status; `--json` for raw), `ai-discussion-answer <comment-node-id>`
 (mark answer), and `ai-discussion-comment <number|url> <body-file> [--repo] [--model]
 [--project]` (signed comment on an existing thread).
