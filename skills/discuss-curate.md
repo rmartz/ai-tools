@@ -11,7 +11,14 @@ current best answer: `$ARGUMENTS` (a discussion title or number on `rmartz/ai`).
 This is the **promotion, not accumulation** half of the Discussion lifecycle. A
 thread of attempts has value, but a reader needs the _current best_ surfaced —
 and once that's stable, it belongs in curated guidance, not buried in a thread.
-Use the `@rmartz/github` Discussions client.
+Use the `@rmartz/github` Discussions client. **No-code path** (when not in a TS
+context) — the mechanical steps are CLIs; the _judgment_ between them is yours:
+
+```
+ai-discussion-read <number>                       # → JSON of the discussion + comments
+ai-discussion-answer <comment-node-id>            # mark the chosen best as the answer
+ai-discussion-comment <number> <body-file> --model "<m>"   # post a synthesized answer
+```
 
 ## 1. Read the thread
 
