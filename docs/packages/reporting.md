@@ -189,13 +189,18 @@ through one injectable `GhReader` (default shells out via `boundedRun('gh',
   counted.
 - **redundantReviews** — `/review` posted twice on the same SHA.
 - **flakyRetries** — a check that failed then passed at the same SHA.
-- **mergeAttempts** — branch-sync merge commits + 1 for the PR merge.
+- **mergeAttempts** — a **proxy**: `(branch-sync commits) + 1`. A true merge
+  attempt is a failed squash invocation (which leaves no commit), so the history
+  proxy over-counts syncs and under-counts real attempts. PR Shepherd supplies the
+  authoritative count via the `mergeAttempts` enrichment for daemon-driven PRs (see
+  [reporting-schema.md](../reporting-schema.md) "Merge attempts").
 
 ### API
 
 - `auditPrEfficiency(pr, opts?) => Promise<EfficiencyEvent>` — `opts`: `repo`
   (defaults to the git remote), `mergedAt`, `durationsMs` (partial enrichment,
-  merged 1:1 with missing buckets defaulting to `0`), `reader`, `call`.
+  merged 1:1 with missing buckets defaulting to `0`), `mergeAttempts` (authoritative
+  override of the derived proxy), `reader`, `call`.
 - `deriveCounts(repo, pr, reader?) => Promise<EfficiencyCounts>` — the raw
   detector.
 - `ghReader` — the default shelling reader.

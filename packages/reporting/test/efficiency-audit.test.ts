@@ -65,7 +65,7 @@ describe('deriveCounts', () => {
       }),
     );
     expect(counts.fixReviewIterations).toBe(2); // c1, c2 only
-    expect(counts.mergeAttempts).toBe(2); // 1 merge commit + 1 for the PR merge
+    expect(counts.mergeAttempts).toBe(2); // proxy: 1 branch sync + 1 (not a true attempt count)
   });
 
   it('classifies preventable failures, flaky retries, and ci runs from GA check-runs', async () => {
@@ -138,6 +138,18 @@ describe('auditPrEfficiency', () => {
       scheduleWait: 0,
       externalWait: 500,
     });
+  });
+
+  it('overrides the derived mergeAttempts proxy with the authoritative enrichment', async () => {
+    const event = await auditPrEfficiency(7, {
+      repo: 'rmartz/app',
+      // a branch-sync commit would make the proxy 2; the authoritative value wins.
+      reader: reader({
+        commits: [{ sha: 'm1', parents: [{ sha: 'a' }, { sha: 'b' }], author: { login: 'reed' } }],
+      }),
+      mergeAttempts: 4,
+    });
+    expect(event.counts.mergeAttempts).toBe(4);
   });
 
   it('attaches mergedAt verbatim when supplied', async () => {

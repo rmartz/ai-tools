@@ -9,10 +9,12 @@ import {
 /**
  * PR efficiency audit: derive an {@link EfficiencyEvent} for a PR **standalone**
  * from GitHub history. ai-tools owns the count detectors (a cross-repo, all-PRs
- * profiler); PR Shepherd never emits the counts — it would double-implement the
- * detectors. PR Shepherd may **optionally enrich** the event with `durationsMs`
- * for runs it drove (timing GitHub can't reconstruct), which this module merges
- * in verbatim but never computes.
+ * profiler); PR Shepherd never emits the *derived* counts — it would
+ * double-implement the detectors. It may **optionally enrich** the event with
+ * data history can't reconstruct: `durationsMs` (timing) and an authoritative
+ * `mergeAttempts` (from its durable per-(PR, head-SHA) failed-squash markers).
+ * This module merges those in verbatim but never computes them — the derived
+ * `mergeAttempts` is only a proxy (see {@link AuditPrEfficiencyOptions}).
  *
  * Reframes the dotfiles `pr_efficiency_audit.py` profiler to the agreed
  * `EfficiencyEvent` wire contract (`docs/reporting-schema.md`). The gh-history
@@ -58,6 +60,12 @@ export interface AuditPrEfficiencyOptions {
   mergedAt?: string;
   /** Optional PR-Shepherd timing enrichment (partial accepted; merged 1:1). */
   durationsMs?: Partial<EfficiencyDurationsMs>;
+  /**
+   * Authoritative `mergeAttempts` from PR Shepherd (failed-squash markers + 1).
+   * When supplied — i.e. the PR was daemon-driven — it **overrides** the derived
+   * history proxy, which over-counts branch syncs and is blind to failed squashes.
+   */
+  mergeAttempts?: number;
   /** Injectable GitHub history reader (default shells out via `gh`). */
   reader?: GhReader;
   /** gh-call options forwarded to repo resolution. */
@@ -84,9 +92,10 @@ function mergeDurations(
 /**
  * Compute an {@link EfficiencyEvent} for one PR. Derives `counts` from GitHub
  * history (review iterations, fix-review iterations, CI runs, preventable CI
- * failures, redundant reviews, flaky retries, merge attempts), then attaches any
- * supplied `durationsMs` enrichment without computing timing itself. `repo`
- * defaults to the current git remote.
+ * failures, redundant reviews, flaky retries, and a `mergeAttempts` proxy), then
+ * applies any PR-Shepherd enrichment — an authoritative `mergeAttempts` override
+ * and `durationsMs` — without computing those itself. `repo` defaults to the
+ * current git remote.
  *
  * Throws only when the repo cannot be resolved; the underlying gh reads throw on
  * unrecoverable API failure (the thin CLI wrapper turns that into an exit code).
@@ -101,6 +110,8 @@ export async function auditPrEfficiency(
   }
 
   const counts = await deriveCounts(repo, pr, opts.reader ?? ghReader);
+  // Authoritative override: PR Shepherd's marker-based count beats the proxy.
+  if (opts.mergeAttempts !== undefined) counts.mergeAttempts = opts.mergeAttempts;
   const durationsMs = mergeDurations(opts.durationsMs);
 
   const event: EfficiencyEvent = { pr, sourceRepo: repo, counts };

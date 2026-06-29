@@ -112,9 +112,10 @@ category + occurrence; it never constructs the title.** Also shipped as the
 **Mode (agreed): ai-tools derives the counts standalone** from GitHub PR history
 (a cross-repo, all-PRs profiler — PR Shepherd's "derive-from-GitHub / never
 durably store" principle means its event stream is not a historical archive).
-PR Shepherd may **optionally enrich** a record with `durationsMs` for runs it
-drove (timing GitHub can't reconstruct), via the same emit seam as anomalies — it
-does **not** emit the counts (that would double-implement detectors).
+PR Shepherd may **optionally enrich** a record with data history can't
+reconstruct — `durationsMs` (timing) and an authoritative `mergeAttempts` — via
+the same emit seam as anomalies. It does **not** emit the _derived_ counts (that
+would double-implement detectors).
 
 ```ts
 interface EfficiencyEvent {
@@ -129,7 +130,7 @@ interface EfficiencyEvent {
     preventableCiFailures: number; // failures a local pre-push check would have caught
     redundantReviews: number;
     flakyRetries: number;
-    mergeAttempts: number;
+    mergeAttempts: number; // see "merge attempts" below — derived value is a proxy
   };
   durationsMs?: {
     // optional PR-Shepherd enrichment; names match its StepMetricsSchema 1:1:
@@ -143,6 +144,40 @@ interface EfficiencyEvent {
 
 Caveat: at merge granularity PR Shepherd's `MergeEfficiencyMetrics` surfaces only
 `claudeMs` + `externalWaitMs`; all four buckets exist at step/run level.
+
+### Merge attempts (authoritative model — PR Shepherd, 2026-06-29)
+
+A **merge attempt is an actual squash-merge _invocation_ that fails** — accounted
+durably per-`(PR, head-SHA)` via hidden marker comments on the PR (so it survives
+restarts and is reconstructable from the PR, not inferred from git). For a landed
+SHA: `mergeAttempts = (failed-squash markers for that SHA) + 1` (the success);
+across a PR's life, the sum of per-SHA failed markers + the final success.
+Per-SHA failures are bounded (~3, `ESCALATION_THRESHOLD`) before the PR is blocked
+rather than looping; the budget resets on a new head SHA or a human clearing
+`escalation needed`.
+
+**Not** merge attempts (never folded in): branch syncs / `update-branch` (a
+separate pre-merge step); pre-merge **gate** rejections (CI-failed / CONFLICTING
+caught in re-validation _before_ the squash — soft-rejects, re-queued to
+review/fix); and defers (CI-running / Copilot-pending — re-poll).
+
+**ai-tools' history-derived value is a documented PROXY:** `(branch-sync commits)
+
+- 1`. Git history can't see a failed squash (it leaves no commit) and can't tell
+  a branch sync from an attempt — so the proxy **over-counts syncs and under-counts
+  true attempts**. Resolution:
+
+* **Daemon-driven PRs** → the authoritative count comes from PR Shepherd, which
+  emits `mergeAttempts` (failed markers + 1) on `MergeEfficiencyMetrics`;
+  `auditPrEfficiency`'s `mergeAttempts` enrichment **overrides** the proxy.
+* **PRs PR Shepherd didn't drive** → the `(branch-sync commits) + 1` proxy stands,
+  understood to diverge as above.
+
+**Status (2026-06-29):** PR Shepherd's merge coordinator (#104) currently records
+failures as `merge_failed` events (#109); the durable per-SHA retry-budget +
+threshold-escalation + operator-actionable classification (mirroring dotfiles
+#1393–#1397) is incoming. Until it lands, the emitted signal is the `merge_failed`
+event count, not the durable marker count.
 
 ## PR Shepherd vocabulary (confirmed, verbatim from merged code)
 
