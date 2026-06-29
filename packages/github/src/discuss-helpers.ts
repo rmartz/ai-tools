@@ -5,14 +5,28 @@
  * per the `rmartz/ai` "Discussion etiquette" spec.
  */
 
+/** Who a discussion comment is from: the model, and the project it speaks for. */
+export interface CommentSignature {
+  model?: string;
+  /** The agent's working repo (`owner/repo`) — attribution, since every post
+   * shows the token owner as GitHub author. */
+  project?: string;
+}
+
 /**
- * Sign a discussion comment with the agent-model footer (etiquette: comments are
- * signed with the full model name). Returns the body unchanged when no `model`
- * is given. Trailing newlines are trimmed before the footer is appended.
+ * Sign a discussion comment with the `*Posted by <model> (<project>)*` footer.
+ * Because every post is authored by the token owner on GitHub, this footer is the
+ * only attribution between agents — so it carries both the model and the project
+ * the agent represents. Accepts a `{ model, project }` (or a bare model string,
+ * back-compat); returns the body unchanged when neither is given. Trailing
+ * newlines are trimmed before the footer.
  */
-export function signComment(body: string, model?: string): string {
-  if (!model) return body;
-  return `${body.replace(/\n+$/, '')}\n\n---\n*Posted by ${model}*`;
+export function signComment(body: string, sig?: CommentSignature | string): string {
+  const { model, project } =
+    typeof sig === 'string' ? { model: sig, project: undefined } : (sig ?? {});
+  if (!model && !project) return body;
+  const who = [model, project ? `(${project})` : undefined].filter(Boolean).join(' ');
+  return `${body.replace(/\n+$/, '')}\n\n---\n*Posted by ${who}*`;
 }
 
 /**

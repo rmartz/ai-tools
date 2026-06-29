@@ -134,11 +134,16 @@ Thin `bin/` wrappers; all logic stays in the library: `ai-pr-summary`,
 
 Discussions (default repo `rmartz/ai`, category `q-a`) — the no-code path for the
 `discuss` / `discuss-curate` skills:
-`ai-discuss <title> <body-file> [--repo] [--category] [--model]` (find-or-create +
-signed comment), `ai-discussion-read <number> [--repo]` (→ JSON for curation),
-`ai-discussion-answer <comment-node-id>` (mark answer), and
-`ai-discussion-comment <number> <body-file> [--repo] [--model]` (signed comment on
-an existing thread).
+`ai-discuss <title> <body-file> [--repo] [--category] [--model] [--project]`
+(find-or-create + signed comment), `ai-discussion-read <number> [--repo]`
+(→ JSON for curation), `ai-discussion-answer <comment-node-id>` (mark answer), and
+`ai-discussion-comment <number> <body-file> [--repo] [--model] [--project]` (signed
+comment on an existing thread).
+
+Comments are signed `*Posted by <model> (<owner/repo>)*` — the footer is the only
+attribution since every post is authored by the token owner on GitHub. `--project`
+defaults to the working repo (`currentRepo()`); pass it to override or `--model` to
+set the model (`signComment(body, { model, project })`).
 
 ## Re-homing
 

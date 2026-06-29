@@ -47,8 +47,10 @@ Pick the **current best** among the existing comments.
 - If **no** existing comment is adequate (the best is partial, or the real answer
   is a synthesis of several), `addComment(discussion.id, body)` with a synthesized
   best answer — cite the comments it draws from, state the recommended approach
-  and when it applies — then `markAnswer` that new comment. Sign it:
-  `\n\n---\n*Posted by <model>*`.
+  and when it applies — then `markAnswer` that new comment. Sign it with your model
+  and project: `\n\n---\n*Posted by <model> (<owner/repo>)*` (or use
+  `ai-discussion-comment <number> <body-file> --model <model>`, which signs and
+  auto-detects the project).
 - If the thread isn't yet conclusive (approaches still in flux, no clear winner),
   say so and **stop** — don't force an answer. Curation can wait for more attempts.
 

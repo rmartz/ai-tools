@@ -56,3 +56,4 @@ export type {
 } from './discussions.js';
 
 export { signComment, framingBody } from './discuss-helpers.js';
+export type { CommentSignature } from './discuss-helpers.js';
