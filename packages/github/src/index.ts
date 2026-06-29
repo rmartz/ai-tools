@@ -42,5 +42,15 @@ export {
   createDiscussion,
   addComment,
   markAnswer,
+  getRepositoryId,
+  listComments,
+  getDiscussion,
+  findOrCreateDiscussion,
 } from './discussions.js';
-export type { DiscussionCategory, DiscussionRef, DiscussionComment } from './discussions.js';
+export type {
+  DiscussionCategory,
+  DiscussionRef,
+  DiscussionComment,
+  DiscussionCommentDetail,
+  DiscussionDetail,
+} from './discussions.js';

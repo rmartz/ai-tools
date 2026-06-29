@@ -25,6 +25,22 @@ export interface DiscussionComment {
   url: string;
 }
 
+/** A comment with the fields needed to evaluate prior approaches and pick an answer. */
+export interface DiscussionCommentDetail extends DiscussionComment {
+  body: string;
+  authorLogin: string | null;
+  createdAt: string;
+  isAnswer: boolean;
+  upvoteCount: number;
+}
+
+/** A discussion plus its body and comments (the read side of curation). */
+export interface DiscussionDetail extends DiscussionRef {
+  title: string;
+  body: string;
+  comments: DiscussionCommentDetail[];
+}
+
 async function graphql(query: string, vars: Record<string, string>): Promise<unknown> {
   const args = ['api', 'graphql', '-f', `query=${query}`];
   for (const [key, value] of Object.entries(vars)) args.push('-F', `${key}=${value}`);
@@ -92,4 +108,91 @@ export async function addComment(discussionId: string, body: string): Promise<Di
 export async function markAnswer(commentId: string): Promise<void> {
   const query = `mutation($id:ID!){markDiscussionCommentAsAnswer(input:{id:$id}){clientMutationId}}`;
   await graphql(query, { id: commentId });
+}
+
+/** Resolve a repo's GraphQL node ID — required to create a discussion. */
+export async function getRepositoryId(repo: string): Promise<string> {
+  const { owner, name } = splitRepo(repo);
+  const query = `query($owner:String!,$name:String!){repository(owner:$owner,name:$name){id}}`;
+  const data = (await graphql(query, { owner, name })) as { repository: { id: string } | null };
+  if (!data.repository) throw new Error(`repository not found: ${repo}`);
+  return data.repository.id;
+}
+
+interface RawComment {
+  id: string;
+  url: string;
+  body: string;
+  createdAt: string;
+  isAnswer: boolean;
+  upvoteCount: number;
+  author: { login: string } | null;
+}
+
+const COMMENT_FIELDS = 'id url body createdAt isAnswer upvoteCount author{login}';
+
+function mapComment(c: RawComment): DiscussionCommentDetail {
+  return {
+    id: c.id,
+    url: c.url,
+    body: c.body,
+    authorLogin: c.author?.login ?? null,
+    createdAt: c.createdAt,
+    isAnswer: c.isAnswer,
+    upvoteCount: c.upvoteCount,
+  };
+}
+
+/** List a discussion's comments (by node ID), for evaluating prior approaches. */
+export async function listComments(discussionId: string): Promise<DiscussionCommentDetail[]> {
+  const query = `query($id:ID!){node(id:$id){... on Discussion{comments(first:100){nodes{${COMMENT_FIELDS}}}}}}`;
+  const data = (await graphql(query, { id: discussionId })) as {
+    node: { comments: { nodes: RawComment[] } } | null;
+  };
+  return data.node ? data.node.comments.nodes.map(mapComment) : [];
+}
+
+/** Fetch a discussion by number with its body + comments, or null if absent. */
+export async function getDiscussion(
+  repo: string,
+  number: number,
+): Promise<DiscussionDetail | null> {
+  const { owner, name } = splitRepo(repo);
+  const query = `query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){discussion(number:$number){id number url title body comments(first:100){nodes{${COMMENT_FIELDS}}}}}}`;
+  const data = (await graphql(query, { owner, name, number: String(number) })) as {
+    repository: {
+      discussion:
+        | (DiscussionRef & { title: string; body: string; comments: { nodes: RawComment[] } })
+        | null;
+    } | null;
+  };
+  const d = data.repository?.discussion;
+  if (!d) return null;
+  return {
+    id: d.id,
+    number: d.number,
+    url: d.url,
+    title: d.title,
+    body: d.body,
+    comments: d.comments.nodes.map(mapComment),
+  };
+}
+
+/**
+ * Find a discussion by exact title, else create it in the category named by
+ * `categorySlug`. Returns the ref either way — the find-or-create half of
+ * find-or-create-or-append; the caller appends an approach via {@link addComment}.
+ */
+export async function findOrCreateDiscussion(
+  repo: string,
+  categorySlug: string,
+  title: string,
+  body: string,
+): Promise<DiscussionRef> {
+  const existing = await findDiscussionByTitle(repo, title);
+  if (existing) return existing;
+  const category = (await listCategories(repo)).find((c) => c.slug === categorySlug);
+  if (!category) throw new Error(`discussion category not found: ${categorySlug} in ${repo}`);
+  const repositoryId = await getRepositoryId(repo);
+  return createDiscussion(repositoryId, category.id, title, body);
 }

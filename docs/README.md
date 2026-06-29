@@ -34,6 +34,8 @@ about emission (see [PR Shepherd handoff](pr-shepherd-handoff.md)).
 | `review`               | [review](skills/review.md)                             |
 | `create-issue`         | [create-issue](skills/create-issue.md)                 |
 | `dependabot-fix-issue` | [dependabot-fix-issue](skills/dependabot-fix-issue.md) |
+| `discuss`              | [discuss](skills/discuss.md)                           |
+| `discuss-curate`       | [discuss-curate](skills/discuss-curate.md)             |
 
 ## Guidance
 

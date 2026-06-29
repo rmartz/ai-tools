@@ -109,8 +109,17 @@ in `gh-call.ts`.
 
 ### Discussions (`discussions.ts`)
 
-- `findDiscussionByTitle` / `createDiscussion` / `addComment` / `markAnswer` /
-  `listCategories` — the GraphQL Discussions client, targeting `rmartz/ai`.
+The GraphQL Discussions client (no REST / `gh` equivalent), targeting `rmartz/ai`
+— powers the `discuss` / `discuss-curate` knowledge-sharing skills.
+
+- Write/find: `findDiscussionByTitle`, `createDiscussion`, `addComment`,
+  `markAnswer`, `listCategories`, `getRepositoryId`.
+- `findOrCreateDiscussion(repo, categorySlug, title, body)` — find-by-exact-title
+  or create in the slugged category; one-call find-or-create.
+- Read for curation: `listComments(discussionId)` and
+  `getDiscussion(repo, number)` return `DiscussionCommentDetail` (body,
+  `authorLogin`, `createdAt`, `isAnswer`, `upvoteCount`) so a curator can evaluate
+  prior approaches and pick an answer.
 
 ### Shared
 
