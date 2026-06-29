@@ -5,7 +5,7 @@ import { defineConfig } from 'vitest/config';
 // cannot occur here — there is no manual discovery list to fall out of sync.
 export default defineConfig({
   test: {
-    include: ['packages/**/test/**/*.test.ts', 'packages/**/*.test.ts'],
+    include: ['packages/**/test/**/*.test.ts', 'packages/**/*.test.ts', 'scripts/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       include: ['packages/*/src/**/*.ts'],

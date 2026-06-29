@@ -37,6 +37,10 @@ about emission (see [PR Shepherd handoff](pr-shepherd-handoff.md)).
 | `discuss`              | [discuss](skills/discuss.md)                           |
 | `discuss-curate`       | [discuss-curate](skills/discuss-curate.md)             |
 
+Make the skills invocable as slash commands with
+[`pnpm run install:skills`](install-skills.md) — it symlinks `skills/*.md` into
+`~/.claude/commands/`.
+
 ## Guidance
 
 Cross-cutting engineering guidance that is specific to this repo's code lives
