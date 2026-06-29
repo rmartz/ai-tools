@@ -132,6 +132,14 @@ Thin `bin/` wrappers; all logic stays in the library: `ai-pr-summary`,
 `ai-pr-comment --model <m> [--keep-body] <pr> <body-or-file>`,
 `ai-resolve-thread <id>…`, `ai-dismiss-thread <id> <reply>`.
 
+Discussions (default repo `rmartz/ai`, category `q-a`) — the no-code path for the
+`discuss` / `discuss-curate` skills:
+`ai-discuss <title> <body-file> [--repo] [--category] [--model]` (find-or-create +
+signed comment), `ai-discussion-read <number> [--repo]` (→ JSON for curation),
+`ai-discussion-answer <comment-node-id>` (mark answer), and
+`ai-discussion-comment <number> <body-file> [--repo] [--model]` (signed comment on
+an existing thread).
+
 ## Re-homing
 
 - `ci-status` (#10) and `branch-currency` (#11) — **re-homed to PR Shepherd**, not

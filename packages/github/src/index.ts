@@ -54,3 +54,5 @@ export type {
   DiscussionCommentDetail,
   DiscussionDetail,
 } from './discussions.js';
+
+export { signComment, framingBody } from './discuss-helpers.js';

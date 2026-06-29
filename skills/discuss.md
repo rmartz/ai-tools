@@ -17,6 +17,17 @@ has one, and it never edits prior comments — the history of attempts is the va
 Use the `@rmartz/github` Discussions client (Discussions are GraphQL-only, no
 first-class `gh`).
 
+**No-code path:** if you're not in a TS context, the whole mechanical flow
+(find-or-create the `q-a` topic + append the signed approach) is one CLI:
+
+```
+ai-discuss "<problem title>" <approach-body-file> --model "<your model>"
+```
+
+It prints the discussion + comment URLs. The steps below describe what it does
+(and the library calls for TS callers); the rules — stable title, append-don't-edit,
+sign — apply either way.
+
 ## 1. Frame the problem as a stable title
 
 The title is the dedup key — phrase it as the _recurring problem_, not this one
