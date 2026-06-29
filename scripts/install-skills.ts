@@ -1,15 +1,4 @@
 #!/usr/bin/env tsx
-/**
- * Symlink ai-tools skills into the Claude harness so they are invocable as slash
- * commands — the replacement for the retired dotfiles `install.sh` symlink step.
- * Each `skills/<name>.md` is linked to `~/.claude/commands/<name>.md`.
- *
- * Idempotent and safe: a symlink already pointing at the same source is left
- * as-is; a symlink pointing elsewhere — or a real file — is only replaced with
- * `--force`. `--dry-run` reports without writing. The commands dir is overridable
- * (`--commands-dir`) and HOME-relative by default, so tests never touch a real
- * `~/.claude`. The importable `installSkills` holds the logic; `main` is the thin CLI.
- */
 import {
   lstatSync,
   mkdirSync,
@@ -54,10 +43,6 @@ function sameTarget(linkPath: string, source: string): boolean {
   }
 }
 
-/**
- * Symlink every `*.md` in `skillsDir` into `commandsDir`. Returns one result per
- * skill describing what happened; performs no writes when `dryRun` is set.
- */
 export function installSkills(opts: InstallSkillsOptions): SkillResult[] {
   const { skillsDir, commandsDir, force = false, dryRun = false } = opts;
   const skills = readdirSync(skillsDir)
