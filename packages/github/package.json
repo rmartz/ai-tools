@@ -16,6 +16,7 @@
     "ai-resolve-thread": "./dist/bin/resolve-thread.js",
     "ai-dismiss-thread": "./dist/bin/dismiss-thread.js",
     "ai-discuss": "./dist/bin/discuss.js",
+    "ai-start-discussion": "./dist/bin/start-discussion.js",
     "ai-discussion-read": "./dist/bin/discussion-read.js",
     "ai-discussion-answer": "./dist/bin/discussion-answer.js",
     "ai-discussion-comment": "./dist/bin/discussion-comment.js"
