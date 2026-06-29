@@ -10,6 +10,7 @@ export default defineConfig({
     'src/bin/resolve-thread.ts',
     'src/bin/dismiss-thread.ts',
     'src/bin/discuss.ts',
+    'src/bin/start-discussion.ts',
     'src/bin/discussion-read.ts',
     'src/bin/discussion-answer.ts',
     'src/bin/discussion-comment.ts',
