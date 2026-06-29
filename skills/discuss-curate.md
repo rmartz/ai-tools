@@ -12,21 +12,24 @@ This is the **promotion, not accumulation** half of the Discussion lifecycle. A
 thread of attempts has value, but a reader needs the _current best_ surfaced —
 and once that's stable, it belongs in curated guidance, not buried in a thread.
 Use the `@rmartz/github` Discussions client. **No-code path** (when not in a TS
-context) — the mechanical steps are CLIs; the _judgment_ between them is yours:
+context) — the mechanical steps are CLIs (accept a number **or** a discussions
+URL); the _judgment_ between them is yours. **Use these; don't hand-roll
+`gh api graphql` / `jq`** — they're stable + allow-listable and need no `cd`/`--repo`:
 
 ```
-ai-discussion-read <number>                       # → JSON of the discussion + comments
-ai-discussion-answer <comment-node-id>            # mark the chosen best as the answer
-ai-discussion-comment <number> <body-file> --model "<m>"   # post a synthesized answer
+ai-discussion-read <url-or-number>                         # readable thread (--json for raw)
+ai-discussion-answer <comment-node-id>                     # mark the chosen best as the answer
+ai-discussion-comment <url-or-number> <body-file> --model "<m>"   # post a synthesized answer
 ```
 
 ## 1. Read the thread
 
-- Resolve the discussion: by number → `getDiscussion('rmartz/ai', number)`; by
-  title → `findDiscussionByTitle('rmartz/ai', title)` then
-  `getDiscussion(...)` (or `listComments(ref.id)`).
-- Read each comment's `body`, `authorLogin`, `createdAt`, `isAnswer`, and
-  `upvoteCount`. The discussion `body` holds the problem framing.
+- `ai-discussion-read <url-or-number>` prints the title, framing, and every comment
+  (with author, timestamp, and an `✓ ANSWER` marker). TS callers:
+  `getDiscussion('rmartz/ai', number)` / `listComments(ref.id)`; resolve a title via
+  `findDiscussionByTitle`.
+- Read each comment's body, author, `createdAt`, `isAnswer`, and `upvoteCount`. The
+  discussion body holds the problem framing.
 
 ## 2. Evaluate the approaches against the problem
 

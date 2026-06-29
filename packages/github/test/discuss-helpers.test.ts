@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { signComment, framingBody } from '../src/discuss-helpers.js';
+import { signComment, framingBody, parseDiscussionRef } from '../src/discuss-helpers.js';
 
 describe('signComment', () => {
   it('signs with model + project, trimming trailing newlines', () => {
@@ -29,5 +29,23 @@ describe('framingBody', () => {
     const body = framingBody('Flaky vitest under parallel workers');
     expect(body).toContain('Recurring problem: Flaky vitest under parallel workers');
     expect(body).toContain('recorded as comments');
+  });
+});
+
+describe('parseDiscussionRef', () => {
+  it('resolves a bare number against the default repo', () => {
+    expect(parseDiscussionRef('2', 'rmartz/ai')).toEqual({ repo: 'rmartz/ai', number: 2 });
+  });
+
+  it('takes repo + number from a discussions URL (overriding the default)', () => {
+    expect(parseDiscussionRef('https://github.com/rmartz/ai/discussions/2', 'other/repo')).toEqual({
+      repo: 'rmartz/ai',
+      number: 2,
+    });
+  });
+
+  it('returns null for a non-discussion arg', () => {
+    expect(parseDiscussionRef('not-a-ref', 'rmartz/ai')).toBeNull();
+    expect(parseDiscussionRef('https://github.com/rmartz/ai/issues/2', 'rmartz/ai')).toBeNull();
   });
 });

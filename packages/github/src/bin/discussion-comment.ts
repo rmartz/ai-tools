@@ -5,34 +5,34 @@
 import { readFileSync } from 'node:fs';
 import { getDiscussion, addComment } from '../discussions.js';
 import { currentRepo } from '../gh-call.js';
-import { signComment } from '../discuss-helpers.js';
+import { signComment, parseDiscussionRef } from '../discuss-helpers.js';
 
 const DEFAULT_REPO = 'rmartz/ai';
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  let repo = DEFAULT_REPO;
+  let defaultRepo = DEFAULT_REPO;
   let model: string | undefined;
   let project: string | undefined;
   const positional: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--repo') repo = argv[++i] ?? repo;
+    if (a === '--repo') defaultRepo = argv[++i] ?? defaultRepo;
     else if (a === '--model') model = argv[++i];
     else if (a === '--project') project = argv[++i];
     else if (a !== undefined) positional.push(a);
   }
-  const [numberArg, bodyFile] = positional;
-  const number = Number(numberArg);
-  if (!numberArg || Number.isNaN(number) || !bodyFile) {
+  const [refArg, bodyFile] = positional;
+  const target = refArg ? parseDiscussionRef(refArg, defaultRepo) : null;
+  if (!target || !bodyFile) {
     console.error(
-      'usage: ai-discussion-comment <number> <body-file> [--repo owner/repo] [--model <model>] [--project owner/repo]',
+      'usage: ai-discussion-comment <number|discussion-url> <body-file> [--repo owner/repo] [--model <model>] [--project owner/repo]',
     );
     process.exit(2);
   }
-  const discussion = await getDiscussion(repo, number);
+  const discussion = await getDiscussion(target.repo, target.number);
   if (discussion === null) {
-    console.error(`discussion #${number} not found in ${repo}`);
+    console.error(`discussion #${target.number} not found in ${target.repo}`);
     process.exit(1);
   }
   const fromProject = project ?? (await currentRepo()) ?? undefined;

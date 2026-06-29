@@ -41,3 +41,22 @@ export function framingBody(title: string): string {
     'is marked as the answer.'
   );
 }
+
+/** A resolved discussion reference: which repo, which number. */
+export interface DiscussionTarget {
+  repo: string;
+  number: number;
+}
+
+/**
+ * Resolve a discussion reference from either a bare number (using `defaultRepo`)
+ * or a full `github.com/<owner>/<repo>/discussions/<n>` URL (repo + number taken
+ * from the URL). Returns `null` for anything else. Letting the CLIs accept a URL
+ * means an agent can act on a thread with one self-contained arg — no `--repo`,
+ * no `cd` into a repo for auth — which keeps the command stable + allowlistable.
+ */
+export function parseDiscussionRef(arg: string, defaultRepo: string): DiscussionTarget | null {
+  if (/^\d+$/.test(arg)) return { repo: defaultRepo, number: Number(arg) };
+  const m = arg.match(/github\.com\/([^/]+\/[^/]+)\/discussions\/(\d+)/);
+  return m ? { repo: m[1]!, number: Number(m[2]) } : null;
+}
