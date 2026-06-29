@@ -1,0 +1,51 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    # Monorepo: scan the root manifest and every workspace package so per-package
+    # deps (tsup, typescript, commander, zod, …) are covered, not just the root.
+    directories:
+      - '/'
+      - '/packages/*'
+    schedule:
+      interval: weekly
+    # Let new releases age 7 days before opening update PRs, reducing exposure
+    # to supply-chain attacks where a malicious version is published then yanked.
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: 'chore'
+      include: 'scope'
+    # Group only minor/patch bumps; major bumps fall outside the groups and get
+    # individual PRs, since they are more likely to need code changes.
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types:
+          - 'minor'
+          - 'patch'
+        patterns:
+          - '*'
+      production-dependencies:
+        dependency-type: production
+        update-types:
+          - 'minor'
+          - 'patch'
+        patterns:
+          - '*'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Let new releases age 7 days before opening update PRs, reducing exposure
+    # to supply-chain attacks where a malicious version is published then yanked.
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: 'chore'
+      include: 'scope'
+    # Group all GitHub Actions updates together (major, minor, and patch).
+    groups:
+      github-actions:
+        patterns:
+          - '*'
