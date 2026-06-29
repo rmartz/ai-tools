@@ -52,6 +52,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      # Tests import sibling packages via their `exports` → dist/, so the
+      # workspace must be built first. The old monolithic job got this for free
+      # because the typecheck step's turbo `^build` populated dist/ beforehand.
+      - run: pnpm run build
       - run: pnpm run test
 
   file-length:
