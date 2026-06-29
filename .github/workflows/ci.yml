@@ -5,37 +5,71 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  verify:
+  typecheck:
+    name: Typecheck
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm run typecheck
+
+  lint:
+    name: Lint (incl. layer boundaries + max-lines)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm run lint
+
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm run format:check
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm run build
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm run test
+
+  file-length:
+    name: File-length ratchet
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # the file-length ratchet needs the merge base
+      - uses: ./.github/actions/setup
+      - run: pnpm run check:file-length -- --base origin/${{ github.base_ref || 'main' }}
 
-      - uses: pnpm/action-setup@v4 # version comes from packageManager in package.json
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Typecheck
-        run: pnpm run typecheck
-
-      - name: Lint (incl. layer boundaries + max-lines)
-        run: pnpm run lint
-
-      - name: Format check
-        run: pnpm run format:check
-
-      - name: File-length ratchet
-        run: pnpm run check:file-length -- --base origin/${{ github.base_ref || 'main' }}
-
-      - name: OKF docs frontmatter
-        run: pnpm run check:okf
-
-      - name: Test
-        run: pnpm run test
+  okf:
+    name: OKF docs frontmatter
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm run check:okf
