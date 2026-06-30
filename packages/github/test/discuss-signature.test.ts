@@ -53,13 +53,15 @@ describe('resolveSignatureContext', () => {
     expect(boundedRun).not.toHaveBeenCalled();
   });
 
-  it('uses an explicit --commit verbatim while still auto-filling the project', async () => {
-    boundedRun
-      .mockResolvedValueOnce(result({ stdout: view('rmartz/trip-planner') }))
-      .mockResolvedValueOnce(result({ stdout: `${FULL_SHA}\n` }));
+  it('uses an explicit --commit verbatim, resolving only the project name (no sha lookup)', async () => {
+    // `currentRepo` returns the bare `nameWithOwner` (its `--jq` extracts it).
+    boundedRun.mockResolvedValueOnce(result({ stdout: 'rmartz/trip-planner\n' }));
     const sig = await resolveSignatureContext({ commit: 'v1.2.3' });
     expect(sig.project).toBe('rmartz/trip-planner');
     expect(sig.commit).toBe('v1.2.3');
+    // The whole point of #45: an explicit sha skips the branch-HEAD lookup, so
+    // only the single name-resolving call is made.
+    expect(boundedRun).toHaveBeenCalledTimes(1);
   });
 
   it('soft-fails to model-only when the repo cannot be resolved', async () => {

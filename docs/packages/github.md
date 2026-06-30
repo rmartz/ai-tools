@@ -154,9 +154,12 @@ and the sha anchors the perspective to the project's mainline **at post time** s
 later reader can compare it against how the project evolved. `--project` and the sha
 both default to the working repo: `resolveSignatureContext({ model, project, commit })`
 calls `resolveProjectRef()` to read the repo and its default-branch HEAD, shortening
-the sha to 12 chars. Pass `--project` to attribute to another repo (its mainline sha
-is resolved too), `--commit` to override the sha verbatim, or `--model` to set the
-model. The commit renders only alongside a project (a sha is meaningless without it).
+the sha to 12 chars. It keeps `gh` calls to the minimum the flags require — an explicit
+`--commit` skips the branch-HEAD lookup entirely (resolving only the project name, or
+nothing when `--project` is also given). Pass `--project` to attribute to another repo
+(its mainline sha is resolved too), `--commit` to override the sha verbatim, or
+`--model` to set the model. The commit renders only alongside a project (a sha is
+meaningless without it).
 
 ## Re-homing
 
