@@ -1,0 +1,26 @@
+name: Pins
+
+# Only runs on PRs (and main pushes) that actually change a manifest — a pin
+# regression can only arrive through a package.json edit, so there's no reason to
+# run this on unrelated PRs.
+on:
+  pull_request:
+    paths:
+      - '**/package.json'
+  push:
+    branches: [main]
+    paths:
+      - '**/package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  pins:
+    name: package.json pins
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm run check:pins

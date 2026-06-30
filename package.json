@@ -16,8 +16,9 @@
     "test:watch": "vitest",
     "check:file-length": "tsx scripts/check-file-length.ts",
     "check:okf": "tsx scripts/check-okf-frontmatter.ts",
+    "check:pins": "tsx scripts/check-pins.ts",
     "install:skills": "tsx scripts/install-skills.ts",
-    "ci": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run check:file-length && pnpm run check:okf && pnpm run test"
+    "ci": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run check:file-length && pnpm run check:okf && pnpm run check:pins && pnpm run test"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",
