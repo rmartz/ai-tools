@@ -44,8 +44,23 @@ const JS_LOCKFILE_INSTALLS: ReadonlyArray<readonly [string, readonly string[]]> 
  */
 const JS_LOOSE_FALLBACK: readonly string[] = ['npm', 'install'];
 
-export const DEFAULT_BRANCH_PREFIX = 'feat';
-export const VALID_BRANCH_PREFIXES = ['feat', 'fix', 'chore', 'refactor', 'test', 'docs'] as const;
+// No default prefix: an omitted prefix yields an unprefixed branch
+// (`issue-<N>-<slug>` or `<name>`). A fixed `feat/` carried no information;
+// callers who want a Conventional-Commit type segment pass one explicitly.
+export const DEFAULT_BRANCH_PREFIX = '';
+export const VALID_BRANCH_PREFIXES = [
+  'feat',
+  'fix',
+  'docs',
+  'chore',
+  'refactor',
+  'test',
+  'style',
+  'perf',
+  'ci',
+  'build',
+  'revert',
+] as const;
 export type BranchPrefix = (typeof VALID_BRANCH_PREFIXES)[number];
 
 // ── Slug / branch / path composition ───────────────────────────────────────
@@ -76,15 +91,18 @@ export interface ComposeBranchOptions {
 }
 
 /**
- * Compose the feature branch name. With `issueNum`:
- * `<prefix>/issue-<N>-<slug>` (slug defaults to `"task"`). With only `name`:
- * `<prefix>/<name>`. Throws if neither is provided.
+ * Compose the feature branch name. `prefix` is an optional Conventional-Commit
+ * type segment: when empty (the default) the branch is unprefixed; when given it
+ * is prepended as `<prefix>/`. With `issueNum`: `[<prefix>/]issue-<N>-<slug>`
+ * (slug defaults to `"task"`). With only `name`: `[<prefix>/]<name>`. Throws if
+ * neither is provided.
  */
 export function composeBranchName(prefix: string, opts: ComposeBranchOptions): string {
+  const head = prefix ? `${prefix}/` : '';
   if (opts.issueNum !== undefined) {
-    return `${prefix}/issue-${opts.issueNum}-${opts.slug || 'task'}`;
+    return `${head}issue-${opts.issueNum}-${opts.slug || 'task'}`;
   }
-  if (opts.name) return `${prefix}/${opts.name}`;
+  if (opts.name) return `${head}${opts.name}`;
   throw new Error('composeBranchName requires either issueNum or name');
 }
 
@@ -241,7 +259,8 @@ export interface NewWorktreeOptions {
   issue?: number;
   /** Short slug for the worktree (overrides the issue-title-derived slug). */
   name?: string;
-  /** Conventional-commit type prefix for the branch (default `feat`). */
+  /** Optional Conventional-Commit type prefix for the branch. Omit (the default)
+   * for an unprefixed `issue-<N>-<slug>` / `<name>` branch. */
   branchPrefix?: string;
   /** Branch or PR to fork from instead of the default branch (stacked work). */
   base?: string;

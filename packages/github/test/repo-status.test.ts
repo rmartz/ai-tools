@@ -87,4 +87,24 @@ describe('gatherRepoStatus', () => {
     expect(status.openPrs[0].issueNumbers).toEqual([55]);
     expect(status.openPrs[1].issueNumbers).toEqual([88]);
   });
+
+  it('parses the branch convention with an optional type prefix', async () => {
+    arrange({
+      issues: [],
+      milestones: [],
+      prs: [
+        // Unprefixed (the new default), a non-feat type, legacy feat/, and a
+        // non-CC-type prefix that must NOT match.
+        { number: 21, headRefName: 'issue-55-x', closingIssuesReferences: [] },
+        { number: 22, headRefName: 'fix/issue-56-x', closingIssuesReferences: [] },
+        { number: 23, headRefName: 'feat/issue-57-x', closingIssuesReferences: [] },
+        { number: 24, headRefName: 'feature/issue-99-x', closingIssuesReferences: [] },
+      ],
+    });
+    const status = await gatherRepoStatus();
+    expect(status.openPrs[0].issueNumbers).toEqual([55]);
+    expect(status.openPrs[1].issueNumbers).toEqual([56]);
+    expect(status.openPrs[2].issueNumbers).toEqual([57]);
+    expect(status.openPrs[3].issueNumbers).toEqual([]); // `feature/` is not a CC type
+  });
 });
