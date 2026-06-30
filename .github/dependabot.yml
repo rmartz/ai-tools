@@ -15,9 +15,30 @@ updates:
     commit-message:
       prefix: 'chore'
       include: 'scope'
-    # Group only minor/patch bumps; major bumps fall outside the groups and get
-    # individual PRs, since they are more likely to need code changes.
     groups:
+      # `typescript` and `tsup` are declared in EVERY workspace manifest, so an
+      # ungrouped bump fans out into one PR per package (root + 9 packages). These
+      # per-dependency groups collapse each dep's bump across all directories into a
+      # SINGLE multi-directory PR — majors included — so a lockstep bump like
+      # typescript 5.9→6.0 is one PR, not ten. Listed first to win group-assignment
+      # precedence (each dependency joins the first group whose patterns match).
+      typescript:
+        patterns:
+          - 'typescript'
+        update-types:
+          - 'major'
+          - 'minor'
+          - 'patch'
+      tsup:
+        patterns:
+          - 'tsup'
+        update-types:
+          - 'major'
+          - 'minor'
+          - 'patch'
+      # Everything else: group only minor/patch bumps. Major bumps fall outside the
+      # groups and get individual PRs, since they are more likely to need code
+      # changes and are better reviewed in isolation.
       dev-dependencies:
         dependency-type: development
         update-types:
