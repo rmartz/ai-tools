@@ -84,6 +84,47 @@ export async function currentRepo(opts: GhCallOptions = {}): Promise<string | nu
   return out && out.trim() ? out.trim() : null;
 }
 
+/** A repo's identity plus the current HEAD of its default branch. */
+export interface ProjectRef {
+  repo: string;
+  branch: string;
+  sha: string;
+}
+
+/**
+ * Resolve a repo's `owner/repo`, default branch, and that branch's current HEAD
+ * sha via `gh`. With no `repo`, resolves the working repo (`gh repo view`).
+ * Used to stamp a discussion comment with the project's mainline commit, so a
+ * perspective is anchored to how the project looked when it was posted — and can
+ * be compared against how it later evolved. Soft-fails to `null`.
+ */
+export async function resolveProjectRef(
+  repo?: string,
+  opts: GhCallOptions = {},
+): Promise<ProjectRef | null> {
+  const viewArgv = ['gh', 'repo', 'view'];
+  if (repo) viewArgv.push(repo);
+  viewArgv.push('--json', 'nameWithOwner,defaultBranchRef');
+  const viewOut = await ghCall({ argv: viewArgv }, null, opts);
+  if (viewOut === null) return null;
+  let view: { nameWithOwner?: string; defaultBranchRef?: { name?: string } | null };
+  try {
+    view = JSON.parse(viewOut) as typeof view;
+  } catch {
+    return null;
+  }
+  const resolvedRepo = view.nameWithOwner;
+  const branch = view.defaultBranchRef?.name;
+  if (!resolvedRepo || !branch) return null;
+  const shaOut = await ghCall(
+    { argv: ['gh', 'api', `repos/${resolvedRepo}/commits/${branch}`, '--jq', '.sha'] },
+    null,
+    opts,
+  );
+  const sha = shaOut?.trim();
+  return sha ? { repo: resolvedRepo, branch, sha } : null;
+}
+
 /** Normalize an issue/PR number or URL to its numeric string, or `null`. */
 export function issueNumber(ref: string | number): string | null {
   const s = String(ref);

@@ -13,7 +13,7 @@ const result = (over: Partial<{ stdout: string; stderr: string; code: number }> 
   ...over,
 });
 
-const { ghCall, issueNumber } = await import('../src/gh-call.js');
+const { ghCall, issueNumber, resolveProjectRef } = await import('../src/gh-call.js');
 
 const noSleep = vi.fn(async () => {});
 
@@ -72,6 +72,55 @@ describe('ghCall', () => {
     boundedRun.mockRejectedValue(new Error('spawn ENOENT'));
     const out = await ghCall({ argv: ['gh', 'api', 'x'] }, null, { sleep: noSleep });
     expect(out).toBeNull();
+  });
+});
+
+describe('resolveProjectRef', () => {
+  beforeEach(() => boundedRun.mockReset());
+
+  const view = (over: { nameWithOwner?: string; branch?: string | null } = {}) =>
+    JSON.stringify({
+      nameWithOwner: over.nameWithOwner ?? 'rmartz/trip-planner',
+      defaultBranchRef: over.branch === null ? null : { name: over.branch ?? 'main' },
+    });
+
+  it('resolves the working repo, its default branch, and that branch HEAD sha', async () => {
+    boundedRun
+      .mockResolvedValueOnce(result({ stdout: view() }))
+      .mockResolvedValueOnce(result({ stdout: 'a1b2c3d4e5f60718\n' }));
+    expect(await resolveProjectRef()).toEqual({
+      repo: 'rmartz/trip-planner',
+      branch: 'main',
+      sha: 'a1b2c3d4e5f60718',
+    });
+  });
+
+  it('queries the named repo (and its commits) when a repo is given', async () => {
+    boundedRun
+      .mockResolvedValueOnce(result({ stdout: view({ nameWithOwner: 'rmartz/ai' }) }))
+      .mockResolvedValueOnce(result({ stdout: 'deadbeefcafe\n' }));
+    const ref = await resolveProjectRef('rmartz/ai');
+    expect(ref?.repo).toBe('rmartz/ai');
+    expect(boundedRun.mock.calls[0]?.[1]).toContain('rmartz/ai');
+    expect(boundedRun.mock.calls[1]?.[1]).toContain('repos/rmartz/ai/commits/main');
+  });
+
+  it('soft-fails to null when the repo view fails', async () => {
+    boundedRun.mockResolvedValue(result({ stderr: 'nope', code: 1 }));
+    expect(await resolveProjectRef(undefined, { sleep: noSleep })).toBeNull();
+  });
+
+  it('soft-fails to null when the default branch is absent', async () => {
+    boundedRun.mockResolvedValueOnce(result({ stdout: view({ branch: null }) }));
+    expect(await resolveProjectRef()).toBeNull();
+    expect(boundedRun).toHaveBeenCalledTimes(1); // never reaches the commits call
+  });
+
+  it('soft-fails to null when the HEAD sha cannot be resolved', async () => {
+    boundedRun
+      .mockResolvedValueOnce(result({ stdout: view() }))
+      .mockResolvedValue(result({ stderr: 'nope', code: 1 }));
+    expect(await resolveProjectRef(undefined, { sleep: noSleep })).toBeNull();
   });
 });
 
