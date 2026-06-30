@@ -20,7 +20,7 @@
     "ci": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run check:file-length && pnpm run check:okf && pnpm run test"
   },
   "devDependencies": {
-    "@types/node": "^22.7.0",
+    "@types/node": "^26.0.0",
     "@typescript-eslint/eslint-plugin": "^8.8.0",
     "@typescript-eslint/parser": "^8.8.0",
     "eslint": "^9.12.0",
