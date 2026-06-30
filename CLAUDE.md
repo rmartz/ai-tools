@@ -69,6 +69,15 @@ library so PR Shepherd and the harness share one implementation.
   (`strict`, `noUncheckedIndexedAccess`, `verbatimModuleSyntax` in
   `tsconfig.base.json`) are load-bearing; reach for a precise type, a narrowing
   guard, or `unknown` rather than escaping the type system.
+- **Value sets: prefer a structural string union over an `enum`.** Use
+  `type MergeMethod = 'merge' | 'squash' | 'rebase'`; when you also need the values
+  at runtime (validation, iteration), use an `as const` array and derive the type
+  — `const MERGE_METHODS = [...] as const; type MergeMethod = (typeof MERGE_METHODS)[number]`.
+  Both stay structural, so raw literals and `gh`/API strings assign without a cast,
+  and they emit ~no runtime. Reserve `enum` for internal state you iterate as a unit
+  and never serialize raw: string enums are **nominal** (won't accept the underlying
+  literal, forcing a cast at every wire boundary), and `const enum` is unavailable
+  under `isolatedModules`, so a plain `enum` always ships a runtime object.
 - Prefer `async`/`await` over `.then()` chains.
 - **Named exports only — no default exports.** Each package's public surface is
   its `index.ts` barrel; `bin/` entrypoints run a `main()` and export nothing.
