@@ -36,6 +36,14 @@ library so PR Shepherd and the harness share one implementation.
 ## Conventions
 
 - Favor type inference; explicit type parameterization is a smell.
+- **Pin every dependency to a full `[major].[minor].[patch]` version** in each
+  `package.json`. Keep the range operator (`^` / `~`) — pin the _base_, e.g.
+  `^3.8.3`, never an abbreviated `^3` or `^3.8`. A bare-major (or major-minor) pin
+  lets Dependabot upgrade the dependency through a `pnpm-lock.yaml`-only change
+  with **no `package.json` diff**, hiding the bump from review — the canonical
+  failure is a minor `prettier` bump that silently reformats the tree and only
+  surfaces as a red CI run. The full base makes every upgrade an explicit,
+  reviewable `package.json` change. (CI enforcement is tracked in #63.)
 - Prettier + ESLint run in CI; there is no separate manual pass.
 - Tests are hermetic: mock real-world boundaries (`gh`, network, subprocess).
   Deny-by-default — a test that reaches the network is a bug.
