@@ -24,7 +24,7 @@
     "@typescript-eslint/eslint-plugin": "^8.8.0",
     "@typescript-eslint/parser": "^8.8.0",
     "eslint": "^9.12.0",
-    "eslint-import-resolver-typescript": "^3.6.3",
+    "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-boundaries": "^5.0.0",
     "eslint-plugin-import": "^2.31.0",
     "gray-matter": "^4.0.3",
