@@ -34,6 +34,7 @@ const {
   detectInstallCommand,
   symlinkClaudeSettings,
   runNewWorktree,
+  DEFAULT_BRANCH_PREFIX,
 } = mod;
 
 describe('deriveSlug', () => {
@@ -63,8 +64,20 @@ describe('composeBranchName', () => {
   it('builds a name-only branch', () => {
     expect(composeBranchName('chore', { name: 'standalone' })).toBe('chore/standalone');
   });
+  it('builds an unprefixed branch when the prefix is empty', () => {
+    expect(composeBranchName('', { issueNum: 873, slug: 'add-worktree' })).toBe(
+      'issue-873-add-worktree',
+    );
+    expect(composeBranchName('', { name: 'standalone' })).toBe('standalone');
+  });
+  it('uses an empty default prefix (unprefixed branch)', () => {
+    expect(DEFAULT_BRANCH_PREFIX).toBe('');
+    expect(composeBranchName(DEFAULT_BRANCH_PREFIX, { issueNum: 42, slug: 'foo' })).toBe(
+      'issue-42-foo',
+    );
+  });
   it('throws with neither issue nor name', () => {
-    expect(() => composeBranchName('feat', {})).toThrow();
+    expect(() => composeBranchName('', {})).toThrow();
   });
 });
 
@@ -158,7 +171,8 @@ describe('runNewWorktree', () => {
 
     const out = await runNewWorktree({ issue: 42, cwd: repo, log: vi.fn(), skipInstall: true });
 
-    expect(out.branch).toBe('feat/issue-42-do-a-thing');
+    // No --branch-prefix → unprefixed branch (the new default).
+    expect(out.branch).toBe('issue-42-do-a-thing');
     expect(out.worktreePath).toBe(join(repo, '.git-worktrees', 'issue-42-do-a-thing'));
     expect(out.baseRef).toBe('main');
     // The worktree-add was issued with the composed path and origin/main base.

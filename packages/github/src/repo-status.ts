@@ -8,7 +8,7 @@ import { ghCall, currentRepo, type GhCallOptions } from './gh-call.js';
  * `openPrs` exposes each PR's head branch and the same-repo issue numbers it
  * closes, resolved in order: (1) `closingIssuesReferences` filtered to same-repo
  * entries — a PR that closes only cross-repo issues yields `[]`, intentionally
- * suppressing the fallbacks; (2) the `feat/issue-<N>-*` branch convention;
+ * suppressing the fallbacks; (2) the `[<type>/]issue-<N>-*` branch convention;
  * (3) `Closes/Fixes/Resolves #N` in the PR body. This lets `/implement-all`
  * identify resume targets without re-fetching PR data.
  */
@@ -42,8 +42,13 @@ export interface RepoStatus {
 }
 
 const DEP_RE = /(?:depends on|blocked by|requires)\s+#(\d+)/gi;
-// `/implement` creates branches as `feat/issue-<N>-<slug>` (slug optional).
-const BRANCH_ISSUE_RE = /^feat\/issue-(\d+)(?:-|$)/;
+// `/implement` creates branches as `[<type>/]issue-<N>-<slug>` (slug optional;
+// the Conventional-Commit type prefix is optional too). Accept an optional prefix
+// drawn from the known CC types (mirrors new-worktree's VALID_BRANCH_PREFIXES) —
+// so `issue-12-foo`, `fix/issue-12-foo`, and legacy `feat/issue-12-foo` all match,
+// while a non-type like `feature/issue-…` still does not.
+const BRANCH_ISSUE_RE =
+  /^(?:(?:feat|fix|docs|chore|refactor|test|style|perf|ci|build|revert)\/)?issue-(\d+)(?:-|$)/;
 const PR_BODY_CLOSING_RE = /(?:closes|fixes|resolves)\s+#(\d+)/gi;
 
 async function run<T>(argv: string[], opts: GhCallOptions): Promise<T> {

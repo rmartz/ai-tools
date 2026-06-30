@@ -90,10 +90,12 @@ worktrees/**)` grants plus **absolute, repo-scoped** equivalents
 
 Thin `bin/` wrappers; all logic stays in the library:
 
-- `ai-new-worktree <issue> [--name slug] [--branch-prefix feat|fix|…] [--base
+- `ai-new-worktree <issue> [--name slug] [--branch-prefix fix|chore|…] [--base
 branch|PR] [--skip-install]` — prints the worktree's absolute path as the final
   stdout line (progress logs go to stderr), so callers can chain into
-  `cd "$(ai-new-worktree …)"`.
+  `cd "$(ai-new-worktree …)"`. The branch is unprefixed by default
+  (`issue-<N>-<slug>` / `<name>`); `--branch-prefix` prepends a Conventional-Commit
+  type.
 - `ai-git-cleanup` — no arguments; run from within the repository.
 
 `worker-permissions` is a library with no CLI.
