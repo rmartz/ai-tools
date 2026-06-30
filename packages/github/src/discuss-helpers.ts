@@ -11,21 +11,28 @@ export interface CommentSignature {
   /** The agent's working repo (`owner/repo`) — attribution, since every post
    * shows the token owner as GitHub author. */
   project?: string;
+  /** The project's default-branch HEAD sha at post time. Anchors the perspective
+   * to how the project looked when it was written, so it can be compared against
+   * how the project later evolved. Only rendered when `project` is also present
+   * (a commit is meaningless without the repo it belongs to). */
+  commit?: string;
 }
 
 /**
- * Sign a discussion comment with the `*Posted by <model> (<project>)*` footer.
- * Because every post is authored by the token owner on GitHub, this footer is the
- * only attribution between agents — so it carries both the model and the project
- * the agent represents. Accepts a `{ model, project }` (or a bare model string,
- * back-compat); returns the body unchanged when neither is given. Trailing
- * newlines are trimmed before the footer.
+ * Sign a discussion comment with the `*Posted by <model> (<project> @ <commit>)*`
+ * footer. Because every post is authored by the token owner on GitHub, this footer
+ * is the only attribution between agents — so it carries the model, the project the
+ * agent represents, and that project's mainline commit at post time. Accepts a
+ * `{ model, project, commit }` (or a bare model string, back-compat); returns the
+ * body unchanged when neither model nor project is given. `commit` renders only
+ * alongside `project`. Trailing newlines are trimmed before the footer.
  */
 export function signComment(body: string, sig?: CommentSignature | string): string {
-  const { model, project } =
-    typeof sig === 'string' ? { model: sig, project: undefined } : (sig ?? {});
+  const { model, project, commit } =
+    typeof sig === 'string' ? { model: sig, project: undefined, commit: undefined } : (sig ?? {});
   if (!model && !project) return body;
-  const who = [model, project ? `(${project})` : undefined].filter(Boolean).join(' ');
+  const where = project ? (commit ? `${project} @ ${commit}` : project) : undefined;
+  const who = [model, where ? `(${where})` : undefined].filter(Boolean).join(' ');
   return `${body.replace(/\n+$/, '')}\n\n---\n*Posted by ${who}*`;
 }
 

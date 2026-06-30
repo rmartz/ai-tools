@@ -4,8 +4,8 @@ export type { PrSummary } from './pr-summary.js';
 export { listPrReviews, listIssueComments } from './pr-reads.js';
 export type { PrReview, IssueComment } from './pr-reads.js';
 
-export { ghCall, issueNumber, currentRepo } from './gh-call.js';
-export type { Transport, GhCallOptions, Sleeper } from './gh-call.js';
+export { ghCall, issueNumber, currentRepo, resolveProjectRef } from './gh-call.js';
+export type { Transport, GhCallOptions, Sleeper, ProjectRef } from './gh-call.js';
 
 export { computePrDiff } from './pr-diff.js';
 export type { PrDiffOptions } from './pr-diff.js';
@@ -57,3 +57,6 @@ export type {
 
 export { signComment, framingBody, parseDiscussionRef } from './discuss-helpers.js';
 export type { CommentSignature, DiscussionTarget } from './discuss-helpers.js';
+
+export { resolveSignatureContext } from './discuss-signature.js';
+export type { SignatureFlags } from './discuss-signature.js';

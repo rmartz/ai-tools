@@ -134,13 +134,13 @@ Thin `bin/` wrappers; all logic stays in the library: `ai-pr-summary`,
 
 Discussions (default repo `rmartz/ai`, category `q-a`) — the no-code path for the
 `discuss` / `discuss-curate` skills:
-`ai-discuss <title> <body-file> [--repo] [--category] [--model] [--project]`
+`ai-discuss <title> <body-file> [--repo] [--category] [--model] [--project] [--commit]`
 (find-or-create + signed comment), `ai-start-discussion <title> <question-body-file>
 [--repo] [--category]` (open a thread seeded with a _question_ → prints the number to
 fan out `/discuss <n>`), `ai-discussion-read <number|url> [--repo] [--json]`
 (readable thread status; `--json` for raw), `ai-discussion-answer <comment-node-id>`
 (mark answer), and `ai-discussion-comment <number|url> <body-file> [--repo] [--model]
-[--project]` (signed comment on an existing thread).
+[--project] [--commit]` (signed comment on an existing thread).
 
 `ai-discussion-read` / `ai-discussion-comment` accept a **discussions URL** (which
 carries the repo) as well as a bare number, so an agent acts on a thread with one
@@ -148,10 +148,15 @@ self-contained, **allow-listable** command — no `cd`, no `gh api graphql` (whi
 trips permission prompts). `ai-discussion-read` prints a readable rendering by
 default (title / body / comments with author + timestamp + `✓ ANSWER`).
 
-Comments are signed `*Posted by <model> (<owner/repo>)*` — the footer is the only
-attribution since every post is authored by the token owner on GitHub. `--project`
-defaults to the working repo (`currentRepo()`); pass it to override or `--model` to
-set the model (`signComment(body, { model, project })`).
+Comments are signed `*Posted by <model> (<owner/repo> @ <short-sha>)*` — the footer
+is the only attribution since every post is authored by the token owner on GitHub,
+and the sha anchors the perspective to the project's mainline **at post time** so a
+later reader can compare it against how the project evolved. `--project` and the sha
+both default to the working repo: `resolveSignatureContext({ model, project, commit })`
+calls `resolveProjectRef()` to read the repo and its default-branch HEAD, shortening
+the sha to 12 chars. Pass `--project` to attribute to another repo (its mainline sha
+is resolved too), `--commit` to override the sha verbatim, or `--model` to set the
+model. The commit renders only alongside a project (a sha is meaningless without it).
 
 ## Re-homing
 

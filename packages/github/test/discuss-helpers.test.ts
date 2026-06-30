@@ -8,6 +8,22 @@ describe('signComment', () => {
     ).toBe('an approach\n\n---\n*Posted by Claude Opus 4.8 (rmartz/trip-planner)*');
   });
 
+  it('signs with model + project @ commit when a commit is given', () => {
+    expect(
+      signComment('an approach', {
+        model: 'Claude Opus 4.8',
+        project: 'rmartz/trip-planner',
+        commit: 'a1b2c3d4e5f6',
+      }),
+    ).toBe('an approach\n\n---\n*Posted by Claude Opus 4.8 (rmartz/trip-planner @ a1b2c3d4e5f6)*');
+  });
+
+  it('drops the commit when no project anchors it', () => {
+    expect(signComment('x', { model: 'Claude Opus 4.8', commit: 'a1b2c3d4e5f6' })).toBe(
+      'x\n\n---\n*Posted by Claude Opus 4.8*',
+    );
+  });
+
   it('accepts a bare model string (back-compat)', () => {
     expect(signComment('x', 'Claude Sonnet 4.6')).toBe('x\n\n---\n*Posted by Claude Sonnet 4.6*');
   });
