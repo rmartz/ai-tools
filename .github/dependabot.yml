@@ -36,6 +36,20 @@ updates:
           - 'major'
           - 'minor'
           - 'patch'
+      # `prettier` is isolated for a different reason than the two above: a major or
+      # minor prettier bump can reformat the whole codebase, so it routinely carries
+      # required code changes and fails the Format check until the tree is
+      # re-formatted. Splitting those into their own PR — separated from unrelated
+      # dev-dep bumps — makes the reformat reviewable on its own. Only `major`/`minor`
+      # are listed: a trivial `patch` bump is unlikely to reformat anything, so it
+      # falls through to the `dev-dependencies` group below and rides along with the
+      # other minor/patch bumps rather than opening a PR of its own.
+      prettier:
+        patterns:
+          - 'prettier'
+        update-types:
+          - 'major'
+          - 'minor'
       # Everything else: group only minor/patch bumps. Major bumps fall outside the
       # groups and get individual PRs, since they are more likely to need code
       # changes and are better reviewed in isolation.
