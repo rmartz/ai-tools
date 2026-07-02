@@ -59,7 +59,10 @@ export function withPackagesToken(env: NodeJS.ProcessEnv, ghToken?: string): Nod
 
 function ghAuthToken(): string | undefined {
   try {
-    return execFileSync('gh', ['auth', 'token'], { encoding: 'utf8' }).trim() || undefined;
+    return (
+      execFileSync('gh', ['auth', 'token', '-h', 'github.com'], { encoding: 'utf8' }).trim() ||
+      undefined
+    );
   } catch {
     return undefined;
   }
