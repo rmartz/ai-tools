@@ -3,6 +3,7 @@
   "release-type": "node",
   "separate-pull-requests": false,
   "bump-minor-pre-major": true,
+  "bootstrap-sha": "3cb7e06358fdd59be71be2cd57511ef45e973a4b",
   "packages": {
     "packages/agent-runtime": {},
     "packages/bootstrap": {},

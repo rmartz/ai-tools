@@ -19,7 +19,7 @@ Installed CLIs then pick the new versions up via `install:clis` / the SessionSta
 
 ## Config
 
-- `release-please-config.json` — `release-type: node`, one entry per package under `packages/`, `separate-pull-requests: false` (one aggregated release PR), `bump-minor-pre-major: true` (pre-1.0, a breaking change bumps the minor, not straight to 1.0.0).
+- `release-please-config.json` — `release-type: node`, one entry per package under `packages/`, `separate-pull-requests: false` (one aggregated release PR), `bump-minor-pre-major: true` (pre-1.0, a breaking change bumps the minor, not straight to 1.0.0), and `bootstrap-sha` anchoring the first run at the manual catch-up publish (`v0.1.3`) so the first release PR only covers commits after it (inert once release-please has cut its own releases).
 - `.release-please-manifest.json` — the current version of each package (release-please's source of truth; it updates this on release).
 
 ## Version bumps
