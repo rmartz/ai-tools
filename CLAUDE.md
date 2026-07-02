@@ -15,6 +15,9 @@ The general-purpose AI toolkit (TypeScript pnpm monorepo). Successor to
 - `pnpm run ci` — the full local gate (typecheck, lint, format, repo-hygiene
   checks, tests). Run before pushing, or use `~/.claude/scripts/pre-push-verify.py`.
 - `pnpm install:skills` — symlink the skills in `skills/` into `~/.claude`.
+- `pnpm install:clis` — install/update the published `ai-*` CLIs globally from
+  GitHub Packages (`pnpm add -g @rmartz/*@latest`); needs `read:packages` auth.
+  Re-run to update; a SessionStart hook can automate it (see `docs/install-clis.md`).
 
 ## Package layers (hard rule, enforced by ESLint `boundaries`)
 
