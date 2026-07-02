@@ -115,6 +115,15 @@ library so PR Shepherd and the harness share one implementation.
   change. `scripts/check-okf-frontmatter.ts` walks `docs/**` and enforces valid
   frontmatter and a `resource` that points at a real file.
 
+## Releases
+
+Automated with **release-please** — no manual bumping or tagging. Merging normal
+`feat`/`fix` PRs makes release-please maintain an aggregated **release PR** that
+bumps each changed package (from Conventional-Commit history) + updates its
+changelog; merging that PR tags the releases and publishes the bumped packages to
+GitHub Packages. Config lives in `release-please-config.json` +
+`.release-please-manifest.json`; full flow in `docs/releasing.md`.
+
 ## Branch & PR workflow
 
 Inherits the global worktree-per-task workflow from `~/.claude/CLAUDE.md`
