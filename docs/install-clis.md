@@ -1,44 +1,75 @@
 ---
 type: Script
 title: install-clis
-description: Symlink ai-tools' built ai-* CLIs onto a PATH directory (~/.claude/bin) so they are invocable as commands — the CLI counterpart to install-skills.
+description: Install/update the published ai-* CLIs globally from GitHub Packages, decoupled from the local checkout — with a SessionStart hook to keep them fresh.
 resource: scripts/install-clis.ts
-tags: [setup, cli, harness, symlink]
+tags: [setup, cli, packages, update]
 ---
 
 # install-clis
 
-`scripts/install-clis.ts` makes ai-tools' `ai-*` command-line tools invocable from
-a shell: it walks each package's `package.json` `bin` map and symlinks the built
-`dist/bin/<name>.js` into a bin directory on `PATH` (default `~/.claude/bin`),
-marking each dist file executable. It is the CLI counterpart to
-[`install-skills`](install-skills.md), and part of the dotfiles→ai-tools cutover —
-the 23 `ai-*` bins are published to GitHub Packages but need to be on `PATH` to
-replace the dotfiles `~/.claude/scripts/*.py` invocations.
+`scripts/install-clis.ts` installs (and updates) ai-tools' `ai-*` command-line
+tools **from the published GitHub Packages**, not the local build. It runs
+`pnpm add -g @rmartz/<pkg>@latest` for every bin-bearing package, so the CLIs live
+in pnpm's global store — **decoupled from this checkout**, which may be on a
+feature branch or mid-edit. Only the package _names_ are read from the workspace
+(stable metadata); the executable code always comes from the registry.
 
-The links point at **locally built** code (dogfood-friendly), so build first:
+Re-running always pulls `@latest`, so the same command **is** the updater.
 
 ```
-pnpm build                       # populate dist/bin/*.js
-pnpm run install:clis            # symlink ai-* bins → ~/.claude/bin
+pnpm run install:clis            # install/update all ai-* CLIs from the registry
 pnpm run install:clis -- --dry-run
-pnpm run install:clis -- --force        # replace a conflicting file/symlink
-pnpm run install:clis -- --bin-dir DIR  # target a different PATH dir
+pnpm run install:clis -- --tag next
 ```
 
-Behaviour:
+## Prerequisite: GitHub Packages auth
 
-- **Idempotent** — a symlink already pointing at the same source reports
-  `unchanged` (its exec bit is re-asserted); nothing else is rewritten.
-- **Safe** — a symlink pointing elsewhere, or a real file, is `skipped` and left
-  intact unless `--force` is given (then `updated`).
-- **Build-aware** — a bin whose `dist/bin/*.js` target does not exist is reported
-  `missing` (not silently skipped) and the run exits non-zero, so a forgotten
-  `pnpm build` fails loudly rather than half-installing.
-- **PATH note** — if the target dir is not on `PATH`, the CLI prints the
-  `export PATH=…` line to add.
-- `--bin-dir <dir>` / `--packages-dir <dir>` override the defaults (the tests use
-  them so no real `~/.claude` is touched).
+The `@rmartz` scope is a private GitHub Packages registry, so a token with
+`read:packages` is required (one-time):
 
-The importable `installClis(opts)` holds the logic (hermetically tested over a temp
-dir); the CLI `main` only parses args, prints, and emits the PATH hint.
+```
+gh auth refresh -h github.com -s read:packages
+# then in ~/.npmrc:
+@rmartz:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=<token with read:packages>
+```
+
+Also run `pnpm setup` once so the global bin dir is on `PATH`. Without auth the
+install fails with a pointer to these steps (exit non-zero).
+
+## Auto-update: SessionStart hook
+
+Because a release publishes to the registry but can't reach your machine, keep
+the CLIs fresh by re-running the install on every agent session start. Add a
+`SessionStart` hook to `~/.claude/settings.json` (backgrounded + output
+discarded, so it never blocks a session and silently no-ops until auth is set up):
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm -C /path/to/ai-tools run install:clis >/dev/null 2>&1 &"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Each session then starts by pulling the latest published `@rmartz/*` CLIs in the
+background — the "periodic/on-merge" refresh, driven by session cadence.
+
+## Design
+
+The importable helpers hold the pure logic and are hermetically tested:
+`resolveBinPackages(packagesDir)` (which workspace packages ship a bin) and
+`buildAddArgs(names, tag)` (the `pnpm add -g` argv). `main()` runs the command
+from a neutral cwd (`$HOME`) so the `-g` install resolves via the user-level
+`~/.npmrc`, not this workspace's config. Markdown **skills** are a separate
+channel — see [`install-skills`](install-skills.md).
