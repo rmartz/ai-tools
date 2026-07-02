@@ -2,15 +2,21 @@
 /**
  * Install (and update) the published `ai-*` CLIs globally from GitHub Packages.
  *
- * Uses `pnpm add -g @rmartz/<pkg>@latest`, which pulls the *published* tarballs
- * into pnpm's global store — deliberately decoupled from this local checkout, so
+ * Uses `npm install -g @rmartz/<pkg>@latest`, which pulls the *published* tarballs
+ * into npm's global prefix — deliberately decoupled from this local checkout, so
  * the CLIs don't break when the root worktree switches to a feature branch or an
  * agent edits the source. Re-running always pulls `@latest`, so this doubles as
  * the updater (e.g. driven from a SessionStart hook — see docs/install-clis.md).
  *
+ * npm (not `pnpm add -g`) is used deliberately: pnpm is corepack-pinned to the
+ * workspace version here, and its `-g` store can mismatch the global pnpm major,
+ * whereas `npm i -g` is invariant to that and reads the same `~/.npmrc` auth.
+ *
  * Only the *names* of the bin-bearing packages are read from the workspace (stable
- * metadata); the executable code always comes from the registry. Requires `@rmartz`
- * GitHub Packages auth (a token with `read:packages`) and `pnpm setup`.
+ * metadata); the code always comes from the registry. Requires `@rmartz` GitHub
+ * Packages auth. `~/.npmrc` sources the token from `${GITHUB_PACKAGES_TOKEN}`; that
+ * env var is only exported in interactive shells, so — for non-interactive callers
+ * (the SessionStart hook, agent shells) — we self-source it from `gh auth token`.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -35,17 +41,36 @@ export function resolveBinPackages(packagesDir: string): string[] {
   return names;
 }
 
-/** The `pnpm add -g <pkg@tag> …` argv that installs/updates the CLIs. */
-export function buildAddArgs(packageNames: string[], tag = 'latest'): string[] {
-  return ['add', '-g', ...packageNames.map((name) => `${name}@${tag}`)];
+/** The `npm install -g <pkg@tag> …` argv that installs/updates the CLIs. */
+export function buildInstallArgs(packageNames: string[], tag = 'latest'): string[] {
+  return ['install', '-g', ...packageNames.map((name) => `${name}@${tag}`)];
+}
+
+/**
+ * Ensure `GITHUB_PACKAGES_TOKEN` (which `~/.npmrc` expands for the `@rmartz`
+ * registry) is set for the npm child process. If already present, keep it;
+ * otherwise fall back to the supplied `ghToken` (from `gh auth token`) so a
+ * non-interactive caller still authenticates. Returns the env to pass to npm.
+ */
+export function withPackagesToken(env: NodeJS.ProcessEnv, ghToken?: string): NodeJS.ProcessEnv {
+  if (env.GITHUB_PACKAGES_TOKEN || !ghToken) return env;
+  return { ...env, GITHUB_PACKAGES_TOKEN: ghToken };
+}
+
+function ghAuthToken(): string | undefined {
+  try {
+    return execFileSync('gh', ['auth', 'token'], { encoding: 'utf8' }).trim() || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 const AUTH_HINT = [
-  'error: global install failed — check @rmartz GitHub Packages auth and pnpm setup:',
+  'error: global install failed — check @rmartz GitHub Packages auth:',
   '  gh auth refresh -h github.com -s read:packages',
   '  ~/.npmrc:  @rmartz:registry=https://npm.pkg.github.com',
-  '             //npm.pkg.github.com/:_authToken=<token with read:packages>',
-  '  pnpm setup   # if the global bin dir is not yet configured',
+  '             //npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}',
+  '  and a valid `gh auth token` (used automatically when the env var is unset).',
 ].join('\n');
 
 interface CliArgs {
@@ -75,16 +100,16 @@ function main(): void {
     console.error('error: no bin-bearing packages found');
     process.exit(1);
   }
-  const addArgs = buildAddArgs(names, args.tag);
+  const installArgs = buildInstallArgs(names, args.tag);
 
   if (args.dryRun) {
-    console.log(`[dry-run] pnpm ${addArgs.join(' ')}`);
+    console.log(`[dry-run] npm ${installArgs.join(' ')}`);
     return;
   }
+  const env = withPackagesToken(process.env, ghAuthToken());
   try {
-    // Run from a neutral cwd (home) so the `-g` install resolves from the
-    // registry via the user-level ~/.npmrc, not this workspace's config.
-    execFileSync('pnpm', addArgs, { cwd: homedir(), stdio: 'inherit' });
+    // Run from a neutral cwd (home) so the install reads the user-level ~/.npmrc.
+    execFileSync('npm', installArgs, { cwd: homedir(), stdio: 'inherit', env });
   } catch {
     console.error(`\n${AUTH_HINT}`);
     process.exit(1);

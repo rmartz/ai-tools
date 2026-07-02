@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { resolveBinPackages, buildAddArgs } from './install-clis.js';
+import { resolveBinPackages, buildInstallArgs, withPackagesToken } from './install-clis.js';
 
 let packagesDir: string;
 
@@ -33,10 +33,10 @@ describe('resolveBinPackages', () => {
   });
 });
 
-describe('buildAddArgs', () => {
-  it('builds a `pnpm add -g <pkg@latest> …` argv', () => {
-    expect(buildAddArgs(['@rmartz/worktree', '@rmartz/github'])).toEqual([
-      'add',
+describe('buildInstallArgs', () => {
+  it('builds an `npm install -g <pkg@latest> …` argv', () => {
+    expect(buildInstallArgs(['@rmartz/worktree', '@rmartz/github'])).toEqual([
+      'install',
       '-g',
       '@rmartz/worktree@latest',
       '@rmartz/github@latest',
@@ -44,10 +44,29 @@ describe('buildAddArgs', () => {
   });
 
   it('honors an explicit dist-tag', () => {
-    expect(buildAddArgs(['@rmartz/worktree'], 'next')).toEqual([
-      'add',
+    expect(buildInstallArgs(['@rmartz/worktree'], 'next')).toEqual([
+      'install',
       '-g',
       '@rmartz/worktree@next',
     ]);
+  });
+});
+
+describe('withPackagesToken', () => {
+  it('injects the gh token when GITHUB_PACKAGES_TOKEN is unset', () => {
+    expect(withPackagesToken({ PATH: '/x' }, 'gho_abc')).toEqual({
+      PATH: '/x',
+      GITHUB_PACKAGES_TOKEN: 'gho_abc',
+    });
+  });
+
+  it('keeps an already-set token (interactive shell already exported it)', () => {
+    const env = { GITHUB_PACKAGES_TOKEN: 'existing' };
+    expect(withPackagesToken(env, 'gho_abc')).toBe(env); // unchanged, not overwritten
+  });
+
+  it('leaves the env untouched when no gh token is available', () => {
+    const env = { PATH: '/x' };
+    expect(withPackagesToken(env, undefined)).toBe(env);
   });
 });
