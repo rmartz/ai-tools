@@ -160,7 +160,13 @@ Analyze the diff and form findings covering:
 - **Linked-issue acceptance criteria** — for each `Closes/Fixes/Resolves #N`,
   read the issue and check every criterion is implemented or explicitly scoped
   out. A neither-implemented-nor-discussed criterion is a required change.
-- **Overview** — what the PR does.
+- **Overview** — what the PR does. For any new utility, component, hook, or
+  module it adds, **search the codebase for overlapping or duplicate
+  functionality** (similar names, similar concepts — a new `formatDate()` should
+  prompt a search for existing date helpers). Duplication _this PR introduces_ is
+  a required change: consolidate with the existing implementation or justify the
+  separate one. Pre-existing duplication the PR merely sits beside goes to
+  **Deferred**.
 - **Code quality & conventions** — flag only violations of rules in the
   project's own `CLAUDE.md` / `AGENTS.md` (for ai-tools: layer boundaries,
   dual-interface library-first, the ~240/480 file-size rule, hermetic tests,
@@ -169,6 +175,29 @@ Analyze the diff and form findings covering:
   failure directly caused by this PR's code.
 - **Test coverage** — meaningful gaps; mock real-world boundaries (`gh`, network,
   subprocess) — a test that reaches the network is a bug here.
+
+**Adversarial second pass — read beyond the diff**: after the first pass, make a
+targeted second pass hunting the classic missed-bug patterns. Don't re-read only
+the hunks — **read the full files the diff touches, plus the call sites of any
+function whose signature or behavior changed**. Hunt specifically for: type
+mismatches at call sites (a changed signature/return type whose callers weren't
+updated), async/await correctness (unawaited promises, missing error handlers on
+async paths), null/undefined guards (optional data dereferenced without a check),
+error propagation (errors swallowed or converted to success paths), mutation of
+shared or immutable state, boundary and off-by-one conditions, and
+resource/listener/subscription cleanup (anything acquired but never released).
+Findings from this pass go to Requested changes like any other. Scale the effort
+with the diff — on a large diff or a refactor this is where the highest-value
+bugs hide; on a small targeted fix a quick scan of the touched files and their
+callers suffices.
+
+**File-structure & naming coherence**: every new file must sit where the
+codebase's majority pattern puts similar code (utilities with utilities, hooks
+with hooks, types where the repo places them), and every new name (file, export,
+function) must be consistent with existing analogous names. This is coherence,
+not a personal-preference quibble — deviation from the repo's _own dominant
+pattern_ is enforceable as a required change. Flag only deviation from that
+pattern; do not demand a layout the codebase itself does not follow.
 
 **Tombstone specs**: for every spec file in the diff, a file whose every `it(` /
 `test(` has an empty or comment-only body provides false coverage — require it be
@@ -222,14 +251,23 @@ runs), is organized as:
   GitHub issue for each (`mcp__github__issue_write` or the `/create-issue` skill)
   and link it, so they are tracked independently of this PR.
 
-**What may be deferred**: pre-existing bugs/smells in untouched code,
-documentation gaps not caused by this change, out-of-scope functionality,
-large-scope enhancements (when the linked issue's criteria are still met), and
-accurate-but-not-yet-relevant scalability concerns (defer + file an issue, never
-dismiss inline). **What must never be deferred** (these block approval): bugs
-_this PR introduced_, missed acceptance criteria, materially better/safer/simpler
-patterns, docs gaps _this PR introduced_, and any code-quality violation that
-appears in this PR's own diff.
+**What may be deferred**: pre-existing bugs/smells in untouched code (**but a new
+call site this PR adds to a known-buggy or known-limited helper is new risk — a
+required change, not deferrable as "pre-existing"**), documentation gaps not
+caused by this change, out-of-scope functionality, large-scope enhancements (when
+the linked issue's criteria are still met), and accurate-but-not-yet-relevant
+scalability concerns (defer + file an issue, never dismiss inline). **What must
+never be deferred** (these block approval): bugs _this PR introduced_, missed
+acceptance criteria, materially better/safer/simpler patterns, docs gaps _this PR
+introduced_, any code-quality violation that appears in this PR's own diff,
+violations of a **project-defined style convention** (a rule the project's own
+`CLAUDE.md` / `AGENTS.md` sets is a binding convention, not a personal
+preference), **low-hanging-fruit optimizations in code the PR touches** (an
+obvious, cheap win — a redundant loop, a repeated lookup, an unnecessary copy — is
+applied now, not filed as future work; only high-effort or speculative
+optimization is deferrable), and **overlapping or duplicated functionality this
+PR introduces** (per the Overview overlap search — consolidate or justify before
+merge).
 
 **UAT is not your call.** Whether a human must test the change is a separate gate
 owned by the PR author / coordinator. Do not apply UAT/verdict/gate labels —
