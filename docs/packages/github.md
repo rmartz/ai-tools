@@ -100,12 +100,15 @@ in `gh-call.ts`.
 
 ### PR-write primitives (`pr-ops.ts`)
 
+- `createPullRequest(repo, { base, head, title, body?, draft? })` — open a PR,
+  returning its URL or `null`. Raw create only: the PR **lifecycle** beyond it
+  (`[WIP]`/draft promotion, labels, milestone) is the caller's/coordinator's.
 - `submitReview(repo, pr, event, { body? })` — submit a review (`APPROVE` /
   `COMMENT` / `REQUEST_CHANGES`). Consumed by `@rmartz/pr-review` (#23).
 - `mergePullRequest(repo, pr, method?)` — the raw merge call, returning the merge
   `sha` (or `true` when absent). The **gated, serialized** merge path (mutex,
   idempotency, re-validation) is PR Shepherd's; this is only the primitive it
-  composes. Both are thin, label-free, gate-free client wrappers.
+  composes. All three are thin, label-free, gate-free client wrappers.
 
 ### Discussions (`discussions.ts`)
 
@@ -130,7 +133,15 @@ The GraphQL Discussions client (no REST / `gh` equivalent), targeting `rmartz/ai
 Thin `bin/` wrappers; all logic stays in the library: `ai-pr-summary`,
 `ai-pr-diff <base> <head> [owner/repo]`, `ai-repo-status`,
 `ai-pr-comment --model <m> [--keep-body] <pr> <body-or-file>`,
+`ai-create-pr --base <b> --head <h> --title <t> [--body <body-or-file>] [--draft] [--repo <owner/repo>]`,
+`ai-create-issue --title <t> [--body <body-or-file>] [--label <l> …] [--repo <owner/repo>]`,
 `ai-resolve-thread <id>…`, `ai-dismiss-thread <id> <reply>`.
+
+`ai-create-pr` / `ai-create-issue` resolve the repo from `--repo` or the git
+remote (`currentRepo`), read a file-or-literal body, and print the new URL. They
+are the write path a direct (non-coordinator) run of `/implement`,
+`/weekly-tech-debt`, and `/weekly-tune-up` composes; label/milestone/lifecycle
+policy stays with the coordinator.
 
 Discussions (default repo `rmartz/ai`, category `q-a`) — the no-code path for the
 `discuss` / `discuss-curate` skills:

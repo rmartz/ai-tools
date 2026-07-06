@@ -14,19 +14,20 @@ Run from inside the target project repo (or pass an optional target repo/path).
 > how to judge what is worth filing. The mechanical **how** — which labels to
 > apply, which milestone a finding belongs to, how the issue is de-duplicated
 > against the tracking ledger, and how it is routed — belongs to the coordinator,
-> not to this skill. Never name a workflow/domain label or cite a specific issue
+> not to this skill. Never name a workflow/verdict label or cite a specific issue
 > template mechanism; speak of "the coordinator" abstractly for anything
-> mechanical, and describe issue writes generically (`gh` / GitHub MCP
-> `mcp__github__*`).
+> mechanical. A direct run files findings with `ai-create-issue`
+> (`@rmartz/github`), labelling only per the project's own domain conventions —
+> never a coordinator's gate/verdict taxonomy.
 
 > **Runner-agnostic emission (read this first).** This skill produces a **set of
 > findings** — each a diagnosed piece of debt with a location, a severity, and a
 > suggested fix. How those findings are _recorded_ depends on the runner:
 >
-> - **Run directly by the harness**: you file the issues yourself. Use a GitHub
->   MCP tool (`mcp__github__issue_write`) or `gh issue create`, applying the label
->   that matches the project's domain conventions. Prefer an MCP tool where one
->   exists; fall back to `gh` only when no equivalent is available.
+> - **Run directly by the harness**: you file the issues yourself with
+>   `ai-create-issue --title <t> --body <file> [--label <domain>]` (a thin CLI over
+>   `@rmartz/github`'s `createIssue`), applying only the label that matches the
+>   project's domain conventions.
 > - **Dispatched by a coordinator**: your GitHub credentials are scrubbed and
 >   **you must not file**. You only _express_ the findings — location, severity,
 >   diagnosis, suggested fix — and the coordinator renders them into issues,
@@ -275,13 +276,14 @@ it stands on its own whether you file it or a coordinator does:
 - **Evidence** — for a session-sourced finding, the session date and the friction
   signal; for a static finding, the offending code or pattern quoted.
 
-**Direct (harness) run** — file each finding yourself via `mcp__github__issue_write`
-(or `gh issue create`), with a concise title and the four-part body. Apply the
-label that matches the project's domain conventions; if a needed label is missing,
-the coordinator owns the taxonomy — create it per the project's convention only
-when running directly and it is clearly required. Render the diagnosis body with
-the `Write` tool to a file and pass it by reference rather than shell-constructing
-it. Sign the body with your full model name.
+**Direct (harness) run** — write each four-part diagnosis to a file with the
+`Write` tool (never shell-construct the body), then file it with
+`ai-create-issue --title <t> --body <file> --label <domain>` (over
+`@rmartz/github`'s `createIssue`; it resolves the repo from `--repo` or the git
+remote and prints the new URL). Apply only the label matching the project's domain
+conventions; the coordinator owns the taxonomy, so create a missing label per the
+project's convention only when running directly and it is clearly required. Sign
+the body with your full model name.
 
 **Coordinator-dispatched run** — your credentials are scrubbed; **do not file.**
 Express the findings — title, four-part body, severity, and any suspected

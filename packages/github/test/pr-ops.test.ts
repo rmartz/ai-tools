@@ -5,7 +5,7 @@ vi.mock('@rmartz/agent-runtime', () => ({ boundedRun }));
 
 const ok = (stdout: string) => ({ stdout, stderr: '', code: 0, timedOut: false });
 
-const { submitReview, mergePullRequest } = await import('../src/pr-ops.js');
+const { createPullRequest, submitReview, mergePullRequest } = await import('../src/pr-ops.js');
 
 describe('submitReview', () => {
   beforeEach(() => boundedRun.mockReset());
@@ -30,6 +30,47 @@ describe('submitReview', () => {
     const out = await submitReview('r/r', 'garbage', 'COMMENT');
     expect(out).toBeNull();
     expect(boundedRun).not.toHaveBeenCalled();
+  });
+});
+
+describe('createPullRequest', () => {
+  beforeEach(() => boundedRun.mockReset());
+
+  it('POSTs title/head/base/body to the pulls endpoint and returns the URL', async () => {
+    boundedRun.mockResolvedValueOnce(ok('https://github.com/r/r/pull/7\n'));
+    const url = await createPullRequest('r/r', {
+      base: 'main',
+      head: 'feature',
+      title: 'feat: x',
+      body: 'why',
+    });
+    expect(url).toBe('https://github.com/r/r/pull/7');
+    const [, args, opts] = boundedRun.mock.calls[0];
+    expect(args).toContain('repos/r/r/pulls');
+    expect(JSON.parse(opts.input)).toEqual({
+      title: 'feat: x',
+      head: 'feature',
+      base: 'main',
+      body: 'why',
+    });
+  });
+
+  it('includes draft in the payload only when requested', async () => {
+    boundedRun.mockResolvedValueOnce(ok('https://github.com/r/r/pull/8\n'));
+    await createPullRequest('r/r', { base: 'main', head: 'f', title: 't', draft: true });
+    const [, , opts] = boundedRun.mock.calls[0];
+    expect(JSON.parse(opts.input)).toMatchObject({ draft: true, body: '' });
+  });
+
+  it('soft-fails to null when the create call fails', async () => {
+    boundedRun.mockResolvedValue({ stdout: '', stderr: 'nope', code: 1, timedOut: false });
+    const url = await createPullRequest('r/r', {
+      base: 'main',
+      head: 'f',
+      title: 't',
+      sleep: async () => {},
+    });
+    expect(url).toBeNull();
   });
 });
 

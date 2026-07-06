@@ -13,6 +13,8 @@
     "ai-pr-diff": "./dist/bin/pr-diff.js",
     "ai-repo-status": "./dist/bin/repo-status.js",
     "ai-pr-comment": "./dist/bin/pr-comment.js",
+    "ai-create-pr": "./dist/bin/create-pr.js",
+    "ai-create-issue": "./dist/bin/create-issue.js",
     "ai-resolve-thread": "./dist/bin/resolve-thread.js",
     "ai-dismiss-thread": "./dist/bin/dismiss-thread.js",
     "ai-discuss": "./dist/bin/discuss.js",
