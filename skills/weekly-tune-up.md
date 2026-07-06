@@ -32,10 +32,10 @@ improvements — each one routed to the repository that owns its artifact type.
 >   the engine renders and records them.
 >
 > Either way, do **not** bake in any coordinator's PR-body section format, label
-> names, or merge semantics. Express each proposal as `{ change, destination-repo,
-gap-type, evidence }` and let the runner emit it. The **routing judgment** — the
-> decision of which repo a change belongs in — is yours and stays here; the
-> **routing plumbing** is the runner's.
+> names, or merge semantics. Express each proposal as
+> `{ change, destination-repo, gap-type, evidence }` and let the runner emit it.
+> The **routing judgment** — the decision of which repo a change belongs in — is
+> yours and stays here; the **routing plumbing** is the runner's.
 
 ## Step 1 — Gather friction data
 
