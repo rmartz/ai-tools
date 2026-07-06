@@ -90,11 +90,11 @@ export async function createPullRequest(
     opts.head,
     '--title',
     opts.title,
-    '--body',
-    body,
+    '--body-file',
+    '-',
   ];
   if (opts.draft) fbArgv.push('--draft');
-  const out = await ghCall(rest, { argv: fbArgv }, opts);
+  const out = await ghCall(rest, { argv: fbArgv, stdin: body }, opts);
   return out ? out.trim() || null : null;
 }
 
