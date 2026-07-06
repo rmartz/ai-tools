@@ -52,8 +52,8 @@ export default [
       'import/resolver': importResolver,
     },
     rules: {
-      // File size: the source-level half of the ratchet (CI backstop is
-      // scripts/check-file-length.ts). Hard ceiling at 2x the 240 split point.
+      // File size: the sole file-length cap (there is no separate CI ratchet).
+      // Hard ceiling at 2x the 240 split point; counts every line.
       'max-lines': ['error', { max: 480, skipBlankLines: false, skipComments: false }],
 
       // Layer boundaries: upper layers import lower, never the reverse.
@@ -75,13 +75,6 @@ export default [
     },
   },
   {
-    // Tests — longer ceiling, no boundary constraints.
-    files: ['packages/*/test/**/*.ts', '**/*.test.ts'],
-    languageOptions: { parser: tsparser, parserOptions: tsParserOptions },
-    plugins: { '@typescript-eslint': tseslint },
-    rules: { 'max-lines': ['error', { max: 720 }] },
-  },
-  {
     // Repo-level scripts (the CI gates themselves) — basic rules, no boundaries.
     files: ['scripts/**/*.ts'],
     languageOptions: { parser: tsparser, parserOptions: tsParserOptions },
@@ -90,5 +83,13 @@ export default [
       'max-lines': ['error', { max: 480 }],
       '@typescript-eslint/consistent-type-imports': 'error',
     },
+  },
+  {
+    // Tests — longer ceiling, no boundary constraints.
+    // Must come after scripts/**/*.ts so the 720 override wins for script test files.
+    files: ['packages/*/test/**/*.ts', '**/*.test.ts'],
+    languageOptions: { parser: tsparser, parserOptions: tsParserOptions },
+    plugins: { '@typescript-eslint': tseslint },
+    rules: { 'max-lines': ['error', { max: 720 }] },
   },
 ];

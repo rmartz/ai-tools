@@ -42,9 +42,9 @@ library so PR Shepherd and the harness share one implementation.
 
 ## File size
 
-- Source/library files: split at ~240 lines; ESLint `max-lines` and the CI
-  ratchet both hard-fail at **480**.
-- Test files: hard-fail at **720**.
+- Source/library files: split at ~240 lines; ESLint `max-lines` hard-fails at
+  **480** (the sole file-length cap — no separate CI ratchet).
+- Test files: hard-fail at **720** (ESLint `max-lines` override).
 - The answer to a length failure is **extraction along a clean conceptual seam,
   never terseness/minification.** Move code out; do not compress what remains.
 
