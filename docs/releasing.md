@@ -28,5 +28,5 @@ Per package, from the Conventional-Commit type of the commits touching its files
 
 ## Notes
 
-- **CI on the release PR**: GitHub's built-in token can't trigger workflows on the PRs it creates, so by default the mechanical release PR carries no CI. Add a `RELEASE_PLEASE_PAT` repo secret (a PAT with `contents` + `pull-requests` + `workflow` scope) and the workflow uses it (`secrets.RELEASE_PLEASE_PAT || github.token`) so CI runs on the release PR.
+- **CI on the release PR**: GitHub's built-in token can't trigger workflows on the PRs it creates, so by default the mechanical release PR carries no CI. Add a `RELEASE_PLEASE_PAT` repo secret — a fine-grained PAT with **Contents: write** + **Pull requests: write** on this repo (or a classic PAT with the `repo` scope) — and the workflow uses it (`secrets.RELEASE_PLEASE_PAT || github.token`) so CI runs on the release PR. It needs neither `workflow` scope (release-please never edits `.github/workflows/`) nor `packages` (publishing uses the built-in `GITHUB_TOKEN`).
 - **Manual path retired**: the old `v*`-tag-triggered publish is replaced; don't hand-tag releases.

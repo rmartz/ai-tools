@@ -23,9 +23,10 @@ jobs:
         id: release
         with:
           # GITHUB_TOKEN-created PRs don't trigger CI. Set a RELEASE_PLEASE_PAT
-          # secret (contents + pull-requests + workflow scope) to run CI on the
-          # release PR; falls back to the built-in token, which still opens the PR
-          # and creates releases but leaves the mechanical release PR without CI.
+          # secret (a PAT with contents + pull-requests write — `repo` scope on a
+          # classic PAT) to run CI on the release PR; falls back to the built-in
+          # token, which still opens the PR and creates releases but leaves the
+          # mechanical release PR without CI.
           token: ${{ secrets.RELEASE_PLEASE_PAT || github.token }}
 
   publish:
