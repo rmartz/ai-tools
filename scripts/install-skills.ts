@@ -5,11 +5,11 @@ import {
   readdirSync,
   readlinkSync,
   realpathSync,
-  rmSync,
   symlinkSync,
+  unlinkSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export type SkillAction = 'linked' | 'unchanged' | 'updated' | 'skipped';
@@ -38,6 +38,32 @@ function safeReadlink(p: string): string {
 function sameTarget(linkPath: string, source: string): boolean {
   try {
     return realpathSync(linkPath) === realpathSync(source);
+  } catch {
+    return false;
+  }
+}
+
+// Is `linkPath` a symlink already pointing somewhere inside `skillsDir`? Such a
+// link is one we created (or a prior install did), so a re-run may refresh it to
+// the canonical source without `--force`, even when it is now stale or broken —
+// `readlinkSync` reads the raw target without resolving it, so a dangling link
+// still classifies. A regular file or a symlink pointing elsewhere is foreign.
+// Remove an existing file or symlink. `unlinkSync` never follows the link, so it
+// reliably clears a broken symlink — unlike `rmSync({ force: true })`, which
+// follows it, finds the target missing, and silently no-ops, leaving it in place.
+function removeExisting(p: string): void {
+  try {
+    unlinkSync(p);
+  } catch {
+    /* best-effort; a following symlinkSync surfaces any real problem */
+  }
+}
+
+function ownsLink(linkPath: string, skillsDir: string): boolean {
+  try {
+    const target = resolve(dirname(linkPath), readlinkSync(linkPath));
+    const base = resolve(skillsDir);
+    return target === base || target.startsWith(base + sep);
   } catch {
     return false;
   }
@@ -72,18 +98,26 @@ export function installSkills(opts: InstallSkillsOptions): SkillResult[] {
       continue;
     }
 
+    // A stale/broken link we already own is refreshed to the canonical source
+    // without `--force` — this is what makes the SessionStart re-install
+    // self-healing. A foreign file/symlink is left untouched unless `--force`.
+    const ours = ownsLink(linkPath, skillsDir);
     const kind = existing.isSymbolicLink()
       ? `symlink → ${safeReadlink(linkPath)}`
       : 'existing file';
-    if (!force) {
+    if (!ours && !force) {
       results.push({ name: file, action: 'skipped', detail: kind });
       continue;
     }
     if (!dryRun) {
-      rmSync(linkPath, { force: true });
+      removeExisting(linkPath);
       symlinkSync(source, linkPath);
     }
-    results.push({ name: file, action: 'updated', detail: `replaced ${kind}` });
+    results.push({
+      name: file,
+      action: 'updated',
+      detail: ours ? 'refreshed ai-tools link' : `replaced ${kind}`,
+    });
   }
   return results;
 }

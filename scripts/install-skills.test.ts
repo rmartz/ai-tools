@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readlinkSync, lstatSync } from 'node:fs';
+import {
+  mkdtempSync,
+  mkdirSync,
+  rmSync,
+  writeFileSync,
+  readlinkSync,
+  lstatSync,
+  symlinkSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { installSkills } from './install-skills.js';
@@ -47,6 +55,29 @@ describe('installSkills', () => {
     const forced = installSkills({ skillsDir, commandsDir, force: true });
     expect(forced.find((r) => r.name === 'discuss.md')?.action).toBe('updated');
     expect(lstatSync(join(commandsDir, 'discuss.md')).isSymbolicLink()).toBe(true);
+  });
+
+  it('refreshes a stale link it owns (points into skillsDir) without --force', () => {
+    mkdirSync(commandsDir);
+    // A prior install left discuss.md pointing at a now-missing file *inside*
+    // skillsDir — a broken link we still own and should self-heal.
+    symlinkSync(join(skillsDir, 'renamed-away.md'), join(commandsDir, 'discuss.md'));
+
+    const discuss = installSkills({ skillsDir, commandsDir }).find((r) => r.name === 'discuss.md');
+    expect(discuss?.action).toBe('updated');
+    expect(discuss?.detail).toContain('refreshed');
+    expect(readlinkSync(join(commandsDir, 'discuss.md'))).toBe(join(skillsDir, 'discuss.md'));
+  });
+
+  it('leaves a foreign symlink (points outside skillsDir) untouched without --force', () => {
+    mkdirSync(commandsDir);
+    const foreign = join(root, 'elsewhere.md');
+    writeFileSync(foreign, '# elsewhere');
+    symlinkSync(foreign, join(commandsDir, 'discuss.md'));
+
+    const discuss = installSkills({ skillsDir, commandsDir }).find((r) => r.name === 'discuss.md');
+    expect(discuss?.action).toBe('skipped');
+    expect(readlinkSync(join(commandsDir, 'discuss.md'))).toBe(foreign); // untouched
   });
 
   it('writes nothing in dry-run', () => {
