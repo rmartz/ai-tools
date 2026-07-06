@@ -104,16 +104,38 @@ Signals detected:
 - `extractFrictionEvents(events, fallbackLabel?) => FrictionEvent[]`
 - `extractFrictionFromText(text, fallbackLabel?) => FrictionEvent[]`
 - `formatFrictionReport(results, days?) => string` — `days` only labels the
-  heading; transcript discovery/windowing is the caller's job.
+  heading; the pure extractor stays discovery-unaware.
+
+### Transcript discovery (`transcript-discovery.ts`)
+
+The discovery layer the extractor deliberately lacks: `friction.ts` stays a pure
+text-in / events-out serializer, and this module carries the `~/.claude`
+directory-walking concern so the CLI can self-discover recent transcripts.
+Filesystem access routes through one injectable `TranscriptFs` (the `GhReader`
+pattern), so tests are hermetic — they feed an in-memory listing with controlled
+mtimes and never touch disk. The default reader uses `node:fs` and soft-fails a
+missing/unreadable root to `[]` rather than throwing.
+
+- `discoverTranscripts(opts?) => string[]` — absolute paths of `*.jsonl` files
+  modified within the last `days`. `opts`: `root` (default `~/.claude/projects`),
+  `days` (default `7`), `now` (default `Date.now()`, injected in tests), `fs`
+  (default the `node:fs` reader). The window is **inclusive** at its lower edge
+  (a file whose mtime is exactly `now - days*86_400_000` is kept); results are
+  sorted **most-recent first**, ties broken lexically by path.
+- `realTranscriptFs` — the default `node:fs`-backed reader.
+- `TranscriptFs`, `DiscoverTranscriptsOptions` types.
 
 ### CLI — `ai-extract-friction`
 
 ```
-ai-extract-friction [--days N] <transcript.jsonl> [<transcript.jsonl> ...]
+ai-extract-friction [--days N] [<transcript.jsonl> ...]
 ```
 
-Takes explicit transcript paths (discovery is the caller's responsibility) and
-prints the report. `--days N` labels the heading only.
+Paths are **optional**. With none, the CLI calls `discoverTranscripts({ days })`
+to auto-discover the last-N-days transcripts under `~/.claude/projects`
+(e.g. `ai-extract-friction --days 7`); with explicit paths, exactly those files
+are read. `--days N` therefore both windows discovery and labels the report
+heading. A stderr note is printed when discovery finds zero transcripts.
 
 ## Anomaly reporting (`anomaly.ts`)
 

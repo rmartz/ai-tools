@@ -15,6 +15,9 @@ export {
 } from './friction.js';
 export type { FrictionType, FrictionEvent, TranscriptFriction } from './friction.js';
 
+export { discoverTranscripts, realTranscriptFs } from './transcript-discovery.js';
+export type { TranscriptFs, DiscoverTranscriptsOptions } from './transcript-discovery.js';
+
 export { reportAnomaly, ledgerTitle } from './anomaly.js';
 export type { AnomalyCategory, AnomalyOccurrence, ReportAnomalyOptions } from './anomaly.js';
 

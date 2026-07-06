@@ -10,10 +10,10 @@ tags: [setup, cli, packages, update]
 
 `scripts/install-clis.ts` installs (and updates) ai-tools' `ai-*` command-line
 tools **from the published GitHub Packages**, not the local build. It runs
-`pnpm add -g @rmartz/<pkg>@latest` for every bin-bearing package, so the CLIs live
-in pnpm's global store — **decoupled from this checkout**, which may be on a
-feature branch or mid-edit. Only the package _names_ are read from the workspace
-(stable metadata); the executable code always comes from the registry.
+`npm install -g @rmartz/<pkg>@latest` for every bin-bearing package, so the CLIs
+land in npm's global prefix (on `PATH`) — **decoupled from this checkout**, which
+may be on a feature branch or mid-edit. Only the package _names_ are read from the
+workspace (stable metadata); the executable code always comes from the registry.
 
 Re-running always pulls `@latest`, so the same command **is** the updater.
 
@@ -23,27 +23,37 @@ pnpm run install:clis -- --dry-run
 pnpm run install:clis -- --tag next
 ```
 
+`npm` is used deliberately rather than `pnpm add -g`: pnpm is corepack-pinned to
+the workspace version here, and its global `-g` store can mismatch the global
+pnpm major (`ERR_PNPM_UNEXPECTED_STORE`), whereas `npm i -g` is invariant to that
+and reads the same `~/.npmrc` auth.
+
 ## Prerequisite: GitHub Packages auth
 
-The `@rmartz` scope is a private GitHub Packages registry, so a token with
-`read:packages` is required (one-time):
+The `@rmartz` scope is a private registry, so a token with `read:packages` is
+required (one-time):
 
 ```
 gh auth refresh -h github.com -s read:packages
-# then in ~/.npmrc:
+# ~/.npmrc:
 @rmartz:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=<token with read:packages>
+//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
 ```
 
-Also run `pnpm setup` once so the global bin dir is on `PATH`. Without auth the
-install fails with a pointer to these steps (exit non-zero).
+`~/.npmrc` sources the token from `${GITHUB_PACKAGES_TOKEN}`. That env var is
+typically exported only in **interactive** shells (to avoid a keychain read per
+subshell), so for **non-interactive** callers — the SessionStart hook, agent
+shells — `install-clis` **self-sources it from `gh auth token`** when the env var
+is unset. So no extra shell config is needed; a valid `gh auth token` with
+`read:packages` is enough. Without auth the install fails with a pointer to these
+steps (exit non-zero).
 
 ## Auto-update: SessionStart hook
 
 Because a release publishes to the registry but can't reach your machine, keep
 the CLIs fresh by re-running the install on every agent session start. Add a
 `SessionStart` hook to `~/.claude/settings.json` (backgrounded + output
-discarded, so it never blocks a session and silently no-ops until auth is set up):
+discarded, so it never blocks a session):
 
 ```json
 {
@@ -68,8 +78,9 @@ background — the "periodic/on-merge" refresh, driven by session cadence.
 ## Design
 
 The importable helpers hold the pure logic and are hermetically tested:
-`resolveBinPackages(packagesDir)` (which workspace packages ship a bin) and
-`buildAddArgs(names, tag)` (the `pnpm add -g` argv). `main()` runs the command
-from a neutral cwd (`$HOME`) so the `-g` install resolves via the user-level
-`~/.npmrc`, not this workspace's config. Markdown **skills** are a separate
-channel — see [`install-skills`](install-skills.md).
+`resolveBinPackages(packagesDir)` (which workspace packages ship a bin),
+`buildInstallArgs(names, tag)` (the `npm install -g` argv), and
+`withPackagesToken(env, ghToken)` (inject the token for non-interactive callers,
+never overwriting an already-set one). `main()` runs the install from a neutral
+cwd (`$HOME`) so it reads the user-level `~/.npmrc`. Markdown **skills** are a
+separate channel — see [`install-skills`](install-skills.md).

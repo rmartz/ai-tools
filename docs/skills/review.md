@@ -55,10 +55,12 @@ portable across runners without knowing the protocol.
    `ai-pr-diff`.
 4. **Open threads** — address each (fixed / dismissed / tracked / still-open) via
    `ai-resolve-thread` / `ai-dismiss-thread`; Copilot threads are triaged first.
-5. **Code review** — title/description, acceptance criteria, conventions
-   (ai-tools' layer boundaries, library-first, file-size, hermetic tests, OKF
-   docs), correctness, coverage, tombstone specs, CI-loosening, obviation, and
-   the visual gate (`extractScreenshotUrls`).
+5. **Code review** — title/description, acceptance criteria, an overlap search
+   for duplicated functionality, conventions (ai-tools' layer boundaries,
+   library-first, file-size, hermetic tests, OKF docs), correctness, coverage, an
+   **adversarial second pass** (read the touched files + changed call sites for
+   the classic missed-bug patterns), file/naming coherence, tombstone specs,
+   CI-loosening, obviation, and the visual gate (`extractScreenshotUrls`).
 6. **Verdict** — Prior items / Requested changes / Verdict / Deferred; UAT and
    labels are explicitly _not_ the reviewer's call.
 7. **Express the verdict** — post it directly, or (dispatched) hand it to the

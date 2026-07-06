@@ -1,12 +1,12 @@
 import { ghCall, issueNumber, type GhCallOptions, type Transport } from './gh-call.js';
 
 /**
- * Generic PR-write primitives: submit a review, merge a PR. These are thin,
- * label-free, gate-free GitHub API wrappers — the shared client, same posture as
- * `issue-ops` (REST-first + GraphQL fallback on rate-limit, soft-fail to `null`).
- * The *verdict-recording protocol* and *gated merge orchestration* (mutex,
- * idempotency, pre-merge re-validation) are PR Shepherd's, not here. TS port of
- * the `submit_review` / `merge_pull_request` helpers from dotfiles'
+ * Generic PR-write primitives: create a PR, submit a review, merge a PR. These
+ * are thin, label-free, gate-free GitHub API wrappers — the shared client, same
+ * posture as `issue-ops` (REST-first + GraphQL fallback on rate-limit, soft-fail
+ * to `null`). The *verdict-recording protocol* and *gated merge orchestration*
+ * (mutex, idempotency, pre-merge re-validation) are PR Shepherd's, not here. TS
+ * port of the `submit_review` / `merge_pull_request` helpers from dotfiles'
  * `gh_issue_ops.py`.
  */
 
@@ -47,6 +47,55 @@ export async function submitReview(
   };
   const out = await ghCall(rest, fb, opts);
   return out ? out : null;
+}
+
+export interface CreatePullRequestOptions extends GhCallOptions {
+  base: string;
+  head: string;
+  title: string;
+  body?: string;
+  draft?: boolean;
+}
+
+/**
+ * Open a pull request. Returns the new PR's URL, or `null` on failure. `draft`
+ * defaults to `false`. The PR *lifecycle* — `[WIP]`/draft promotion, labels,
+ * milestone — belongs to the caller/coordinator, not this raw create call.
+ */
+export async function createPullRequest(
+  repo: string,
+  opts: CreatePullRequestOptions,
+): Promise<string | null> {
+  const body = opts.body ?? '';
+  const payload: Record<string, unknown> = {
+    title: opts.title,
+    head: opts.head,
+    base: opts.base,
+    body,
+  };
+  if (opts.draft) payload.draft = true;
+  const rest: Transport = {
+    argv: ['gh', 'api', '-X', 'POST', `repos/${repo}/pulls`, '--input', '-', '--jq', '.html_url'],
+    stdin: JSON.stringify(payload),
+  };
+  const fbArgv = [
+    'gh',
+    'pr',
+    'create',
+    '--repo',
+    repo,
+    '--base',
+    opts.base,
+    '--head',
+    opts.head,
+    '--title',
+    opts.title,
+    '--body-file',
+    '-',
+  ];
+  if (opts.draft) fbArgv.push('--draft');
+  const out = await ghCall(rest, { argv: fbArgv, stdin: body }, opts);
+  return out ? out.trim() || null : null;
 }
 
 export type MergeMethod = 'merge' | 'squash' | 'rebase';
