@@ -17,18 +17,19 @@ the coordination around it. Label taxonomy, milestone assignment, ledger
 de-duplication, and routing belong to the coordinator, which spawns this skill by
 name.
 
-Unlike `/review`, this skill has **no dedicated package or CLI** — direct-run
-GitHub writes go through `gh` / GitHub MCP (`mcp__github__*`) generically, and
-transcript mining goes through the session-search tool.
+A direct run files findings with `ai-create-issue` (`@rmartz/github`); transcript
+mining for code-level friction goes through the session-search tool. It applies
+only the label matching the project's domain conventions — never a coordinator's
+gate/verdict taxonomy.
 
 ## Runner-agnostic emission
 
 The skill reaches a set of findings and stops; how those findings are _recorded_
 depends on who ran it:
 
-- **Direct (harness) run** — the skill files the issues itself via
-  `mcp__github__issue_write` / `gh issue create`, applying the label that matches
-  the project's domain conventions.
+- **Direct (harness) run** — the skill files the issues itself with
+  `ai-create-issue --title <t> --body <file> --label <domain>`, applying the label
+  that matches the project's domain conventions.
 - **Coordinator-dispatched run** — the skill's GitHub credentials are scrubbed and
   it **must not file**. It only expresses each finding (location, severity,
   four-part diagnosis, suspected duplicate); the coordinator renders it into an

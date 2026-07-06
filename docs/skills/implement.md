@@ -16,10 +16,13 @@ tests, implementing to green, and a duplication self-review — and deliberately
 cadence, PR creation, its title/body/draft lifecycle, labels, and milestone
 assignment are the runner's (coordinator's) job.
 
-There is no dedicated `@rmartz/*` package or `ai-*` CLI for implementation yet, so
-direct-run GitHub reads/writes go through the GitHub MCP tools (`mcp__github__*`),
-with `gh` as the fallback where no MCP equivalent exists. The skill never names a
-gate/verdict label and never bakes in a coordinator's PR lifecycle.
+A direct run composes the maintained `ai-*` CLIs for its mechanical spine:
+`ai-new-worktree` (`@rmartz/worktree`) to provision the worktree,
+`ai-pre-push-verify` (`@rmartz/verify`) to re-run the project's CI-derived checks,
+and `ai-create-pr` / `ai-create-issue` (`@rmartz/github`) for the PR and any issue
+write; a GitHub MCP tool (`mcp__github__*`) is preferred where richer (e.g. reading
+an issue). The skill never names a gate/verdict label and never bakes in a
+coordinator's PR lifecycle.
 
 ## Runner-agnostic emission
 
@@ -28,8 +31,7 @@ Per the [PR Shepherd handoff](../pr-shepherd-handoff.md), the skill produces a
 on who ran it:
 
 - **Direct (harness) run** — the skill commits in the worktree and opens the PR
-  itself via `mcp__github__create_pull_request` (or `gh pr create`), with a
-  Conventional-Commit title.
+  itself with `ai-create-pr`, using a Conventional-Commit title.
 - **Coordinator-dispatched run** — the skill's GitHub credentials are scrubbed;
   it **must not** open the PR or apply labels. It expresses the outcome — ready,
   or stuck with a diagnosis — and the engine records it and drives PR creation,

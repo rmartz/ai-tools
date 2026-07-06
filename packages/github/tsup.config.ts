@@ -7,6 +7,8 @@ export default defineConfig({
     'src/bin/pr-diff.ts',
     'src/bin/repo-status.ts',
     'src/bin/pr-comment.ts',
+    'src/bin/create-pr.ts',
+    'src/bin/create-issue.ts',
     'src/bin/resolve-thread.ts',
     'src/bin/dismiss-thread.ts',
     'src/bin/discuss.ts',

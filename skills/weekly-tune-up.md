@@ -13,12 +13,15 @@ improvements — each one routed to the repository that owns its artifact type.
 > **Tooling**: this skill is tune-up _craft_, not coordination. It owns the
 > **what** — the friction-detection method, the routing judgment (which repo an
 > artifact belongs in), the drift classification, and the diagnosis of each
-> cluster into a gap type. The **how** — the exact transcript-extraction command,
-> which label to apply, how a filed issue or PR body is formatted, and how the
-> resulting change is merged — belongs to the coordinator (PR Shepherd) and is
-> abstracted here. For direct GitHub reads/writes prefer the GitHub MCP tools
-> (`mcp__github__*`); fall back to `gh` only where no equivalent exists. Never
-> name a workflow/gate/verdict label — that vocabulary is the coordinator's.
+> cluster into a gap type. A direct run composes the maintained `ai-*` CLIs for
+> its spine: `ai-extract-friction --days 7` (`@rmartz/reporting`) to gather the
+> friction report, and `ai-create-issue` (`@rmartz/github`) to file a proposal
+> into whichever repo owns it. The remaining **how** — which label to apply, how a
+> filed issue or PR body is formatted, and how the resulting change is merged —
+> belongs to the coordinator (PR Shepherd). Prefer a GitHub MCP tool
+> (`mcp__github__*`) where it is richer; fall back to `gh` only where neither a CLI
+> nor an MCP tool fits. Never name a workflow/gate/verdict label — that vocabulary
+> is the coordinator's.
 
 > **Runner-agnostic emission (read this first).** This skill produces a set of
 > **proposals**, each tagged with a **destination repo** and a **gap type**. How
@@ -26,7 +29,8 @@ improvements — each one routed to the repository that owns its artifact type.
 >
 > - **Run directly by the harness**: you carry them out yourself — edit the
 >   dotfiles-destined artifacts in a worktree, and for every proposal destined for
->   another repo, file a linked issue there via `mcp__github__*` / `gh`.
+>   another repo, file a linked issue there with
+>   `ai-create-issue --repo <owner/repo> --title <t> --body <file>`.
 > - **Coordinator-dispatched run**: your GitHub credentials are scrubbed and you
 >   **must not** edit or file anything. You only _express_ the routed proposals;
 >   the engine renders and records them.
@@ -39,9 +43,10 @@ improvements — each one routed to the repository that owns its artifact type.
 
 ## Step 1 — Gather friction data
 
-Pull the last 7 days of transcripts and extract a structured friction report
-(the runner provides the extraction; you consume its output). Read it carefully
-and note the volume and distribution across these categories:
+Run `ai-extract-friction --days 7` (`@rmartz/reporting`): with no path arguments
+it discovers the last-7-days transcripts under `~/.claude/projects` and prints a
+structured friction report. Read it carefully and note the volume and distribution
+across these categories:
 
 - **Tool errors** — tool calls that returned an error.
 - **User corrections** — short messages where the user redirected or corrected
@@ -200,10 +205,12 @@ and friction type that motivated it (e.g. "3 tool-error events in
 **Route, don't cross-edit.** Carry each proposal's Step 2 destination all the way
 through. In a direct run, edit only the artifacts whose destination is the repo
 you're working in; for every proposal destined elsewhere, file a **linked issue**
-in the target repo describing the change and its evidence, so it is tracked as
-real work in its own repo rather than a dangling recommendation. The mechanics of
-_how_ those issues and edits are grouped, labeled, and merged are the runner's —
-your job is to get each proposal to the right repo with enough context to act on.
+in the target repo with `ai-create-issue --repo <owner/repo> --title <t> --body
+<file>` (body written to a file with the `Write` tool), describing the change and
+its evidence so it is tracked as real work in its own repo rather than a dangling
+recommendation. The mechanics of _how_ those issues and edits are grouped,
+labeled, and merged are the runner's — your job is to get each proposal to the
+right repo with enough context to act on.
 
 ## Step 6 — Report
 

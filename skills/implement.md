@@ -14,10 +14,14 @@ Implement the GitHub issue(s): $ARGUMENTS
 > provisioning the worktree, the commit/verify cadence, opening the PR, its
 > title/body/draft lifecycle, labels, and milestone assignment — belongs to the
 > runner (the coordinator), not to this skill. Never name a gate/verdict label
-> and never hard-code a coordinator's PR lifecycle. There is no dedicated
-> `@rmartz/*` package or `ai-*` CLI for implementation yet; for any direct GitHub
-> read/write, prefer the GitHub MCP tools (`mcp__github__*`) and fall back to
-> `gh` only where no MCP equivalent exists.
+> and never hard-code a coordinator's PR lifecycle. For a direct run the
+> mechanical spine composes the maintained `ai-*` CLIs: `ai-new-worktree`
+> (`@rmartz/worktree`) to provision the isolated worktree, `ai-pre-push-verify`
+> (`@rmartz/verify`) to re-run the project's own CI-derived checks before
+> hand-off, and `ai-create-pr` / `ai-create-issue` (`@rmartz/github`) for the PR
+> and any issue write. Prefer a GitHub MCP tool (`mcp__github__*`) where it is
+> richer (e.g. reading an issue body); fall back to `gh` only where neither a CLI
+> nor an MCP tool fits.
 >
 > **Assumption**: the project tests with **Vitest**. This skill designs the
 > approach, then writes tests that validate that design, then implements until
@@ -27,11 +31,12 @@ Implement the GitHub issue(s): $ARGUMENTS
 > branch and an outcome** (implemented-and-ready, or stuck-with-a-diagnosis). How
 > that outcome is _recorded_ depends on the runner:
 >
-> - **Run directly by the harness**: you perform the mechanics yourself — commit
->   in the worktree, open the PR via `mcp__github__create_pull_request` (or
->   `gh pr create`), and report the PR. Do not invent gate/verdict labels or a
->   draft/WIP lifecycle; keep the PR title a Conventional-Commit summary and let
->   the reader pick up the rest.
+> - **Run directly by the harness**: you perform the mechanics yourself —
+>   provision the worktree with `ai-new-worktree`, commit in it, and open the PR
+>   with `ai-create-pr --base <base> --head <branch> --title <t> --body <file>`,
+>   then report the PR. Do not invent gate/verdict labels or a draft/WIP
+>   lifecycle; keep the PR title a Conventional-Commit summary and let the reader
+>   pick up the rest.
 > - **Dispatched by a coordinator**: your GitHub credentials are scrubbed and you
 >   **must not** open the PR or apply labels. You express the outcome — the branch
 >   is ready (or stuck, with the diagnosis) — and the engine records it and drives
@@ -179,10 +184,10 @@ Iterate — implement, run, diagnose, fix — until every test passes or you hit
   with no gain, stop iterating and take the stuck path below.
 
 **All green** → run the full suite once to confirm no regression, fix any test
-this change broke, and verify the change locally the way the project's own CI
-would (typecheck / lint / format / tests) before handing off. This local
-verification is a principle, not a specific script: hand off only work that would
-pass the project's checks.
+this change broke, and verify the change locally with `ai-pre-push-verify`
+(`@rmartz/verify`): it reads the project's own CI workflows and re-runs their
+locally-runnable checks (typecheck / lint / format / tests), so a green result
+predicts CI. Hand off only work that passes it.
 
 **Stuck** → stop and write a clear account: which criteria are covered (passing),
 which still fail (with exact messages), and a one-line diagnosis of the blocker
@@ -204,11 +209,11 @@ the duplicate. This is the final net for a parallel implementation that Step 3b'
 survey missed; it is cheaper to catch here than in review.
 
 Then hand off. In direct-harness mode, commit the work in the worktree and open
-the PR yourself (Conventional-Commit title summarizing the change; a body stating
-the purpose, the reuse/extend/new decision from Step 3b, which criteria pass, and
-the issue it closes) via `mcp__github__create_pull_request` or `gh pr create`.
-When dispatched by a coordinator, express the outcome — ready, or stuck with the
-diagnosis — and let the engine open and label the PR.
+the PR yourself with `ai-create-pr` — a Conventional-Commit title summarizing the
+change and a body (written to a file, passed as `--body <file>`) stating the
+purpose, the reuse/extend/new decision from Step 3b, which criteria pass, and the
+issue it closes. When dispatched by a coordinator, express the outcome — ready, or
+stuck with the diagnosis — and let the engine open and label the PR.
 
 **This skill stops here.** It does not review, fix-review, or merge its own
 work — that is a separate concern with a separate owner. When several issues were

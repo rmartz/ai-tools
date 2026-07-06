@@ -27,9 +27,10 @@ where a change belongs, not a mechanical step.
 The skill produces a set of proposals, each tagged with a **destination repo** and
 a **gap type**; how they are _recorded_ depends on who ran it:
 
-- **Direct (harness) run** — the skill carries them out itself: edits the
-  locally-owned artifacts and files linked issues in each other destination repo
-  via `mcp__github__*` / `gh`.
+- **Direct (harness) run** — the skill carries them out itself: gathers friction
+  with `ai-extract-friction --days 7` (`@rmartz/reporting`), edits the
+  locally-owned artifacts, and files linked issues in each other destination repo
+  with `ai-create-issue --repo <owner/repo>` (`@rmartz/github`).
 - **Coordinator-dispatched run** — the skill's GitHub credentials are scrubbed and
   it **must not** edit or file. It only expresses the routed proposals; the engine
   renders and records them.
