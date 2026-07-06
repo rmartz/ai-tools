@@ -16,7 +16,8 @@ The general-purpose AI toolkit (TypeScript pnpm monorepo). Successor to
   checks, tests). Run before pushing, or use `~/.claude/scripts/pre-push-verify.py`.
 - `pnpm install:skills` — symlink the skills in `skills/` into `~/.claude`.
 - `pnpm install:clis` — install/update the published `ai-*` CLIs globally from
-  GitHub Packages (`npm i -g @rmartz/*@latest`); needs `read:packages` auth
+  GitHub Packages (`npm i -g` the highest published version per package — not
+  `@latest`, which GitHub Packages leaves stale); needs `read:packages` auth
   (self-sourced from `gh auth token`). Re-run to update; a SessionStart hook can
   automate it (see `docs/install-clis.md`).
 

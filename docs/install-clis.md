@@ -9,13 +9,20 @@ tags: [setup, cli, packages, update]
 # install-clis
 
 `scripts/install-clis.ts` installs (and updates) ai-tools' `ai-*` command-line
-tools **from the published GitHub Packages**, not the local build. It runs
-`npm install -g @rmartz/<pkg>@latest` for every bin-bearing package, so the CLIs
-land in npm's global prefix (on `PATH`) — **decoupled from this checkout**, which
-may be on a feature branch or mid-edit. Only the package _names_ are read from the
-workspace (stable metadata); the executable code always comes from the registry.
+tools **from the published GitHub Packages**, not the local build. For every
+bin-bearing package it resolves the **highest published version** (`npm view <pkg>
+versions`) and runs `npm install -g @rmartz/<pkg>@<version>`, so the CLIs land in
+npm's global prefix (on `PATH`) — **decoupled from this checkout**, which may be on
+a feature branch or mid-edit. Only the package _names_ are read from the workspace
+(stable metadata); the executable code always comes from the registry.
 
-Re-running always pulls `@latest`, so the same command **is** the updater.
+Re-running re-resolves and re-installs, so the same command **is** the updater.
+
+**Why an explicit version, not `@latest`/`@*`:** GitHub Packages does not reliably
+advance the `latest` dist-tag on publish, and the abbreviated packument it serves
+to `npm install`'s range resolver can lag a fresh publish — both make `@latest`
+and `@*` install a _stale_ version. `npm view … versions` reads the current full
+packument, and installing the resolved exact version fetches the right tarball.
 
 ```
 pnpm run install:clis            # install/update all ai-* CLIs from the registry

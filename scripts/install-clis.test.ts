@@ -2,7 +2,13 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { resolveBinPackages, buildInstallArgs, withPackagesToken } from './install-clis.js';
+import {
+  resolveBinPackages,
+  maxStableVersion,
+  resolveLatestVersions,
+  buildInstallArgs,
+  withPackagesToken,
+} from './install-clis.js';
 
 let packagesDir: string;
 
@@ -33,22 +39,49 @@ describe('resolveBinPackages', () => {
   });
 });
 
-describe('buildInstallArgs', () => {
-  it('builds an `npm install -g <pkg@latest> …` argv', () => {
-    expect(buildInstallArgs(['@rmartz/worktree', '@rmartz/github'])).toEqual([
-      'install',
-      '-g',
-      '@rmartz/worktree@latest',
-      '@rmartz/github@latest',
-    ]);
+describe('maxStableVersion', () => {
+  it('returns the highest version, comparing numerically not lexically', () => {
+    // 0.10.0 > 0.9.0 numerically, but a string sort would pick 0.9.0.
+    expect(maxStableVersion(['0.1.0', '0.10.0', '0.9.0', '0.2.0'])).toBe('0.10.0');
   });
 
-  it('honors an explicit dist-tag', () => {
-    expect(buildInstallArgs(['@rmartz/worktree'], 'next')).toEqual([
-      'install',
-      '-g',
-      '@rmartz/worktree@next',
+  it('ignores pre-release and non-numeric tags', () => {
+    expect(maxStableVersion(['0.1.0', 'latest', '1.0.0-beta.1', '0.2.0'])).toBe('0.2.0');
+  });
+
+  it('returns undefined when no plain semver version is present', () => {
+    expect(maxStableVersion([])).toBeUndefined();
+    expect(maxStableVersion(['next', '1.0.0-rc.0'])).toBeUndefined();
+  });
+});
+
+describe('resolveLatestVersions', () => {
+  it('pairs each name with its max version and drops names the registry cannot resolve', () => {
+    const versions: Record<string, string[]> = {
+      '@rmartz/github': ['0.1.3', '0.2.0'],
+      '@rmartz/worktree': ['0.1.1'],
+      '@rmartz/missing': [], // unresolvable → dropped
+    };
+    expect(
+      resolveLatestVersions(
+        ['@rmartz/github', '@rmartz/worktree', '@rmartz/missing'],
+        (name) => versions[name] ?? [],
+      ),
+    ).toEqual([
+      ['@rmartz/github', '0.2.0'],
+      ['@rmartz/worktree', '0.1.1'],
     ]);
+  });
+});
+
+describe('buildInstallArgs', () => {
+  it('builds an `npm install -g <pkg@version> …` argv from resolved pairs', () => {
+    expect(
+      buildInstallArgs([
+        ['@rmartz/worktree', '0.1.1'],
+        ['@rmartz/github', '0.2.0'],
+      ]),
+    ).toEqual(['install', '-g', '@rmartz/worktree@0.1.1', '@rmartz/github@0.2.0']);
   });
 });
 
