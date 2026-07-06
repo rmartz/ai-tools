@@ -27,7 +27,6 @@ packument, and installing the resolved exact version fetches the right tarball.
 ```
 pnpm run install:clis            # install/update all ai-* CLIs from the registry
 pnpm run install:clis -- --dry-run
-pnpm run install:clis -- --tag next
 ```
 
 `npm` is used deliberately rather than `pnpm add -g`: pnpm is corepack-pinned to
@@ -86,8 +85,14 @@ background — the "periodic/on-merge" refresh, driven by session cadence.
 
 The importable helpers hold the pure logic and are hermetically tested:
 `resolveBinPackages(packagesDir)` (which workspace packages ship a bin),
-`buildInstallArgs(names, tag)` (the `npm install -g` argv), and
-`withPackagesToken(env, ghToken)` (inject the token for non-interactive callers,
-never overwriting an already-set one). `main()` runs the install from a neutral
-cwd (`$HOME`) so it reads the user-level `~/.npmrc`. Markdown **skills** are a
-separate channel — see [`install-skills`](install-skills.md).
+`maxStableVersion(versions)` (highest `X.Y.Z` version from a list, numeric
+comparison so `0.10.0 > 0.9.0`),
+`resolveLatestVersions(names, listVersions)` (pair each package name with its
+highest published version via an injectable `listVersions` callback),
+`buildInstallArgs(pairs)` (the `npm install -g <name@version> …` argv from
+resolved `[name, version]` pairs), and `withPackagesToken(env, ghToken)` (inject
+the token for non-interactive callers, never overwriting an already-set one).
+`main()` runs the install from a neutral cwd (`$HOME`) so it reads the user-level
+`~/.npmrc` and exits non-zero if any package's version cannot be resolved.
+Markdown **skills** are a separate channel — see
+[`install-skills`](install-skills.md).

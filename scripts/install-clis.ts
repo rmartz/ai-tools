@@ -146,6 +146,10 @@ function parseArgs(argv: string[]): CliArgs {
     const a = argv[i];
     if (a === '--dry-run') args.dryRun = true;
     else if (a === '--packages-dir') args.packagesDir = argv[++i];
+    else {
+      console.error(`error: unknown argument: ${a}`);
+      process.exit(1);
+    }
   }
   return args;
 }
@@ -163,6 +167,12 @@ function main(): void {
 
   const env = withPackagesToken(process.env, ghAuthToken());
   const pairs = resolveLatestVersions(names, (name) => npmViewVersions(name, env));
+  const resolvedNames = new Set(pairs.map(([name]) => name));
+  const failed = names.filter((n) => !resolvedNames.has(n));
+  if (failed.length > 0) {
+    console.error(`error: could not resolve version for: ${failed.join(', ')}\n\n${AUTH_HINT}`);
+    process.exit(1);
+  }
   if (pairs.length === 0) {
     console.error(`\n${AUTH_HINT}`);
     process.exit(1);
