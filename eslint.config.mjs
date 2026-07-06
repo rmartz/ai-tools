@@ -75,13 +75,6 @@ export default [
     },
   },
   {
-    // Tests — longer ceiling, no boundary constraints.
-    files: ['packages/*/test/**/*.ts', '**/*.test.ts'],
-    languageOptions: { parser: tsparser, parserOptions: tsParserOptions },
-    plugins: { '@typescript-eslint': tseslint },
-    rules: { 'max-lines': ['error', { max: 720 }] },
-  },
-  {
     // Repo-level scripts (the CI gates themselves) — basic rules, no boundaries.
     files: ['scripts/**/*.ts'],
     languageOptions: { parser: tsparser, parserOptions: tsParserOptions },
@@ -90,5 +83,13 @@ export default [
       'max-lines': ['error', { max: 480 }],
       '@typescript-eslint/consistent-type-imports': 'error',
     },
+  },
+  {
+    // Tests — longer ceiling, no boundary constraints.
+    // Must come after scripts/**/*.ts so the 720 override wins for script test files.
+    files: ['packages/*/test/**/*.ts', '**/*.test.ts'],
+    languageOptions: { parser: tsparser, parserOptions: tsParserOptions },
+    plugins: { '@typescript-eslint': tseslint },
+    rules: { 'max-lines': ['error', { max: 720 }] },
   },
 ];
