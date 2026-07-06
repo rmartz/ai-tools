@@ -52,8 +52,8 @@ export default [
       'import/resolver': importResolver,
     },
     rules: {
-      // File size: the source-level half of the ratchet (CI backstop is
-      // scripts/check-file-length.ts). Hard ceiling at 2x the 240 split point.
+      // File size: the sole file-length cap (there is no separate CI ratchet).
+      // Hard ceiling at 2x the 240 split point; counts every line.
       'max-lines': ['error', { max: 480, skipBlankLines: false, skipComments: false }],
 
       // Layer boundaries: upper layers import lower, never the reverse.

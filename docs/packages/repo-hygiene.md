@@ -13,10 +13,11 @@ importable function; a thin `bin/` CLI wraps it for the pre-commit hook and CI.
 Imports only `@rmartz/agent-runtime` (for `boundedRun`) from layer 0.
 
 For now this package ships a single check, `check-conflict-markers`. The other
-dotfiles hygiene checks are intentionally out of scope: file-length and the OKF
-frontmatter check live in the repo's root `scripts/` (`check-file-length.ts`,
-`check-okf-frontmatter.ts`), and `check_exec_bits` is obsolete — TS bins declare
-their executables via `package.json` `bin` maps rather than filesystem exec bits.
+dotfiles hygiene checks are intentionally out of scope: file-length is enforced by
+ESLint's `max-lines` rule (no separate script), the OKF frontmatter check lives in
+the repo's root `scripts/` (`check-okf-frontmatter.ts`), and `check_exec_bits` is
+obsolete — TS bins declare their executables via `package.json` `bin` maps rather
+than filesystem exec bits.
 
 ## check-conflict-markers
 

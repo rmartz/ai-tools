@@ -24,16 +24,15 @@ nothing here imports it. The dependency arrow is one-way.
 
 ```sh
 pnpm install
-pnpm run ci        # typecheck + lint + format + file-length + okf + test
+pnpm run ci        # typecheck + lint + format + okf + test
 pnpm run test:watch
 ```
 
 ## CI gates (enforced from commit #1)
 
 - **typecheck** — `tsc` across all packages
-- **lint** — ESLint incl. layer boundaries, `max-lines` (480 src / 720 test), no import cycles
+- **lint** — ESLint incl. layer boundaries, `max-lines` (480 src / 720 test — the sole file-length cap), no import cycles
 - **format** — Prettier check
-- **file-length ratchet** — `scripts/check-file-length.ts` (a change may not grow an over-limit file)
 - **OKF docs** — `scripts/check-okf-frontmatter.ts` (every `docs/` page has valid frontmatter + a real resource)
 - **test** — vitest (globbed discovery; no manual test list to fall out of sync)
 

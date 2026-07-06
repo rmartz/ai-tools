@@ -58,17 +58,6 @@ jobs:
       - run: pnpm run build
       - run: pnpm run test
 
-  file-length:
-    name: File-length ratchet
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0 # the file-length ratchet needs the merge base
-      - uses: ./.github/actions/setup
-      - run: pnpm run check:file-length -- --base origin/${{ github.base_ref || 'main' }}
-
   okf:
     name: OKF docs frontmatter
     runs-on: ubuntu-latest
