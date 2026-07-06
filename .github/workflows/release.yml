@@ -1,15 +1,37 @@
 name: Release
 
-# Publishes changed packages to GitHub Packages on a version tag (e.g. v0.1.0).
-# Each package publishes independently — `pnpm -r publish` skips any package
-# whose current version is already on the registry, so bump only what changed.
+# Automated releases via release-please. On every push to main it maintains an
+# aggregated "release" PR that bumps the changed packages (from Conventional-
+# Commit history) and updates their changelogs. Merging that PR creates the
+# releases/tags; the publish job then builds and runs `pnpm -r publish` (which
+# skips any version already on the registry), so only the bumped packages ship.
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+
+permissions:
+  contents: write # create releases + the release-PR branch
+  pull-requests: write # open/update the release PR
 
 jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          # GITHUB_TOKEN-created PRs don't trigger CI. Set a RELEASE_PLEASE_PAT
+          # secret (a PAT with contents + pull-requests write — `repo` scope on a
+          # classic PAT) to run CI on the release PR; falls back to the built-in
+          # token, which still opens the PR and creates releases but leaves the
+          # mechanical release PR without CI.
+          token: ${{ secrets.RELEASE_PLEASE_PAT || github.token }}
+
   publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

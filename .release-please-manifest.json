@@ -1,0 +1,11 @@
+{
+  "packages/agent-runtime": "0.1.1",
+  "packages/bootstrap": "0.1.1",
+  "packages/github": "0.1.3",
+  "packages/issues": "0.1.1",
+  "packages/pr-review": "0.1.1",
+  "packages/repo-hygiene": "0.1.1",
+  "packages/reporting": "0.1.1",
+  "packages/verify": "0.1.1",
+  "packages/worktree": "0.1.1"
+}
