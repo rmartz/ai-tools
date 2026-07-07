@@ -25,11 +25,14 @@ Run `ai-git-cleanup` from within the repository. It is idempotent and runs three
 phases, making a single PR lookup per unique branch (a branch that appears both as
 a worktree and locally is looked up once):
 
-1. **Remove orphaned worktrees** — every secondary worktree whose branch has no
-   open PR is removed (`git worktree remove --force`). The main worktree,
-   detached-HEAD worktrees, and worktrees with an open PR are skipped.
-2. **Delete orphaned branches** — every local branch with no open PR is deleted.
-   The current branch and the default branch (`main`/`master`) are skipped.
+1. **Remove orphaned worktrees** — every secondary worktree whose branch's PR is
+   `closed`/merged is removed (`git worktree remove`, no `--force`); dirty
+   worktrees are skipped even when the PR is closed. Kept: main worktree,
+   detached-HEAD worktrees, worktrees with an open PR, and worktrees whose branch
+   has no PR yet (`none` — pre-PR work in progress).
+2. **Delete orphaned branches** — every local branch whose PR is `closed`/merged
+   is deleted. Kept: branches with an open PR, branches with no PR yet (`none`),
+   the current branch, and the default branch (`main`/`master`).
 3. **Prune stale admin files** — `git worktree prune` clears stale worktree
    administrative files.
 

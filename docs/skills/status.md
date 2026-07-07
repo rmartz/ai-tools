@@ -22,8 +22,9 @@ the lighter PR overview `ai-repo-status` + `gh pr list` provide.
 
 ## Flow
 
-1. **Gather** — `ai-repo-status`: milestones, issues (+ parsed `deps`), and
-   `openPrs` with the same-repo issue numbers each closes.
+1. **Gather** — `ai-repo-status`: milestones, issues not labeled `blocked` or
+   `manual` (+ parsed `deps`), and `openPrs` with the same-repo issue numbers
+   each closes.
 2. **Classify** — each open issue as unblocked, in progress (has an open PR), or
    blocked (a dep is still open).
 3. **Epics** — flag empty (no sub-issues) and completed (only the epic issue open)

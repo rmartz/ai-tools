@@ -8,15 +8,19 @@ tags: [cleanup, worktree, branches, git]
 
 # `/cleanup`
 
-The `cleanup` skill clears local branches and worktrees that no longer have an
-open PR — the accumulation from manual merges, force-deletes, and older PRs a
-merge skill didn't tidy. It composes `@rmartz/worktree`'s `ai-git-cleanup`
-(`runCleanup`); the orphan-detection logic lives in the library.
+The `cleanup` skill clears local branches and worktrees whose PR has been
+closed/merged — the accumulation from manual merges, force-deletes, and older PRs
+a merge skill didn't tidy. Branches and worktrees with no PR yet (`none` state —
+pre-PR work in progress) are always kept. It composes `@rmartz/worktree`'s
+`ai-git-cleanup` (`runCleanup`); the orphan-detection logic lives in the library.
 
 Idempotent, three phases, one PR lookup per unique branch:
 
-1. Remove orphaned secondary worktrees (skip main, detached-HEAD, and open-PR ones).
-2. Delete orphaned local branches (skip the current and default branch).
+1. Remove secondary worktrees whose branch's PR is `closed`/merged — never with
+   `--force`; dirty worktrees are skipped. Keeps: main, detached-HEAD, open-PR,
+   and no-PR-yet (`none`) worktrees.
+2. Delete local branches whose PR is `closed`/merged — keeps open-PR branches,
+   no-PR-yet (`none`) branches, the current branch, and the default branch.
 3. `git worktree prune` for stale admin files.
 
 Git-local only — the sole GitHub touch is the read that checks whether a branch

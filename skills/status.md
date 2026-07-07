@@ -25,8 +25,8 @@ and open-PR data as one JSON object:
 
 - `milestones` — `{ title, number, openIssues }` per open milestone (epic).
 - `issues` — `{ number, title, milestone, labels, assignees, deps }` per open
-  issue; `deps` are the issue numbers parsed from "depends on / blocked by /
-  requires #N" in the body.
+  issue not labeled `blocked` or `manual`; `deps` are the issue numbers parsed from
+  "depends on / blocked by / requires #N" in the body.
 - `openPrs` — `{ number, headRefName, issueNumbers }`, where `issueNumbers` is the
   same-repo issues the PR closes, resolved from GitHub's `closingIssuesReferences`
   (authoritative), then the `[<type>/]issue-<N>-*` branch convention, then
