@@ -162,8 +162,7 @@ export async function getDiscussion(
   const data = (await graphql(query, { owner, name, number: String(number) })) as {
     repository: {
       discussion:
-        | (DiscussionRef & { title: string; body: string; comments: { nodes: RawComment[] } })
-        | null;
+        (DiscussionRef & { title: string; body: string; comments: { nodes: RawComment[] } }) | null;
     } | null;
   };
   const d = data.repository?.discussion;

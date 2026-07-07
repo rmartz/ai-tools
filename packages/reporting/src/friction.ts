@@ -13,11 +13,7 @@ import { parseLogEventsText, type LogEvent } from '@rmartz/agent-runtime';
  */
 
 export type FrictionType =
-  | 'tool_error'
-  | 'user_correction'
-  | 'hook_block'
-  | 'tool_retry'
-  | 'context_compacted';
+  'tool_error' | 'user_correction' | 'hook_block' | 'tool_retry' | 'context_compacted';
 
 export interface FrictionEvent {
   type: FrictionType;

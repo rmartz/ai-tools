@@ -24,12 +24,7 @@ export const FIXES_DEPENDABOT_PREFIX = 'Fixes Dependabot PR #';
  * `unknown` is the soft default when the caller has only the raw CI failure.
  */
 export type FixCategory =
-  | 'lint-rule'
-  | 'type-error'
-  | 'breaking-api'
-  | 'compatibility-shim'
-  | 'test-failure'
-  | 'unknown';
+  'lint-rule' | 'type-error' | 'breaking-api' | 'compatibility-shim' | 'test-failure' | 'unknown';
 
 export interface DependabotFixIssueInput {
   /** The Dependabot PR number that is red. */
