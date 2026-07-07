@@ -40,5 +40,5 @@ based on its dep's branch) is expressed; the runner orders the merges.
 ## See also
 
 - Atomic unit: [`implement`](./implement.md).
-- Scope input: [`status`](./status.md) surfaces empty/un-implemented epics to seed.
+- Scope input: `status` surfaces empty/un-implemented epics to seed.
 - Libraries: [`@rmartz/github`](../packages/github.md), [`@rmartz/worktree`](../packages/worktree.md).

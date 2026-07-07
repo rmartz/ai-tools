@@ -45,7 +45,7 @@ those are the coordinator's job.
   - **Non-epic** — include the issue itself.
 - **A quoted string** (e.g. `"Tech Debt"`) — label mode: an exact label name.
   Fetch every open issue with it (`gh issue list --label "<label>" --state open
---json number,title --limit 100`). Zero found → exit `"No open issues with label
+--json number,title --paginate`). Zero found → exit `"No open issues with label
 '<label>'"`. Print a one-line confirmation (`"Label scope: '<label>' — N
 issue(s): #A, #B, …"`) before the loop. Multiple quoted strings union
   (deduplicated).
@@ -107,19 +107,22 @@ guard holds: a dep with **neither** a closed issue **nor** an open PR still bloc
 the child — nothing to merge, nothing to stack on.
 
 **Stale-worktree check (actionable issues).** Run `git worktree list --porcelain`
-and inspect `.git-worktrees/issue-<N>/` for each actionable N:
+and, for each actionable N, parse the `worktree` lines to find the actual path
+whose leaf matches `issue-<N>-*` (e.g. `.git-worktrees/issue-<N>-slug`); call it
+`<wt>`. If no matching entry is found, the worktree does not exist — skip the
+stale-worktree check for that issue and proceed to `/implement`. Otherwise:
 
 - **Substantive committed work** (commits past `origin/main`): recover
   automatically —
-  1. **Inspect HEAD** (`git -C .git-worktrees/issue-<N> log -1 --no-merges
---format=%s origin/main..HEAD`). A Conventional-Commits subject → a
-     ready-for-review PR; otherwise a **draft** PR with a `[WIP]` title.
-  2. **Push** `git -C .git-worktrees/issue-<N> push -u origin HEAD`; on failure
-     take the failure path.
+  1. **Inspect HEAD** (`git -C <wt> log -1 --no-merges --format=%s
+origin/main..HEAD`). A Conventional-Commits subject → a ready-for-review PR;
+     otherwise a **draft** PR with a `[WIP]` title.
+  2. **Push** `git -C <wt> push -u origin HEAD`; on failure take the failure
+     path.
   3. **Resolve the recovery base from branch ancestry — do not hard-code `main`.**
      A stale worktree may have been created **stacked** on a dep's branch; a
      recovery PR against `main` would let the child merge ahead of its parent. Read
-     the tracking ref (`git -C .git-worktrees/issue-<N> rev-parse --abbrev-ref
+     the tracking ref (`git -C <wt> rev-parse --abbrev-ref
 --symbolic-full-name @{u}`) and strip `origin/`; with no upstream, compare the
      branch's merge-base against the default branch vs. each open PR's head
      (`openPrs[].headRefName`) to find the head it was forked from. If that base is
@@ -134,8 +137,8 @@ and inspect `.git-worktrees/issue-<N>/` for each actionable N:
      user (push failed → "branch not yet on origin — retry `git push`"; PR-create
      failed → "branch already pushed — retry `ai-create-pr`"). Don't re-run
      `/implement`.
-- **Only uncommitted scratch / empty** → force-remove (two calls: `git worktree
-remove --force .git-worktrees/issue-<N>`, then `git branch -D` the branch if it
+- **Only uncommitted scratch / empty** → force-remove (two calls:
+  `git worktree remove --force <wt>`, then `git branch -D` the branch if it
   remains). `/implement` recreates it cleanly.
 
 Initialize iteration state: `iteration = 0`, `max_iterations = 60` (safety cap),
