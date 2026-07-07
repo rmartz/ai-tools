@@ -117,12 +117,34 @@ describe('parseBumpFromDiff', () => {
   });
 
   it('escapes a scoped name and does not match a different package', () => {
-    const diff = ['-    "@scope/pkg": "1.0.0",', '+    "@scope/pkg": "2.0.0",'].join('\n');
+    const diff = [
+      'diff --git a/package.json b/package.json',
+      '@@ -1,3 +1,3 @@',
+      '-    "@scope/pkg": "1.0.0",',
+      '+    "@scope/pkg": "2.0.0",',
+    ].join('\n');
     expect(parseBumpFromDiff(diff, '@scope/pkg')).toEqual({
       fromVersion: '1.0.0',
       toVersion: '2.0.0',
     });
     expect(parseBumpFromDiff(diff, 'somepkg')).toEqual({});
+  });
+
+  it('ignores matching version lines outside package.json sections', () => {
+    const diff = [
+      'diff --git a/src/versions.ts b/src/versions.ts',
+      '@@ -1,1 +1,1 @@',
+      '-    "somepkg": "^3.8.4",',
+      '+    "somepkg": "^3.9.4",',
+      'diff --git a/package.json b/package.json',
+      '@@ -1,1 +1,1 @@',
+      '-    "somepkg": "^1.2.3",',
+      '+    "somepkg": "^1.2.4",',
+    ].join('\n');
+    expect(parseBumpFromDiff(diff, 'somepkg')).toEqual({
+      fromVersion: '1.2.3',
+      toVersion: '1.2.4',
+    });
   });
 
   it('returns {} when the diff does not pin the version (lockfile-only)', () => {
@@ -157,5 +179,8 @@ describe('verifyDependabotBump', () => {
       toVersion: '3.9.4',
     });
     expect(v.titleMisstated).toBe(false);
+    // Claimed versions should be preserved as fallback for downstream risk assessment.
+    expect(v.fromVersion).toBe('3.9.1');
+    expect(v.toVersion).toBe('3.9.4');
   });
 });

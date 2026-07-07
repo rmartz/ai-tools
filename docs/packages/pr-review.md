@@ -55,11 +55,12 @@ as review craft.
   **actual** version change of `name` from a unified diff's `package.json`
   dependency line — the source of truth. `{}` when the diff doesn't pin the version
   (e.g. lockfile-only).
-- `verifyDependabotBump(name, diff, claimed)` → `{ fromVersion?, toVersion?,
-titleMisstated, note? }`. **Trust but verify**: reconciles the bump Dependabot
-  _claims_ (in its title/description) against the diff. Dependabot has been seen to
-  misstate the from-version (envctl#27: title `3.9.1 → 3.9.4`, diff `3.8.4 → 3.9.4`),
-  under-stating the delta and the risk. The review composes this **before**
+- `verifyDependabotBump(name, diff, claimed)` → `{ fromVersion?, toVersion?, titleMisstated, note? }`.
+  **Trust but verify**: reconciles the bump Dependabot _claims_ (in its title/description) against
+  the diff. Returns diff-derived versions when the diff pins the version (the source of truth),
+  falling back to the claimed versions for lockfile-only PRs where the diff can't verify. Dependabot
+  has been seen to misstate the from-version (envctl#27: title `3.9.1 → 3.9.4`, diff
+  `3.8.4 → 3.9.4`), under-stating the delta and the risk. The review composes this **before**
   `assessDependabotRisk` and re-titles the PR from the diff on a mismatch.
 
 ## Verdict mapping
