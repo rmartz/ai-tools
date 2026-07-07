@@ -170,3 +170,103 @@ export function assessDependabotRisk(bump: DependabotBump): DependabotRiskAssess
 
   return { level, reasons, semverChange };
 }
+
+// ── Trust-but-verify: reconcile the claimed bump against the diff ──────────────
+
+/** A version change read from a PR diff for a specific dependency. */
+export interface DiffBump {
+  fromVersion?: string;
+  toVersion?: string;
+}
+
+/**
+ * True when both versions parse to the same `major.minor.patch`. Conservative: an
+ * unparseable side returns `true`, so an unknown never manufactures a mismatch.
+ */
+function sameSemver(a: string | undefined, b: string | undefined): boolean {
+  const pa = parseSemver(a);
+  const pb = parseSemver(b);
+  if (!pa || !pb) return true;
+  return pa.major === pb.major && pa.minor === pb.minor && pa.patch === pb.patch;
+}
+
+/**
+ * Read the actual from/to version of `name` from a unified diff — the source of
+ * truth for a Dependabot bump. Scans removed (`-`) / added (`+`) lines within
+ * `package.json` file sections only (identified by `diff --git` / `+++ ` headers),
+ * tolerating a leading range operator or `v`. Returns whichever ends it finds; `{}`
+ * when the diff doesn't pin the version (e.g. a lockfile-only refresh), which the
+ * caller reads as "cannot verify".
+ */
+export function parseBumpFromDiff(diff: string, name: string): DiffBump {
+  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`"${esc}"\\s*:\\s*"[~^>=v\\s]*(\\d+\\.\\d+\\.\\d+)`);
+  const result: DiffBump = {};
+  let inPackageJson = false;
+  for (const line of diff.split('\n')) {
+    if (line.startsWith('diff --git ')) {
+      // Track the destination path: "diff --git a/<old> b/<new>" — key off new path.
+      const bIdx = line.lastIndexOf(' b/');
+      const bPath = bIdx >= 0 ? line.slice(bIdx + 3) : '';
+      inPackageJson = bPath === 'package.json' || bPath.endsWith('/package.json');
+    } else if (line.startsWith('+++ b/')) {
+      const bPath = line.slice(6);
+      inPackageJson = bPath === 'package.json' || bPath.endsWith('/package.json');
+    } else if (inPackageJson) {
+      if (line.startsWith('-') && !line.startsWith('---')) {
+        const m = re.exec(line.slice(1));
+        if (m && result.fromVersion === undefined) result.fromVersion = m[1];
+      } else if (line.startsWith('+') && !line.startsWith('+++')) {
+        const m = re.exec(line.slice(1));
+        if (m && result.toVersion === undefined) result.toVersion = m[1];
+      }
+    }
+  }
+  return result;
+}
+
+export interface BumpVerification extends DiffBump {
+  /** True when the title/description's claimed bump disagrees with the diff. */
+  titleMisstated: boolean;
+  /** A one-line explanation when misstated, for the reviewer to surface and act on. */
+  note?: string;
+}
+
+/**
+ * Trust-but-verify a Dependabot PR: reconcile the bump **claimed** by its
+ * title/description against the **actual** version change in the diff. Dependabot
+ * has been observed to misstate the from-version (envctl#27: the title said
+ * `3.9.1 → 3.9.4`, the diff was `3.8.4 → 3.9.4`), which understates the semver
+ * delta — and so the risk `assessDependabotRisk` would compute. Returns the
+ * diff-derived versions (the ones to assess and to re-title the PR from) plus a
+ * flag and note when the claim disagrees. When the diff doesn't pin the version
+ * (so nothing can be verified), nothing is flagged.
+ */
+export function verifyDependabotBump(
+  name: string,
+  diff: string,
+  claimed: DiffBump,
+): BumpVerification {
+  const actual = parseBumpFromDiff(diff, name);
+  const misstated =
+    !sameSemver(claimed.fromVersion, actual.fromVersion) ||
+    !sameSemver(claimed.toVersion, actual.toVersion);
+  if (!misstated) {
+    // When the diff can't pin a version (lockfile-only), fall back to the claimed
+    // value so downstream risk assessment still has something to work with.
+    return {
+      fromVersion: actual.fromVersion ?? claimed.fromVersion,
+      toVersion: actual.toVersion ?? claimed.toVersion,
+      titleMisstated: false,
+    };
+  }
+  const claim = `${claimed.fromVersion ?? '?'} → ${claimed.toVersion ?? '?'}`;
+  const real = `${actual.fromVersion ?? '?'} → ${actual.toVersion ?? '?'}`;
+  return {
+    ...actual,
+    titleMisstated: true,
+    note:
+      `Dependabot's title/description claims \`${name}\` ${claim} but the diff shows ` +
+      `${real}. Assess risk from the diff-derived versions and re-title the PR.`,
+  };
+}

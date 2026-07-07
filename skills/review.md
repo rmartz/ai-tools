@@ -69,19 +69,27 @@ silently — silence is indistinguishable from a crash to the runner.
 
 If the PR author is `dependabot[bot]`:
 
-- If the title is not Conventional Commits (`chore(deps): …` / `chore(deps-dev): …`),
-  rename it.
-- Get the bump details (`gh pr diff $ARGUMENTS`) and feed them to
-  `assessDependabotRisk` from `@rmartz/pr-review` (parse name, from/to version,
-  ecosystem, lockfile-only, dev-dependency). Skip all code-quality, style, and
+- **Trust but verify the bump — the diff is the source of truth, not the title.**
+  Dependabot's title/description has been observed to misstate the from-version
+  (envctl#27 claimed `3.9.1 → 3.9.4` while the diff was `3.8.4 → 3.9.4`), which
+  understates the semver delta and the risk. Run `gh pr diff $ARGUMENTS` and pass
+  it, with the title-claimed from/to, to `verifyDependabotBump(name, diff, claimed)`
+  from `@rmartz/pr-review`. Use its **diff-derived** `fromVersion`/`toVersion` for
+  everything downstream. If `titleMisstated` is true: **correct the PR title** to
+  the real versions (title-fix-in-place, like Step 5) and surface `note` as a
+  concern — a mis-stated bump is itself a finding.
+- Feed the **diff-derived** bump to `assessDependabotRisk` (with `name`,
+  `ecosystem`, `lockfileOnly`, `devDependency`). Skip all code-quality, style, and
   convention checks — they do not apply to automated bumps.
-- Map the assessment to a verdict:
-  - **`safe`** → **approve** with no concerns. Dependabot PRs never need manual
-    testing.
-  - **`review`** or **`high`** → **soft reject**: post (or express) a concern
-    describing the specific risk (`assessment.reasons`) and what to verify. A
-    `github_actions` bump in particular cannot be merged by an automation lacking
-    the `workflows` OAuth scope — say so.
+- Map the assessment to a verdict (a misstated title escalates at least to
+  `soft_reject`, since the true risk was under-claimed):
+  - **`safe`** (and the title matched) → **approve** with no concerns. Dependabot
+    PRs never need manual testing.
+  - **`review`** or **`high`** (or a misstated title) → **soft reject**: post (or
+    express) a concern describing the specific risk (`assessment.reasons`, plus the
+    bump-mismatch `note` when present) and what to verify. A `github_actions` bump
+    in particular cannot be merged by an automation lacking the `workflows` OAuth
+    scope — say so.
 - Then stop — do not continue to the remaining steps.
 
 ---
