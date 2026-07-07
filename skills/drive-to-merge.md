@@ -154,9 +154,11 @@ One state per PR; run until every PR is terminal (`merged` or `blocked`).
      - changed → `awaiting_ci` (new commit; CI must run before the next review).
      - unchanged → `blocked`. Report "/fix-review pushed no commits — manual
        intervention required".
-   - **`approved`**: invoke `/merge <pr>`, then confirm with `gh pr view <pr> --json
-state,mergedAt,mergeCommit`: - `state: MERGED` → `merged`. Apply the post-merge safety check (Step 4) to all
-     remaining non-terminal PRs before continuing. - anything else → `blocked`. Report what `/merge` found.
+   - **`approved`**: invoke `/merge <pr>`, then confirm with
+     `gh pr view <pr> --json state,mergedAt,mergeCommit`:
+     - `state: MERGED` → `merged`. Apply the post-merge safety check (Step 4) to all
+       remaining non-terminal PRs before continuing.
+     - anything else → `blocked`. Report what `/merge` found.
 3. **Iteration ceiling**: each PR may enter `ready_review` at most **3 times**. A
    fourth entry → `blocked` instead, logging the outcome seen at each iteration.
 4. **No actionable PRs, some waiting** (`awaiting_ci`/`awaiting_copilot`) → Step 3a.
