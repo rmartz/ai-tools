@@ -3,7 +3,7 @@
   "packages/bootstrap": "0.1.1",
   "packages/github": "0.2.0",
   "packages/issues": "0.1.1",
-  "packages/pr-review": "0.1.1",
+  "packages/pr-review": "0.1.2",
   "packages/repo-hygiene": "0.1.1",
   "packages/reporting": "0.2.0",
   "packages/verify": "0.1.1",
