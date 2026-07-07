@@ -2,8 +2,21 @@ import { describe, it, expect } from 'vitest';
 import {
   assessDependabotRisk,
   classifySemverChange,
+  parseBumpFromDiff,
+  verifyDependabotBump,
   type DependabotBump,
 } from '../src/dependabot-risk.js';
+
+// A package.json hunk bumping `somepkg` from 3.8.4 to 3.9.4 (as envctl#27 did),
+// while Dependabot's *title* misstated the from-version as 3.9.1.
+const DIFF_3_8_4_TO_3_9_4 = [
+  'diff --git a/package.json b/package.json',
+  '@@ -12,7 +12,7 @@',
+  '   "dependencies": {',
+  '-    "somepkg": "^3.8.4",',
+  '+    "somepkg": "^3.9.4",',
+  '     "other": "^1.0.0"',
+].join('\n');
 
 describe('classifySemverChange', () => {
   it('classifies each delta class', () => {
@@ -92,5 +105,57 @@ describe('assessDependabotRisk', () => {
     });
     expect(r.level).toBe('safe');
     expect(r.reasons[0]).toMatch(/dev dependency/);
+  });
+});
+
+describe('parseBumpFromDiff', () => {
+  it('reads the real from/to from the package.json change, stripping the range op', () => {
+    expect(parseBumpFromDiff(DIFF_3_8_4_TO_3_9_4, 'somepkg')).toEqual({
+      fromVersion: '3.8.4',
+      toVersion: '3.9.4',
+    });
+  });
+
+  it('escapes a scoped name and does not match a different package', () => {
+    const diff = ['-    "@scope/pkg": "1.0.0",', '+    "@scope/pkg": "2.0.0",'].join('\n');
+    expect(parseBumpFromDiff(diff, '@scope/pkg')).toEqual({
+      fromVersion: '1.0.0',
+      toVersion: '2.0.0',
+    });
+    expect(parseBumpFromDiff(diff, 'somepkg')).toEqual({});
+  });
+
+  it('returns {} when the diff does not pin the version (lockfile-only)', () => {
+    expect(parseBumpFromDiff('-  resolved "…/somepkg-3.8.4.tgz"', 'somepkg')).toEqual({});
+  });
+});
+
+describe('verifyDependabotBump', () => {
+  it('flags a title whose from-version disagrees with the diff (the envctl#27 case)', () => {
+    const v = verifyDependabotBump('somepkg', DIFF_3_8_4_TO_3_9_4, {
+      fromVersion: '3.9.1', // what the title claimed
+      toVersion: '3.9.4',
+    });
+    expect(v.titleMisstated).toBe(true);
+    expect(v.fromVersion).toBe('3.8.4'); // diff is the source of truth
+    expect(v.toVersion).toBe('3.9.4');
+    expect(v.note).toMatch(/3\.9\.1.*3\.8\.4|diff shows/);
+  });
+
+  it('does not flag when the title matches the diff', () => {
+    const v = verifyDependabotBump('somepkg', DIFF_3_8_4_TO_3_9_4, {
+      fromVersion: '3.8.4',
+      toVersion: '3.9.4',
+    });
+    expect(v.titleMisstated).toBe(false);
+    expect(v.note).toBeUndefined();
+  });
+
+  it('does not flag when the diff cannot pin the version (nothing to verify against)', () => {
+    const v = verifyDependabotBump('somepkg', 'lockfile only, no package.json line', {
+      fromVersion: '3.9.1',
+      toVersion: '3.9.4',
+    });
+    expect(v.titleMisstated).toBe(false);
   });
 });

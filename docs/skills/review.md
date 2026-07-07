@@ -48,8 +48,11 @@ portable across runners without knowing the protocol.
 1. **Setup** — resolve the PR, read its summary (`ai-pr-summary`). Stop with a
    `no_op` when CI is not terminal or the title is `[WIP]`; a CI _failure_ does
    not stop the pass. Branch-immutable throughout.
-2. **Dependabot fast path** — for `dependabot[bot]`, run `assessDependabotRisk`;
-   `safe` → `approve`, `review`/`high` → `soft_reject` with the specific risk.
+2. **Dependabot fast path** — for `dependabot[bot]`, **verify the bump against the
+   diff** (`verifyDependabotBump` — the diff is the source of truth, not the title,
+   which Dependabot can misstate), then run `assessDependabotRisk` on the
+   diff-derived versions; `safe` (matching title) → `approve`, `review`/`high` or a
+   misstated title → `soft_reject` with the specific risk.
 3. **Diff scope** — `listPrReviews` + `lastAuthoritativeReview` set the baseline
    (Copilot reviews are informational); full vs. incremental diff via
    `ai-pr-diff`.
