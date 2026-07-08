@@ -107,8 +107,8 @@ consistent with existing analogous names. Flag deviation from the repo's _own
 dominant pattern_ (coherence, not preference).
 
 **Tombstone specs** — a spec file whose every `it(` / `test(` has an empty or
-comment-only body provides false coverage; a finding to remove it or give it real
-assertions.
+comment-only body provides false coverage; emit a finding to remove it or give it
+real assertions.
 
 **File-size / refactor-on-write** — measure each touched file _at HEAD_.
 Materially over the project max (480 src / 720 test, ~240 target) without a clean
@@ -146,7 +146,8 @@ Each finding carries:
 
 - `category` — one of `correctness` · `security` · `test-coverage` ·
   `duplication` · `convention` · `file-size` · `structure` · `acceptance` ·
-  `title-description` · `ci-loosening` · `obviation` · `visual`.
+  `title-description` · `ci-loosening` · `obviation` · `visual` ·
+  `dependency-bump`.
 - `severity` — the reviewer's honest read: `blocking` (must be addressed before
   merge), `non-blocking` (a real issue that could be deferred), or
   `needs-human-input` (design disagreement, CI loosening, obviation, a

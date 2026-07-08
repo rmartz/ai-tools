@@ -115,7 +115,7 @@ run directly by the harness, the skill posts via `@rmartz/github`
 ### Review-cycle skills (the review split) — outcome + artifact contracts
 
 The single-purpose `review` skill is being split into single-responsibility
-craft skills the coordinator chains (ai-tools #106). Each keeps a `## Setup`
+craft skills the coordinator chains (ai-tools #106). Each keeps a `## Step 1 — Setup`
 (inputs the wrapper provisions) and a declarative emission (outputs the wrapper
 records/posts) — **deciding is the skill's; doing is delegated.** The agent
 decides only the outcome and the response text; PR Shepherd (or a thin direct-mode
