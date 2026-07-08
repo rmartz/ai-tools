@@ -53,9 +53,18 @@ describe('checkActionRef', () => {
     expect(checkActionRef(`actions/checkout@${SHA}`, 'v7.0.0-rc.1')).toBeNull();
   });
 
+  it('accepts a valid 40-hex SHA with uppercase characters', () => {
+    const upperSha = 'A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0';
+    expect(checkActionRef(`actions/checkout@${upperSha}`, 'v7.0.0')).toBeNull();
+  });
+
   it('requires a docker image to be digest-pinned', () => {
     expect(checkActionRef('docker://alpine:3.20')).toMatch(/@sha256 digest/);
     expect(checkActionRef(`docker://alpine@sha256:${'b'.repeat(64)}`)).toBeNull();
+  });
+
+  it('rejects a docker image with a truncated sha256 digest', () => {
+    expect(checkActionRef('docker://alpine@sha256:abc')).toMatch(/@sha256 digest/);
   });
 });
 

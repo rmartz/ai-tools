@@ -13,7 +13,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const SHA = /^[0-9a-f]{40}$/;
+const SHA = /^[0-9a-fA-F]{40}$/;
 // The pin comment must be a FULL major.minor.patch semver (optionally `v`-prefixed,
 // with an optional pre-release/build suffix). Dependabot's github-actions ecosystem
 // is unreliable at bumping pins whose comment is a partial version (`v7`, `v6.4`),
@@ -41,7 +41,9 @@ export function checkActionRef(uses: string, comment?: string): string | null {
   if (uses.startsWith('./') || uses.startsWith('../')) return null;
   // Docker image reference — the immutable form is a @sha256 digest pin.
   if (uses.startsWith('docker://')) {
-    return uses.includes('@sha256:') ? null : `${uses} — pin the docker image by @sha256 digest`;
+    return /@sha256:[0-9a-fA-F]{64}$/.test(uses)
+      ? null
+      : `${uses} — pin the docker image by @sha256 digest`;
   }
   const at = uses.lastIndexOf('@');
   if (at === -1) {
