@@ -60,6 +60,15 @@ library so PR Shepherd and the harness share one implementation.
   failure is a minor `prettier` bump that silently reformats the tree and only
   surfaces as a red CI run. The full base makes every upgrade an explicit,
   reviewable `package.json` change. (CI enforcement is tracked in #63.)
+- **Pin every GitHub Action to a full commit SHA** with a **full `major.minor.patch`**
+  version comment (`uses: owner/repo@<40-char-sha> # v7.0.0`), never a mutable tag —
+  a tag can be force-moved by a compromised upstream to run code with our token. The
+  version comment lets Dependabot's `github-actions` ecosystem keep both the SHA and
+  the comment current, but Dependabot is unreliable at bumping a **partial** version
+  comment (`# v7`, `# v6.4`), so the full three-part semver is required. Local `./…`
+  action refs are exempt (they move with the commit). Enforced by
+  `pnpm run check:actions` (`scripts/check-action-pins.ts` +
+  `.github/workflows/action-pins.yml`), the CI analog of the package.json pin check.
 - Prettier + ESLint run in CI; there is no separate manual pass.
 - Tests are hermetic: mock real-world boundaries (`gh`, network, subprocess).
   Deny-by-default — a test that reaches the network is a bug.
