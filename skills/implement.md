@@ -32,11 +32,14 @@ Implement the GitHub issue(s): $ARGUMENTS
 > that outcome is _recorded_ depends on the runner:
 >
 > - **Run directly by the harness**: you perform the mechanics yourself —
->   provision the worktree with `ai-new-worktree`, commit in it, and open the PR
->   with `ai-create-pr --base <base> --head <branch> --title <t> --body <file>`,
->   then report the PR. Do not invent gate/verdict labels or a draft/WIP
->   lifecycle; keep the PR title a Conventional-Commit summary and let the reader
->   pick up the rest.
+>   provision the worktree with `ai-new-worktree`, commit in it, open the PR with
+>   `ai-create-pr … --draft`, and — as your **final action** — mark it
+>   ready-for-review (`gh pr ready <pr>`), then report the PR. **The PR is a draft
+>   only while you are working**; a completed implementation is ready for another
+>   agent to pick up for review/fix-review/merge, so you flip it to ready the
+>   moment you finish (see Step 6). Do not invent gate/verdict labels — those are
+>   the coordinator's — but the draft → ready-for-review transition **is** yours;
+>   keep the title a Conventional-Commit summary.
 > - **Dispatched by a coordinator**: your GitHub credentials are scrubbed and you
 >   **must not** open the PR or apply labels. You express the outcome — the branch
 >   is ready (or stuck, with the diagnosis) — and the engine records it and drives
@@ -209,14 +212,23 @@ the duplicate. This is the final net for a parallel implementation that Step 3b'
 survey missed; it is cheaper to catch here than in review.
 
 Then hand off. In direct-harness mode, commit the work in the worktree and open
-the PR yourself with `ai-create-pr` — a Conventional-Commit title summarizing the
-change and a body (written to a file, passed as `--body <file>`) stating the
-purpose, the reuse/extend/new decision from Step 3b, which criteria pass, and the
-issue it closes. When dispatched by a coordinator, express the outcome — ready, or
-stuck with the diagnosis — and let the engine open and label the PR.
+the PR yourself with `ai-create-pr … --draft` — a Conventional-Commit title
+summarizing the change and a body (written to a file, passed as `--body <file>`)
+stating the purpose, the reuse/extend/new decision from Step 3b, which criteria
+pass, and the issue it closes. Then, as your **final action, mark the PR
+ready-for-review** (`gh pr ready <pr>`): the draft state means "implement is still
+working on this," so a **finished** implementation must always end **ready** — that
+is the signal another agent uses to pick it up for review → fix-review → merge.
+Never leave a completed PR sitting as a draft. When dispatched by a coordinator,
+express the outcome — ready, or stuck with the diagnosis — and let the engine open
+and promote the PR.
 
-**This skill stops here.** It does not review, fix-review, or merge its own
-work — that is a separate concern with a separate owner. When several issues were
-implemented in parallel, aggregate their outcomes into one hand-off so the reader
-sees every branch, its state (ready / stuck), and any blocking diagnosis at a
-glance.
+On the **stuck** path, do the opposite: if you open a PR at all, **leave it a
+draft** (or a `[WIP]` title) — the work is not finished, so it is not ready for
+pickup — and report the diagnosis instead of marking it ready.
+
+**This skill stops here.** Marking the PR ready-for-review is a hand-off signal,
+not a review — it does not review, fix-review, or merge its own work; that is a
+separate concern with a separate owner. When several issues were implemented in
+parallel, aggregate their outcomes into one hand-off so the reader sees every
+branch, its state (ready / stuck), and any blocking diagnosis at a glance.

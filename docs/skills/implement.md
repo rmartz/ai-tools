@@ -13,8 +13,11 @@ into a ready branch. It owns the **what** — understanding the issue, confirmin
 its premise against the code, surveying for reuse, designing before writing
 tests, implementing to green, and a duplication self-review — and deliberately
 **not** the surrounding coordination. Worktree provisioning, the commit/verify
-cadence, PR creation, its title/body/draft lifecycle, labels, and milestone
-assignment are the runner's (coordinator's) job.
+cadence, PR creation, labels, and milestone assignment are the runner's
+(coordinator's) job. The **draft → ready-for-review** transition, however, is the
+skill's: the PR is a draft only while implement is working, and a finished
+implementation always ends **ready** — the signal another agent uses to pick it up
+for review/fix-review/merge.
 
 A direct run composes the maintained `ai-*` CLIs for its mechanical spine:
 `ai-new-worktree` (`@rmartz/worktree`) to provision the worktree,
@@ -30,8 +33,10 @@ Per the [PR Shepherd handoff](../pr-shepherd-handoff.md), the skill produces a
 **ready branch and an outcome** and stops; how the outcome is _recorded_ depends
 on who ran it:
 
-- **Direct (harness) run** — the skill commits in the worktree and opens the PR
-  itself with `ai-create-pr`, using a Conventional-Commit title.
+- **Direct (harness) run** — the skill commits in the worktree, opens the PR
+  itself with `ai-create-pr … --draft` (Conventional-Commit title), and — as its
+  final action on the done path — marks it ready-for-review (`gh pr ready`). A
+  stuck run leaves the PR a draft.
 - **Coordinator-dispatched run** — the skill's GitHub credentials are scrubbed;
   it **must not** open the PR or apply labels. It expresses the outcome — ready,
   or stuck with a diagnosis — and the engine records it and drives PR creation,
