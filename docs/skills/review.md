@@ -1,75 +1,58 @@
 ---
 type: Skill
 title: review
-description: The PR-review skill — assemble review context, address every open thread, analyze the diff, and reach a runner-agnostic verdict.
+description: The PR-review skill — analyze the diff, hunt the classic missed-bug patterns, and emit findings. Triage and the routing verdict belong to synthesize-review.
 resource: skills/review.md
-tags: [pr-review, skill, review, craft, dependabot]
+tags: [pr-review, skill, review, craft, findings]
 ---
 
 # `/review`
 
-Review _craft_: the judgment a reviewer applies to a pull request, expressed as a
-single verdict. It composes `@rmartz/pr-review` (context helpers + Dependabot risk
-assessment) and `@rmartz/github` (reads + the `submitReview` / `postPrComment`
-write primitives). It owns the **how-to-review**, not the coordination around it —
-routing, gates, verdict-label reconciliation, UAT, and merge belong to the
-coordinator (PR Shepherd), which spawns this skill by name.
+Review _craft_, narrowed to one responsibility: **produce findings on the diff**.
+It analyzes the change, runs an adversarial second pass over the touched files and
+their changed call sites, and emits a set of declarative findings. It does **not**
+triage existing threads, reconcile multiple reviewers, or reach the routing
+verdict — those are [`synthesize-review`](synthesize-review.md)'s job, which
+consumes these findings. It composes `@rmartz/pr-review` (context helpers) and
+`@rmartz/github` (reads).
 
-## Runner-agnostic emission
+This is one of three skills the single-purpose `review` was split into:
+`review` (this — findings on a human PR), [`dependabot-review`](dependabot-review.md)
+(findings on an automated bump), and [`synthesize-review`](synthesize-review.md)
+(triage + verdict + action list). Dependabot PRs are out of scope here.
 
-The skill reaches a verdict and stops; how that verdict is _recorded_ depends on
-who ran it:
+## Emission
 
-- **Direct (harness) run** — the skill posts the verdict itself via
-  `@rmartz/github`: `submitReview(repo, pr, event, { body })`, plus
-  `postPrComment` / the `ai-pr-comment` CLI for status notes.
-- **Coordinator-dispatched run** — the skill's GitHub credentials are scrubbed
-  and it **must not post**. It only expresses the verdict; the engine renders and
-  posts the outcome record.
+The skill produces **findings** and stops — it never posts them, mutates the PR,
+resolves a thread, or decides merge. Each finding is declarative data; _deciding_
+a finding and _acting_ on it are separate responsibilities, and this skill owns
+only the deciding. A direct run expresses the findings and a thin executor records
+them; a coordinator captures them into the review-cycle store `synthesize-review`
+reads.
 
-So the skill describes the **judgment + verdict** but bakes in **no** coordinator
-marker format, gate semantics, or label names. The verdict maps onto a small
-outcome enum:
-
-| Verdict       | Meaning                                                           |
-| ------------- | ----------------------------------------------------------------- |
-| `approve`     | No outstanding issues — clean and safe to merge.                  |
-| `soft_reject` | Issues a follow-up fix pass can address.                          |
-| `hard_reject` | Needs the author's judgment (design, CI loosening, obviation, …). |
-| `no_op`       | A guard stopped the pass (CI not terminal, `[WIP]`).              |
-| `error`       | The pass could not complete (tooling / transient failure).        |
-
-This is the same enum the coordinator's Skill Outcome Protocol consumes (see
-`docs/pr-shepherd-handoff.md`, "Two contract boundaries"), so the skill is
-portable across runners without knowing the protocol.
+Each finding carries a `category`, a proposed `severity`
+(`blocking` / `non-blocking` / `needs-human-input` — a proposal, not the verdict),
+a `location` for threading, a `summary`, and optional `suggestedText` (a
+title/description replacement or an obvious code fix).
 
 ## Flow
 
-1. **Setup** — resolve the PR, read its summary (`ai-pr-summary`). Stop with a
-   `no_op` when CI is not terminal or the title is `[WIP]`; a CI _failure_ does
-   not stop the pass. Branch-immutable throughout.
-2. **Dependabot fast path** — for `dependabot[bot]`, **verify the bump against the
-   diff** (`verifyDependabotBump` — the diff is the source of truth, not the title,
-   which Dependabot can misstate), then run `assessDependabotRisk` on the
-   diff-derived versions; `safe` (matching title) → `approve`, `review`/`high` or a
-   misstated title → `soft_reject` with the specific risk.
-3. **Diff scope** — `listPrReviews` + `lastAuthoritativeReview` set the baseline
-   (Copilot reviews are informational); full vs. incremental diff via
-   `ai-pr-diff`.
-4. **Open threads** — address each (fixed / dismissed / tracked / still-open) via
-   `ai-resolve-thread` / `ai-dismiss-thread`; Copilot threads are triaged first.
-5. **Code review** — title/description, acceptance criteria, an overlap search
-   for duplicated functionality, conventions (ai-tools' layer boundaries,
+1. **Setup & diff scope** — resolve the PR (`ai-pr-summary`), set the baseline with
+   `listPrReviews` + `lastAuthoritativeReview` (Copilot reviews are informational),
+   and pick a full or incremental diff via `ai-pr-diff`. Branch-immutable
+   throughout.
+2. **Review the diff** — title/description vs. the diff (as a `suggestedText`
+   finding, not an inline edit), acceptance criteria, an overlap search for
+   duplicated functionality, conventions (ai-tools' layer boundaries,
    library-first, file-size, hermetic tests, OKF docs), correctness, coverage, an
-   **adversarial second pass** (read the touched files + changed call sites for
-   the classic missed-bug patterns), file/naming coherence, tombstone specs,
-   CI-loosening, obviation, and the visual gate (`extractScreenshotUrls`).
-6. **Verdict** — Prior items / Requested changes / Verdict / Deferred; UAT and
-   labels are explicitly _not_ the reviewer's call.
-7. **Express the verdict** — post it directly, or (dispatched) hand it to the
-   engine.
+   **adversarial second pass** (the classic missed-bug patterns), file/naming
+   coherence, tombstone specs, CI-loosening, obviation, and the visual gate
+   (`extractScreenshotUrls`).
+3. **Emit the findings** — express them as declarative data (an empty record when
+   nothing was found), with the diff scope, for `synthesize-review` to consume.
 
 ## See also
 
+- [`synthesize-review`](synthesize-review.md) — consumes these findings.
 - `@rmartz/pr-review` library — `docs/packages/pr-review.md`.
 - The delegation contract — `docs/pr-shepherd-handoff.md`.
