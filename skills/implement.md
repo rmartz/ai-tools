@@ -10,11 +10,9 @@ Implement the GitHub issue(s): $ARGUMENTS
 > **Tooling**: this skill is implementation _craft_, not coordination. It owns
 > the **what** — understanding the issue, surveying for reuse, designing the
 > approach, writing tests that encode that design, implementing to green, and
-> self-reviewing for duplication. The **how** of the surrounding workflow —
-> provisioning the worktree, the commit/verify cadence, opening the PR, its
-> title/body/draft lifecycle, labels, and milestone assignment — belongs to the
-> runner (the coordinator), not to this skill. Never name a gate/verdict label
-> and never hard-code a coordinator's PR lifecycle. For a direct run the
+> self-reviewing for duplication. It does **not** own the wider coordination that
+> surrounds a merge — gate/verdict labels, milestone assignment, and where the PR
+> travels after it is handed off ready. Never name a gate/verdict label. The
 > mechanical spine composes the maintained `ai-*` CLIs: `ai-new-worktree`
 > (`@rmartz/worktree`) to provision the isolated worktree, `ai-pre-push-verify`
 > (`@rmartz/verify`) to re-run the project's own CI-derived checks before
@@ -27,27 +25,21 @@ Implement the GitHub issue(s): $ARGUMENTS
 > approach, then writes tests that validate that design, then implements until
 > they pass. Cap the implementation at ~15 iterations before declaring stuck.
 
-> **Runner-agnostic emission (read this first).** This skill produces a **working
-> branch and an outcome** (implemented-and-ready, or stuck-with-a-diagnosis). How
-> that outcome is _recorded_ depends on the runner:
+> **Emission (read this first).** This skill produces a **working branch and an
+> outcome** — implemented-and-ready, or stuck-with-a-diagnosis — and opens the PR
+> itself. Provision the worktree with `ai-new-worktree`, commit in it, and open
+> the PR with `ai-create-pr … --draft`. On the done path, as your **final
+> action**, mark it ready-for-review (`gh pr ready <pr>`) and report it: **the PR
+> is a draft only while you are working**, and a completed implementation is ready
+> for another agent to pick up for review/fix-review/merge, so you flip it to
+> ready the moment you finish (see Step 6). On the stuck path, leave the PR a
+> draft. Do not invent gate/verdict labels — those belong to whoever coordinates
+> the PR afterward — but the draft → ready-for-review transition **is** yours;
+> keep the title a Conventional-Commit summary.
 >
-> - **Run directly by the harness**: you perform the mechanics yourself —
->   provision the worktree with `ai-new-worktree`, commit in it, open the PR with
->   `ai-create-pr … --draft`, and — as your **final action** — mark it
->   ready-for-review (`gh pr ready <pr>`), then report the PR. **The PR is a draft
->   only while you are working**; a completed implementation is ready for another
->   agent to pick up for review/fix-review/merge, so you flip it to ready the
->   moment you finish (see Step 6). Do not invent gate/verdict labels — those are
->   the coordinator's — but the draft → ready-for-review transition **is** yours;
->   keep the title a Conventional-Commit summary.
-> - **Dispatched by a coordinator**: your GitHub credentials are scrubbed and you
->   **must not** open the PR or apply labels. You express the outcome — the branch
->   is ready (or stuck, with the diagnosis) — and the engine records it and drives
->   PR creation, labelling, promotion, and milestone tracking.
->
-> Either way this skill **stops when the implementation is done** — it never
-> reviews, fix-reviews, or merges its own work. Do not invoke a review or merge
-> skill from within it.
+> This skill **stops when the implementation is done** — it never reviews,
+> fix-reviews, or merges its own work. Do not invoke a review or merge skill from
+> within it.
 
 ## Step 0 — Resolve the issue reference(s)
 
@@ -98,9 +90,8 @@ changed. Confirm the premise against the code _before_ committing to an approach
    not already exist and the stated rationale holds.
 3. **If the code contradicts the premise, stop.** Do not invent a root cause to
    justify proceeding. Record the discrepancy — what the code actually does vs.
-   what the issue claims — and surface it (in direct mode, a comment on the issue
-   asking for clarification; when dispatched, express it as the outcome) rather
-   than implementing against a false premise.
+   what the issue claims — and surface it (a comment on the issue asking for
+   clarification) rather than implementing against a false premise.
 4. **If the premise holds** — or cannot be contradicted, as with a net-new
    feature that has no prior behavior to check — continue.
 
@@ -211,17 +202,15 @@ If either is yes, **consolidate** — call or extend the existing code and delet
 the duplicate. This is the final net for a parallel implementation that Step 3b's
 survey missed; it is cheaper to catch here than in review.
 
-Then hand off. In direct-harness mode, commit the work in the worktree and open
-the PR yourself with `ai-create-pr … --draft` — a Conventional-Commit title
-summarizing the change and a body (written to a file, passed as `--body <file>`)
-stating the purpose, the reuse/extend/new decision from Step 3b, which criteria
-pass, and the issue it closes. Then, as your **final action, mark the PR
-ready-for-review** (`gh pr ready <pr>`): the draft state means "implement is still
-working on this," so a **finished** implementation must always end **ready** — that
-is the signal another agent uses to pick it up for review → fix-review → merge.
-Never leave a completed PR sitting as a draft. When dispatched by a coordinator,
-express the outcome — ready, or stuck with the diagnosis — and let the engine open
-and promote the PR.
+Then hand off. Commit the work in the worktree and open the PR yourself with
+`ai-create-pr … --draft` — a Conventional-Commit title summarizing the change and
+a body (written to a file, passed as `--body <file>`) stating the purpose, the
+reuse/extend/new decision from Step 3b, which criteria pass, and the issue it
+closes. Then, as your **final action, mark the PR ready-for-review**
+(`gh pr ready <pr>`): the draft state means "implement is still working on this,"
+so a **finished** implementation must always end **ready** — that is the signal
+another agent uses to pick it up for review → fix-review → merge. Never leave a
+completed PR sitting as a draft.
 
 On the **stuck** path, do the opposite: if you open a PR at all, **leave it a
 draft** (or a `[WIP]` title) — the work is not finished, so it is not ready for
