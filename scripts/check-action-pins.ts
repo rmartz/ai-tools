@@ -14,9 +14,11 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SHA = /^[0-9a-f]{40}$/;
-// A version-ish token in the pin comment (`v7.0.0`, `v6`, `1.2.3`) so Dependabot
-// has a baseline version to bump from.
-const VERSION_COMMENT = /\bv?\d+(?:\.\d+)*\b/;
+// The pin comment must be a FULL major.minor.patch semver (optionally `v`-prefixed,
+// with an optional pre-release/build suffix). Dependabot's github-actions ecosystem
+// is unreliable at bumping pins whose comment is a partial version (`v7`, `v6.4`),
+// so require all three components.
+const FULL_SEMVER_COMMENT = /^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
 /** Parse the `uses:` value and any trailing `# comment` from one line. */
 export function parseUsesLine(line: string): { uses: string; comment?: string } | null {
@@ -49,8 +51,8 @@ export function checkActionRef(uses: string, comment?: string): string | null {
   if (!SHA.test(ref)) {
     return `${uses} — not SHA-pinned; pin to a full 40-char commit SHA (a tag is mutable)`;
   }
-  if (!comment || !VERSION_COMMENT.test(comment)) {
-    return `${uses} — SHA-pinned but no version comment; add "# vX.Y.Z" so Dependabot can track it`;
+  if (!comment || !FULL_SEMVER_COMMENT.test(comment)) {
+    return `${uses} — SHA-pinned but the version comment must be a full major.minor.patch (e.g. "# v7.0.0"); Dependabot is unreliable with a partial version`;
   }
   return null;
 }

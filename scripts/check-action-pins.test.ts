@@ -40,7 +40,17 @@ describe('checkActionRef', () => {
   });
 
   it('rejects a SHA pin with no version comment', () => {
-    expect(checkActionRef(`actions/checkout@${SHA}`)).toMatch(/no version comment/);
+    expect(checkActionRef(`actions/checkout@${SHA}`)).toMatch(/full major\.minor\.patch/);
+  });
+
+  it('rejects a SHA pin whose comment is a partial (non-full-semver) version', () => {
+    expect(checkActionRef(`actions/checkout@${SHA}`, 'v7')).toMatch(/full major\.minor\.patch/);
+    expect(checkActionRef(`actions/checkout@${SHA}`, 'v6.4')).toMatch(/full major\.minor\.patch/);
+  });
+
+  it('accepts a full semver comment without the v prefix and with a pre-release', () => {
+    expect(checkActionRef(`actions/checkout@${SHA}`, '7.0.0')).toBeNull();
+    expect(checkActionRef(`actions/checkout@${SHA}`, 'v7.0.0-rc.1')).toBeNull();
   });
 
   it('requires a docker image to be digest-pinned', () => {
