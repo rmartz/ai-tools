@@ -1,0 +1,28 @@
+name: Action pins
+
+# Only runs on PRs (and main pushes) that change a workflow or composite action —
+# an action-pin regression can only arrive through a `.github/` edit, so there's
+# no reason to run this on unrelated PRs. Mirrors pins.yml for package.json.
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+
+permissions:
+  contents: read
+
+jobs:
+  action-pins:
+    name: GitHub Actions SHA pins
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: ./.github/actions/setup
+      - run: pnpm run check:actions
