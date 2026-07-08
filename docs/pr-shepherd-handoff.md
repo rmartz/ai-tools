@@ -112,6 +112,39 @@ do **not** bake PR Shepherd's typed marker format or posting into the skill. Whe
 run directly by the harness, the skill posts via `@rmartz/github`
 (`postPrComment` / `submitReview`); under PR Shepherd, emission is the engine's.
 
+### Review-cycle skills (the review split) — outcome + artifact contracts
+
+The single-purpose `review` skill is being split into single-responsibility
+craft skills the coordinator chains (ai-tools #106). Each keeps a `## Setup`
+(inputs the wrapper provisions) and a declarative emission (outputs the wrapper
+records/posts) — **deciding is the skill's; doing is delegated.** The agent
+decides only the outcome and the response text; PR Shepherd (or a thin direct-mode
+executor) performs every post/resolve/edit. No skill in this family calls
+`ai-resolve-thread` / `ai-dismiss-thread` / `gh pr edit` itself.
+
+| Skill               | Emits                                                                                     | Outcome enum                                          |
+| ------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `review`            | **findings** on a human PR (`category`/`severity`/`location`/`summary`/`suggestedText`)   | — (no verdict)                                        |
+| `dependabot-review` | **findings** on an automated bump, same schema                                            | — (no verdict)                                        |
+| `synthesize-review` | **verdict** + per-thread `{disposition, replyText}` + an **action list** for `fix-review` | `approve`/`soft_reject`/`hard_reject`/`no_op`/`error` |
+
+The **routing verdict lives only in `synthesize-review`** — the arbiter that sees
+every reviewer (Claude findings + Copilot + humans). `review` / `dependabot-review`
+never approve/reject.
+
+**Two payload shapes still to finalize with you** (marked placeholder in the
+skills):
+
+1. The **findings-record** format `review` / `dependabot-review` write and
+   `synthesize-review` reads.
+2. The **action-list** format `synthesize-review` hands `fix-review`.
+
+Both cross the review-cycle store boundary you own — the same **`ResumeStore`
+PR-comment-backed store** described under "Seams PR Shepherd must supply" is the
+natural carrier. Once the two shapes are agreed, the skills swap the placeholder
+for the real format; the outcome enum and the express-don't-post seam are already
+stable.
+
 ### Reporting ↔ self-observability (#109) — coordinate the taxonomy
 
 PR Shepherd's open **#109** (self-observability, Epic 11) detects engine-internal
