@@ -36,6 +36,19 @@ updates:
           - 'major'
           - 'minor'
           - 'patch'
+      # The ESLint toolchain is a version-locked family. `@typescript-eslint/eslint-plugin`
+      # and `@typescript-eslint/parser` ship on an IDENTICAL version line and must move
+      # together — ungrouped, a major would raise them as two separate, individually-broken
+      # PRs. `eslint` core, the plugins, and the import resolver track eslint's major, so a
+      # lint bump is only coherent when the whole toolchain moves at once. Grouped across ALL
+      # update types (major/minor/patch) and listed among the family groups (before the
+      # dev/prod catch-alls) so any eslint-ecosystem bump lands as one atomic PR.
+      eslint:
+        patterns:
+          - 'eslint'
+          - '@typescript-eslint/*'
+          - 'eslint-plugin-*'
+          - 'eslint-import-resolver-*'
       # `prettier` is isolated for a different reason than the two above: a major or
       # minor prettier bump can reformat the whole codebase, so it routinely carries
       # required code changes and fails the Format check until the tree is
