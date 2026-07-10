@@ -16,39 +16,49 @@ updates:
       prefix: 'chore'
       include: 'scope'
     groups:
-      # `typescript` and `tsup` are declared in EVERY workspace manifest, so an
-      # ungrouped bump fans out into one PR per package (root + 9 packages). These
-      # per-dependency groups collapse each dep's bump across all directories into a
-      # SINGLE multi-directory PR — majors included — so a lockstep bump like
-      # typescript 5.9→6.0 is one PR, not ten. Listed first to win group-assignment
-      # precedence (each dependency joins the first group whose patterns match).
+      # `typescript` and `tsup` are declared in EVERY workspace manifest, so a MAJOR
+      # bump — which the `dev-dependencies` catch-all below does not cover — would
+      # otherwise fan out into one PR per package (root + 9 packages). These groups
+      # collapse that into a SINGLE multi-directory PR. minor/patch fan-out is already
+      # collapsed by `dev-dependencies`, so each group covers only the update types the
+      # catch-all leaves out:
+      #   - typescript keeps `minor` as well: a minor can shift type inference and fail
+      #     the typecheck, so (like prettier) it is isolated in its own PR rather than
+      #     batched into dev-dependencies; its patch falls through to dev-dependencies.
+      #   - tsup is `major` only: a bundler minor/patch rarely needs code changes, so
+      #     those ride dev-dependencies.
+      # Listed first to win group-assignment precedence (each dependency joins the first
+      # group whose patterns match).
       typescript:
         patterns:
           - 'typescript'
         update-types:
           - 'major'
           - 'minor'
-          - 'patch'
       tsup:
         patterns:
           - 'tsup'
         update-types:
           - 'major'
-          - 'minor'
-          - 'patch'
       # The ESLint toolchain is a version-locked family. `@typescript-eslint/eslint-plugin`
       # and `@typescript-eslint/parser` ship on an IDENTICAL version line and must move
-      # together — ungrouped, a major would raise them as two separate, individually-broken
-      # PRs. `eslint` core, the plugins, and the import resolver track eslint's major, so a
-      # lint bump is only coherent when the whole toolchain moves at once. Grouped across ALL
-      # update types (major/minor/patch) and listed among the family groups (before the
-      # dev/prod catch-alls) so any eslint-ecosystem bump lands as one atomic PR.
+      # together; `eslint` core, the plugins, and the import resolver track eslint's major.
+      # Restricted to `major` ONLY: the family is entirely dev, so its minor/patch bumps are
+      # already grouped in lockstep by the `dev-dependencies` catch-all below — an all-types
+      # group would just split them into a second, redundant PR. `major` is the only update
+      # type the catch-alls don't cover, so ungrouped it is where the family fragments into
+      # separate, individually-broken per-package PRs (a `@typescript-eslint/*` major on one
+      # package but not the other). A family spanning dev AND prod would instead need all
+      # update types, since the prod/dev catch-alls would scatter its minor/patch across two
+      # PRs; ai-tools has no such family today.
       eslint:
         patterns:
           - 'eslint'
           - '@typescript-eslint/*'
           - 'eslint-plugin-*'
           - 'eslint-import-resolver-*'
+        update-types:
+          - 'major'
       # `prettier` is isolated for a different reason than the two above: a major or
       # minor prettier bump can reformat the whole codebase, so it routinely carries
       # required code changes and fails the Format check until the tree is
