@@ -54,12 +54,20 @@ and `python_env` interpreter discovery are dropped entirely.
 
 ### Cleanup (`git-cleanup.ts`)
 
-- `runCleanup({ cwd?, log? })` — remove secondary worktrees and local branches
-  whose PR is **closed/merged**, in three phases (worktrees → branches → `git
-worktree prune`). Two states are deliberately preserved: an **open** PR (work
-  in flight) and **no PR ever** (pre-PR WIP) — cleaning these up was the #1104
-  data-loss bug. Never uses `--force`, and skips a closed-PR worktree that has
-  uncommitted/untracked changes. Returns removed/kept counts.
+- `runCleanup({ cwd?, log?, now?, staleAfterDays? })` — remove secondary
+  worktrees and local branches whose PR is **closed/merged**, or whose **latest
+  commit is at least `staleAfterDays` (default 30) days old**, in three phases
+  (worktrees → branches → `git worktree prune`). Recent-commit branches with an
+  **open** PR (work in flight) or **no PR ever** (pre-PR WIP) are preserved —
+  cleaning a _fresh_ one up was the #1104 data-loss bug — but once stale they are
+  cleaned, which is the only way a no-PR branch is ever removed. Never uses
+  `--force`, and skips a worktree with uncommitted/untracked changes even when its
+  branch is closed or stale. `now`/`staleAfterDays` are injectable for tests.
+  Returns removed/kept counts.
+- `decideCleanup(state, stale, staleAfterDays)` — folds PR state + staleness into
+  one `{ remove, reason }` decision. `isStale(commitEpochMs, nowMs, days)` /
+  `STALE_AFTER_DAYS` (`branch-staleness.ts`) back the staleness sweep; unknown
+  commit age is treated as not-stale (kept).
 - `classifyBranches(branches, repo, cwd, log)` — branch → `'open' | 'closed' |
 'none'`. Open-PR head branches come from `gatherRepoStatus().openPrs`; the rest
   are classified via `gh pr list --head … --state all` + `fetchPrSummary` per PR.

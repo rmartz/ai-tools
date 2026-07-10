@@ -14,7 +14,7 @@ const result = (over: Partial<{ stdout: string; stderr: string; code: number }> 
   ...over,
 });
 
-const { parseSecondaryWorktrees, classifyBranches, runCleanup } =
+const { parseSecondaryWorktrees, classifyBranches, decideCleanup, runCleanup } =
   await import('../src/git-cleanup.js');
 
 beforeEach(() => {
@@ -70,6 +70,28 @@ describe('classifyBranches', () => {
     const out = await classifyBranches(new Set(['feat/unknown']), 'o/r', undefined, log);
     expect(out.get('feat/unknown')).toBe('open');
     expect(log).toHaveBeenCalled();
+  });
+});
+
+describe('decideCleanup', () => {
+  it('removes a closed-PR branch', () => {
+    expect(decideCleanup('closed', false, 30)).toEqual({
+      remove: true,
+      reason: 'PR closed/merged',
+    });
+  });
+
+  it('removes an otherwise-kept branch once it is stale', () => {
+    expect(decideCleanup('open', true, 30)).toEqual({
+      remove: true,
+      reason: 'stale — no commit in 30+ days',
+    });
+    expect(decideCleanup('none', true, 30).remove).toBe(true);
+  });
+
+  it('keeps a fresh open-PR branch and a fresh no-PR branch', () => {
+    expect(decideCleanup('open', false, 30)).toEqual({ remove: false, reason: 'has open PR' });
+    expect(decideCleanup('none', false, 30).reason).toBe('no PR yet — work in progress');
   });
 });
 
@@ -166,6 +188,54 @@ describe('runCleanup', () => {
     expect(removeCalled).toBe(false);
     expect(out.worktreesKept).toBe(1);
     expect(out.worktreesRemoved).toBe(0);
+  });
+
+  it('deletes a stale open-PR branch and its worktree, keeping a fresh one', async () => {
+    // Both branches have an open PR, so only staleness distinguishes them.
+    gatherRepoStatus.mockResolvedValue({
+      openPrs: [{ headRefName: 'feat/stale' }, { headRefName: 'feat/fresh' }],
+    });
+    const NOW = 1_700_000_000_000;
+    const DAY = 86_400_000;
+    const removed: string[] = [];
+    const deleted: string[] = [];
+    scriptGit((cmd, args) => {
+      if (cmd === 'git' && args[0] === 'symbolic-ref' && args[1] === 'refs/remotes/origin/HEAD')
+        return result({ stdout: 'refs/remotes/origin/main\n' });
+      if (cmd === 'git' && args[0] === 'symbolic-ref') return result({ stdout: 'main\n' });
+      if (cmd === 'git' && args[0] === 'worktree' && args[1] === 'list')
+        return result({
+          stdout: [
+            'worktree /repo\nbranch refs/heads/main',
+            'worktree /repo/.git-worktrees/stale\nbranch refs/heads/feat/stale',
+          ].join('\n\n'),
+        });
+      if (cmd === 'git' && args[0] === 'branch' && args.includes('--format=%(refname:short)'))
+        return result({ stdout: 'feat/stale\nfeat/fresh\n' });
+      if (cmd === 'git' && args[0] === 'log') {
+        const ageDays = args[args.length - 1] === 'feat/stale' ? 45 : 3;
+        return result({ stdout: `${(NOW - ageDays * DAY) / 1000}\n` });
+      }
+      if (cmd === 'git' && args.includes('status')) return result({ stdout: '' }); // clean
+      if (cmd === 'git' && args[0] === 'worktree' && args[1] === 'remove') {
+        removed.push(args[2] ?? '');
+        return result();
+      }
+      if (cmd === 'git' && args[0] === 'branch' && args[1] === '-D') {
+        deleted.push(args[2] ?? '');
+        return result();
+      }
+      if (cmd === 'gh' && args[0] === 'repo') return result({ stdout: 'o/r\n' });
+      return undefined;
+    });
+
+    const out = await runCleanup({ cwd: '/repo', log: vi.fn(), now: NOW });
+
+    expect(removed).toEqual(['/repo/.git-worktrees/stale']);
+    expect(deleted).toEqual(['feat/stale']);
+    expect(out.worktreesRemoved).toBe(1);
+    expect(out.branchesDeleted).toBe(1);
+    expect(out.branchesKept).toBe(1); // feat/fresh — recent commit, open PR
   });
 
   it('reports nothing to clean when there are no worktrees or extra branches', async () => {
