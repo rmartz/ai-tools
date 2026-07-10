@@ -16,26 +16,30 @@ updates:
       prefix: 'chore'
       include: 'scope'
     groups:
-      # `typescript` and `tsup` are declared in EVERY workspace manifest, so an
-      # ungrouped bump fans out into one PR per package (root + 9 packages). These
-      # per-dependency groups collapse each dep's bump across all directories into a
-      # SINGLE multi-directory PR — majors included — so a lockstep bump like
-      # typescript 5.9→6.0 is one PR, not ten. Listed first to win group-assignment
-      # precedence (each dependency joins the first group whose patterns match).
+      # `typescript` and `tsup` are declared in EVERY workspace manifest, so a MAJOR
+      # bump — which the `dev-dependencies` catch-all below does not cover — would
+      # otherwise fan out into one PR per package (root + 9 packages). These groups
+      # collapse that into a SINGLE multi-directory PR. minor/patch fan-out is already
+      # collapsed by `dev-dependencies`, so each group covers only the update types the
+      # catch-all leaves out:
+      #   - typescript keeps `minor` as well: a minor can shift type inference and fail
+      #     the typecheck, so (like prettier) it is isolated in its own PR rather than
+      #     batched into dev-dependencies; its patch falls through to dev-dependencies.
+      #   - tsup is `major` only: a bundler minor/patch rarely needs code changes, so
+      #     those ride dev-dependencies.
+      # Listed first to win group-assignment precedence (each dependency joins the first
+      # group whose patterns match).
       typescript:
         patterns:
           - 'typescript'
         update-types:
           - 'major'
           - 'minor'
-          - 'patch'
       tsup:
         patterns:
           - 'tsup'
         update-types:
           - 'major'
-          - 'minor'
-          - 'patch'
       # The ESLint toolchain is a version-locked family. `@typescript-eslint/eslint-plugin`
       # and `@typescript-eslint/parser` ship on an IDENTICAL version line and must move
       # together; `eslint` core, the plugins, and the import resolver track eslint's major.
