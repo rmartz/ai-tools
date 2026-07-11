@@ -21,7 +21,8 @@ import { STALE_AFTER_DAYS, classifyStaleBranches } from './branch-staleness.js';
  *   1. Remove secondary worktrees whose branch is closed/merged or stale — never
  *      with `--force`, and never when the worktree has uncommitted/untracked
  *      changes (those are preserved and the skip is surfaced).
- *   2. Delete local branches that are closed/merged or stale.
+ *   2. Delete local branches that are closed/merged or stale, skipping any still
+ *      checked out in a worktree Phase 1 kept (git would refuse the deletion).
  *   3. Prune stale worktree administrative files with `git worktree prune`.
  *
  * Idempotent and safe to run while other sessions hold work-in-progress
@@ -288,6 +289,10 @@ export async function runCleanup(opts: CleanupOptions = {}): Promise<CleanupResu
     staleAfterDays,
   );
 
+  // A worktree kept in Phase 1 (dirty guard, or a failed removal) still has its
+  // branch checked out, so Phase 2 must not attempt to delete that branch.
+  const keptWorktreeBranches = new Set<string>();
+
   // Phase 1: remove worktrees (before branch deletion — git refuses to delete a
   // branch checked out in a worktree).
   for (const { path, branch } of worktrees) {
@@ -305,12 +310,15 @@ export async function runCleanup(opts: CleanupOptions = {}): Promise<CleanupResu
           `worktree has uncommitted/untracked changes)`,
       );
       result.worktreesKept += 1;
+      keptWorktreeBranches.add(branch);
       continue;
     }
     log(`Removing worktree ${path} (branch ${branch} — ${decision.reason})`);
     const removed = await git(['worktree', 'remove', path], cwd);
     if (removed.code !== 0) {
       log(`  warning: could not remove ${path}: ${removed.stderr.trim()}`);
+      result.worktreesKept += 1;
+      keptWorktreeBranches.add(branch);
     } else {
       result.worktreesRemoved += 1;
     }
@@ -320,6 +328,11 @@ export async function runCleanup(opts: CleanupOptions = {}): Promise<CleanupResu
   for (const branch of allBranches) {
     if (branch === currentBranch) {
       log(`Keeping  branch ${branch} (current branch)`);
+      result.branchesKept += 1;
+      continue;
+    }
+    if (keptWorktreeBranches.has(branch)) {
+      log(`Keeping  branch ${branch} (checked out in a kept worktree)`);
       result.branchesKept += 1;
       continue;
     }

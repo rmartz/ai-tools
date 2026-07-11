@@ -156,10 +156,11 @@ describe('runCleanup', () => {
     expect(out.branchesKept).toBe(2);
   });
 
-  it('keeps a dirty closed-PR worktree without forcing removal', async () => {
+  it('keeps a dirty closed-PR worktree and its branch — no force-remove, no branch delete', async () => {
     gatherRepoStatus.mockResolvedValue({ openPrs: [] });
     fetchPrSummary.mockResolvedValue({ state: 'MERGED' });
     let removeCalled = false;
+    const deleted: string[] = [];
     scriptGit((cmd, args) => {
       if (cmd === 'git' && args[0] === 'symbolic-ref' && args[1] === 'refs/remotes/origin/HEAD')
         return result({ stdout: 'refs/remotes/origin/main\n' });
@@ -178,6 +179,10 @@ describe('runCleanup', () => {
         removeCalled = true;
         return result();
       }
+      if (cmd === 'git' && args[0] === 'branch' && args[1] === '-D') {
+        deleted.push(args[2] ?? '');
+        return result();
+      }
       if (cmd === 'gh' && args[0] === 'repo') return result({ stdout: 'o/r\n' });
       if (cmd === 'gh' && args[0] === 'pr')
         return result({ stdout: JSON.stringify([{ number: 9 }]) });
@@ -188,6 +193,49 @@ describe('runCleanup', () => {
     expect(removeCalled).toBe(false);
     expect(out.worktreesKept).toBe(1);
     expect(out.worktreesRemoved).toBe(0);
+    // The branch is checked out in the kept worktree — Phase 2 must skip it, not
+    // attempt `git branch -D` (which git refuses), and count it as kept.
+    expect(deleted).toEqual([]);
+    expect(out.branchesKept).toBe(1);
+  });
+
+  it('counts a failed worktree removal as kept and skips its branch in Phase 2', async () => {
+    gatherRepoStatus.mockResolvedValue({ openPrs: [] });
+    fetchPrSummary.mockResolvedValue({ state: 'MERGED' });
+    const deleted: string[] = [];
+    scriptGit((cmd, args) => {
+      if (cmd === 'git' && args[0] === 'symbolic-ref' && args[1] === 'refs/remotes/origin/HEAD')
+        return result({ stdout: 'refs/remotes/origin/main\n' });
+      if (cmd === 'git' && args[0] === 'symbolic-ref') return result({ stdout: 'main\n' });
+      if (cmd === 'git' && args[0] === 'worktree' && args[1] === 'list')
+        return result({
+          stdout: [
+            'worktree /repo\nbranch refs/heads/main',
+            'worktree /repo/.git-worktrees/stuck\nbranch refs/heads/feat/stuck',
+          ].join('\n\n'),
+        });
+      if (cmd === 'git' && args[0] === 'branch' && args.includes('--format=%(refname:short)'))
+        return result({ stdout: 'feat/stuck\n' });
+      if (cmd === 'git' && args.includes('status')) return result({ stdout: '' }); // clean
+      if (cmd === 'git' && args[0] === 'worktree' && args[1] === 'remove')
+        return result({ code: 1, stderr: 'worktree is locked' }); // removal fails
+      if (cmd === 'git' && args[0] === 'branch' && args[1] === '-D') {
+        deleted.push(args[2] ?? '');
+        return result();
+      }
+      if (cmd === 'gh' && args[0] === 'repo') return result({ stdout: 'o/r\n' });
+      if (cmd === 'gh' && args[0] === 'pr')
+        return result({ stdout: JSON.stringify([{ number: 3 }]) });
+      return undefined;
+    });
+
+    const out = await runCleanup({ cwd: '/repo', log: vi.fn() });
+    // A failed `git worktree remove` counts as kept (not neither counter)…
+    expect(out.worktreesKept).toBe(1);
+    expect(out.worktreesRemoved).toBe(0);
+    // …and its branch is still checked out there, so Phase 2 skips the delete.
+    expect(deleted).toEqual([]);
+    expect(out.branchesKept).toBe(1);
   });
 
   it('deletes a stale open-PR branch and its worktree, keeping a fresh one', async () => {
