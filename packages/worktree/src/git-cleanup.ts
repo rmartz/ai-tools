@@ -1,21 +1,27 @@
 import { boundedRun } from '@rmartz/agent-runtime';
 import { fetchPrSummary, gatherRepoStatus, type RepoStatus } from '@rmartz/github';
+import { STALE_AFTER_DAYS, classifyStaleBranches } from './branch-staleness.js';
 
 /**
- * Remove worktrees and local branches whose pull request is closed/merged. TS
- * port of dotfiles' `git_cleanup.py`.
+ * Remove worktrees and local branches whose pull request is closed/merged, or
+ * whose latest commit is at least 30 days old. TS port of dotfiles'
+ * `git_cleanup.py`, extended with the staleness sweep.
  *
- * A branch is cleaned up **only** when it had a PR that is now closed or merged.
- * Two states are deliberately preserved (cleaning them up was the #1104
+ * A branch is cleaned up when its PR is closed/merged **or** it has gone stale
+ * (no commit in `STALE_AFTER_DAYS`+ days) — after that long we are not coming
+ * back to it, and a no-PR branch that never resolves is otherwise never cleaned.
+ * Otherwise two states are preserved (cleaning a *fresh* one up was the #1104
  * data-loss bug):
- *   - an **open** PR — work still in flight, and
- *   - **no PR ever** — work in progress that simply hasn't opened a PR yet.
+ *   - an **open** PR whose branch still has recent commits — work in flight, and
+ *   - **no PR ever** with recent commits — work that hasn't opened a PR yet.
+ * Uncommitted/untracked changes in a worktree are always preserved (the worktree
+ * is kept and the skip surfaced), even when its branch is closed or stale.
  *
  * Runs in three phases:
- *   1. Remove secondary worktrees whose branch's PR is closed/merged — never
+ *   1. Remove secondary worktrees whose branch is closed/merged or stale — never
  *      with `--force`, and never when the worktree has uncommitted/untracked
  *      changes (those are preserved and the skip is surfaced).
- *   2. Delete local branches whose PR is closed/merged.
+ *   2. Delete local branches that are closed/merged or stale.
  *   3. Prune stale worktree administrative files with `git worktree prune`.
  *
  * Idempotent and safe to run while other sessions hold work-in-progress
@@ -32,6 +38,10 @@ export type Log = (message: string) => void;
 export interface CleanupOptions {
   cwd?: string;
   log?: Log;
+  /** Clock for staleness, epoch ms. Defaults to `Date.now()`; injected in tests. */
+  now?: number;
+  /** A branch idle at least this many days is cleanup-eligible. Defaults to 30. */
+  staleAfterDays?: number;
 }
 
 export interface CleanupResult {
@@ -219,6 +229,27 @@ function keepReason(state: PrState): string {
   return state === 'open' ? 'has open PR' : 'no PR yet — work in progress';
 }
 
+/** A keep/remove decision paired with the reason to log. */
+export interface CleanupDecision {
+  remove: boolean;
+  reason: string;
+}
+
+/**
+ * Fold a branch's PR state and staleness into one cleanup decision. A
+ * closed/merged PR is removed; an otherwise-kept branch (open PR, or no PR yet)
+ * that has gone stale is removed too; everything else is kept with its reason.
+ */
+export function decideCleanup(
+  state: PrState,
+  stale: boolean,
+  staleAfterDays: number,
+): CleanupDecision {
+  if (state === 'closed') return { remove: true, reason: 'PR closed/merged' };
+  if (stale) return { remove: true, reason: `stale — no commit in ${staleAfterDays}+ days` };
+  return { remove: false, reason: keepReason(state) };
+}
+
 /**
  * Run the full cleanup. Resolves the repo (via the same git remote) and returns
  * counts of removed/kept worktrees and deleted/kept branches.
@@ -249,26 +280,34 @@ export async function runCleanup(opts: CleanupOptions = {}): Promise<CleanupResu
 
   const repo = (await safeCurrentRepo(cwd)) ?? '';
   const status = await classifyBranches(branchesToCheck, repo, cwd, log);
+  const staleAfterDays = opts.staleAfterDays ?? STALE_AFTER_DAYS;
+  const stale = await classifyStaleBranches(
+    branchesToCheck,
+    cwd,
+    opts.now ?? Date.now(),
+    staleAfterDays,
+  );
 
   // Phase 1: remove worktrees (before branch deletion — git refuses to delete a
   // branch checked out in a worktree).
   for (const { path, branch } of worktrees) {
     const state = status.get(branch) ?? 'open';
-    if (state !== 'closed') {
-      log(`Keeping  worktree ${path} (branch ${branch} — ${keepReason(state)})`);
+    const decision = decideCleanup(state, stale.has(branch), staleAfterDays);
+    if (!decision.remove) {
+      log(`Keeping  worktree ${path} (branch ${branch} — ${decision.reason})`);
       result.worktreesKept += 1;
       continue;
     }
     const dirty = await git(['-C', path, 'status', '--porcelain'], cwd);
     if (dirty.code === 0 && dirty.stdout.trim()) {
       log(
-        `Keeping  worktree ${path} (branch ${branch} — PR closed but ` +
+        `Keeping  worktree ${path} (branch ${branch} — ${decision.reason} but ` +
           `worktree has uncommitted/untracked changes)`,
       );
       result.worktreesKept += 1;
       continue;
     }
-    log(`Removing worktree ${path} (branch ${branch} — PR closed/merged)`);
+    log(`Removing worktree ${path} (branch ${branch} — ${decision.reason})`);
     const removed = await git(['worktree', 'remove', path], cwd);
     if (removed.code !== 0) {
       log(`  warning: could not remove ${path}: ${removed.stderr.trim()}`);
@@ -285,12 +324,13 @@ export async function runCleanup(opts: CleanupOptions = {}): Promise<CleanupResu
       continue;
     }
     const state = status.get(branch) ?? 'open';
-    if (state !== 'closed') {
-      log(`Keeping  branch ${branch} (${keepReason(state)})`);
+    const decision = decideCleanup(state, stale.has(branch), staleAfterDays);
+    if (!decision.remove) {
+      log(`Keeping  branch ${branch} (${decision.reason})`);
       result.branchesKept += 1;
       continue;
     }
-    log(`Deleting branch ${branch} (PR closed/merged)`);
+    log(`Deleting branch ${branch} (${decision.reason})`);
     const deleted = await git(['branch', '-D', branch], cwd);
     if (deleted.code !== 0) {
       log(`  warning: could not delete ${branch}: ${deleted.stderr.trim()}`);
