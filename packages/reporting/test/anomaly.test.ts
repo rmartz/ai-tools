@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type * as Tracking from '../src/tracking.js';
 
 const reportToTracking = vi.fn();
 vi.mock('../src/tracking.js', async () => {
-  const actual = await vi.importActual<typeof import('../src/tracking.js')>('../src/tracking.js');
+  const actual = await vi.importActual<typeof Tracking>('../src/tracking.js');
   return { ...actual, reportToTracking };
 });
 
