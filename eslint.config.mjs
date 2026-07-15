@@ -36,6 +36,53 @@ const importResolver = {
   node: true,
 };
 
+/**
+ * Code-style conventions promoted from CLAUDE.md prose to static enforcement, so
+ * they hold at every model tier instead of relying on a reviewer's eye. Every
+ * rule is core ESLint or an already-installed plugin (`typescript-eslint`,
+ * `eslint-plugin-import`) — no new dependency. Applied uniformly to first-party
+ * source, scripts, and tests.
+ */
+const STYLE_RULES = {
+  // "Strict TypeScript throughout — no `any`, no `@ts-ignore`." `ban-ts-comment`
+  // still permits `@ts-expect-error` with a description (the sanctioned hatch).
+  '@typescript-eslint/no-explicit-any': 'error',
+  '@typescript-eslint/ban-ts-comment': 'error',
+  // Type-only imports: `import type`, side-effect-free (companion pair).
+  '@typescript-eslint/consistent-type-imports': 'error',
+  '@typescript-eslint/no-import-type-side-effects': 'error',
+};
+
+// "Prefer async/await over .then() chains", "No IIFEs", and "Named exports only —
+// no default exports". Expressed as core `no-restricted-syntax` selectors (rather
+// than `import/no-default-export`, which crashes under ESLint 10 flat config) so
+// there is no plugin-compat risk. Config files are globally ignored, so tsup /
+// eslint / vitest configs keep their required default export.
+const RESTRICTED_SYNTAX = [
+  {
+    selector: "CallExpression[callee.property.name='then']",
+    message: 'Prefer async/await over .then() chains (CLAUDE.md).',
+  },
+  {
+    selector: 'CallExpression[callee.type=/FunctionExpression|ArrowFunctionExpression/]',
+    message:
+      'No IIFEs — extract a named helper or compute the value with a plain expression (CLAUDE.md).',
+  },
+  {
+    selector: 'ExportDefaultDeclaration',
+    message: 'Named exports only — no default exports (CLAUDE.md).',
+  },
+];
+
+// Tests additionally forbid Vitest's `test()` global — the repo uses describe/it.
+const TEST_RESTRICTED_SYNTAX = [
+  ...RESTRICTED_SYNTAX,
+  {
+    selector: "CallExpression[callee.name='test']",
+    message: 'Use it() from Vitest, not test() (CLAUDE.md).',
+  },
+];
+
 export default [
   {
     ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', '**/*.config.*'],
@@ -71,7 +118,8 @@ export default [
 
       'import/no-cycle': ['error', { maxDepth: 1 }],
       '@typescript-eslint/no-inferrable-types': 'error',
-      '@typescript-eslint/consistent-type-imports': 'error',
+      ...STYLE_RULES,
+      'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX],
     },
   },
   {
@@ -81,7 +129,8 @@ export default [
     plugins: { '@typescript-eslint': tseslint },
     rules: {
       'max-lines': ['error', { max: 480 }],
-      '@typescript-eslint/consistent-type-imports': 'error',
+      ...STYLE_RULES,
+      'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX],
     },
   },
   {
@@ -90,6 +139,10 @@ export default [
     files: ['packages/*/test/**/*.ts', '**/*.test.ts'],
     languageOptions: { parser: tsparser, parserOptions: tsParserOptions },
     plugins: { '@typescript-eslint': tseslint },
-    rules: { 'max-lines': ['error', { max: 720 }] },
+    rules: {
+      'max-lines': ['error', { max: 720 }],
+      ...STYLE_RULES,
+      'no-restricted-syntax': ['error', ...TEST_RESTRICTED_SYNTAX],
+    },
   },
 ];

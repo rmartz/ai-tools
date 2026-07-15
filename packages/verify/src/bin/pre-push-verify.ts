@@ -108,9 +108,13 @@ async function main(): Promise<number> {
   return anyFailed(results) ? 1 : 0;
 }
 
-main()
-  .then((code) => process.exit(code))
-  .catch((err: unknown) => {
+async function run(): Promise<void> {
+  try {
+    process.exit(await main());
+  } catch (err: unknown) {
     console.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
-  });
+  }
+}
+
+void run();

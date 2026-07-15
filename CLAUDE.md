@@ -69,7 +69,12 @@ library so PR Shepherd and the harness share one implementation.
   action refs are exempt (they move with the commit). Enforced by
   `pnpm run check:actions` (`scripts/check-action-pins.ts` +
   `.github/workflows/action-pins.yml`), the CI analog of the package.json pin check.
-- Prettier + ESLint run in CI; there is no separate manual pass.
+- Prettier + ESLint run in CI; there is no separate manual pass. Several
+  conventions here are **statically enforced by `eslint.config.mjs`**, not left to
+  review: no `any` / `@ts-ignore` (an `@ts-expect-error` _with a description_ is the
+  sanctioned hatch), `import type` for type-only imports, no default exports, no
+  IIFEs, no `.then()` chains, and `describe` / `it` (not `test`) in tests — alongside
+  the layer boundaries and the `max-lines` cap.
 - Tests are hermetic: mock real-world boundaries (`gh`, network, subprocess).
   Deny-by-default — a test that reaches the network is a bug.
 - **File naming is kebab-case everywhere** — source, tests, docs, and skill
@@ -79,10 +84,11 @@ library so PR Shepherd and the harness share one implementation.
   over: a TS module and its CLI share one kebab-case stem (`pr-diff.ts` +
   `bin/pr-diff.ts`). The only non-kebab filenames allowed are conventional
   all-caps root meta files: `CLAUDE.md`, `README.md`, `LICENSE`.
-- **Strict TypeScript throughout — no `any`, no `@ts-ignore`.** The strict flags
-  (`strict`, `noUncheckedIndexedAccess`, `verbatimModuleSyntax` in
-  `tsconfig.base.json`) are load-bearing; reach for a precise type, a narrowing
-  guard, or `unknown` rather than escaping the type system.
+- **Strict TypeScript throughout.** The strict flags (`strict`,
+  `noUncheckedIndexedAccess`, `verbatimModuleSyntax` in `tsconfig.base.json`) are
+  load-bearing; reach for a precise type, a narrowing guard, or `unknown` rather
+  than escaping the type system. (The no-`any` / no-`@ts-ignore` half is
+  ESLint-enforced — see above.)
 - **Value sets: prefer a structural string union over an `enum`.** Use
   `type MergeMethod = 'merge' | 'squash' | 'rebase'`; when you also need the values
   at runtime (validation, iteration), use an `as const` array and derive the type
@@ -92,16 +98,14 @@ library so PR Shepherd and the harness share one implementation.
   and never serialize raw: string enums are **nominal** (won't accept the underlying
   literal, forcing a cast at every wire boundary), and `const enum` is unavailable
   under `isolatedModules`, so a plain `enum` always ships a runtime object.
-- Prefer `async`/`await` over `.then()` chains.
-- **Named exports only — no default exports.** Each package's public surface is
-  its `index.ts` barrel; `bin/` entrypoints run a `main()` and export nothing.
+- **Named exports only.** Each package's public surface is its `index.ts` barrel;
+  `bin/` entrypoints run a `main()` and export nothing.
 - No spurious variables — don't bind a value only to return it on the next line;
-  return the expression. No IIFEs — extract a named helper or compute the value
-  with a plain expression.
+  return the expression.
 
 ## Testing
 
-- Vitest with `describe` / `it` (not `test`). Tests are hermetic (see Conventions).
+- Vitest with `describe` / `it`. Tests are hermetic (see Conventions).
 - Fixture generators are named `make{Domain}()` (e.g. `makePr()`, `makeReview()`).
 - **Test design:**
   - **Control inputs and outputs.** Don't assert a function's _default_ return as

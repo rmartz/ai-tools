@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
+import type * as AgentRuntime from '@rmartz/agent-runtime';
 
 vi.mock('@rmartz/agent-runtime', async () => {
-  const actual =
-    await vi.importActual<typeof import('@rmartz/agent-runtime')>('@rmartz/agent-runtime');
+  const actual = await vi.importActual<typeof AgentRuntime>('@rmartz/agent-runtime');
   // Keep the real classifyCommand/CATEGORY_ORDER; only the subprocess boundary
   // is mocked so no command ever executes.
   return { ...actual, boundedRun: vi.fn() };

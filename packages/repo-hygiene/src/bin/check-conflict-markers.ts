@@ -23,9 +23,13 @@ async function main(): Promise<number> {
   return 0;
 }
 
-main()
-  .then((code) => process.exit(code))
-  .catch((err: unknown) => {
+async function run(): Promise<void> {
+  try {
+    process.exit(await main());
+  } catch (err: unknown) {
     console.error(err instanceof Error ? err.message : String(err));
     process.exit(2);
-  });
+  }
+}
+
+void run();
