@@ -27,7 +27,7 @@
     "@typescript-eslint/parser": "^8.62.1",
     "eslint": "^10.6.0",
     "eslint-import-resolver-typescript": "^4.4.5",
-    "eslint-plugin-boundaries": "^6.0.2",
+    "eslint-plugin-boundaries": "^7.0.2",
     "eslint-plugin-import": "^2.31.0",
     "gray-matter": "^4.0.3",
     "prettier": "^3.9.4",
