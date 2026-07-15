@@ -13,6 +13,15 @@ permissions:
   contents: write # create releases + the release-PR branch
   pull-requests: write # open/update the release PR
 
+# Serialize release-please across a burst of main merges: run one at a time rather
+# than firing several concurrent, API-heavy invocations that can exhaust the
+# RELEASE_PLEASE_PAT's shared REST rate limit (observed 2026-07-10 — three merges
+# in ~6 min failed the third with "API rate limit already exceeded"). Queue rather
+# than cancel: every merge must still be reconciled into the aggregated release PR.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
