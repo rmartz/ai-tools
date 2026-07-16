@@ -1,0 +1,28 @@
+name: Release age
+
+# A deterministic second layer over Dependabot's `cooldown` (which is advisory and
+# has documented reliability gaps for npm): fail a PR that introduces a package
+# version younger than the cooldown window. pull_request-only and path-filtered to
+# the lockfile — the gate blocks a hot version from *landing*; on main it would
+# only fail an already-merged commit.
+on:
+  pull_request:
+    paths:
+      - 'pnpm-lock.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  release-age:
+    name: Dependency release-age cooldown
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+      # Make the base lockfile readable as origin/<base> for the diff.
+      - run: git fetch --no-tags --depth=1 origin "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
+      - uses: ./.github/actions/setup
+      - run: pnpm run check:release-age

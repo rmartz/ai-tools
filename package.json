@@ -17,6 +17,7 @@
     "check:okf": "tsx scripts/check-okf-frontmatter.ts",
     "check:pins": "tsx scripts/check-pins.ts",
     "check:actions": "tsx scripts/check-action-pins.ts",
+    "check:release-age": "tsx scripts/check-release-age.ts",
     "install:skills": "tsx scripts/install-skills.ts",
     "install:clis": "tsx scripts/install-clis.ts",
     "ci": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run check:okf && pnpm run check:pins && pnpm run check:actions && pnpm run test"
