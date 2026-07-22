@@ -31,7 +31,7 @@
     "eslint-plugin-boundaries": "^7.0.2",
     "eslint-plugin-import": "^2.31.0",
     "gray-matter": "^4.0.3",
-    "prettier": "^3.9.4",
+    "prettier": "^3.9.5",
     "tsup": "^8.3.0",
     "tsx": "^4.23.1",
     "turbo": "^2.10.5",
