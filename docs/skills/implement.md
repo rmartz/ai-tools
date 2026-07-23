@@ -14,10 +14,12 @@ its premise against the code, surveying for reuse, designing before writing
 tests, implementing to green, and a duplication self-review — and deliberately
 **not** the wider coordination that surrounds a merge — gate/verdict labels,
 milestone assignment, and where the PR travels after hand-off. It provisions the
-worktree, commits, opens the PR, and — as its final action on the done path —
-marks it ready-for-review: the PR is a draft only while implement is working, and
-a finished implementation always ends **ready**, the signal another agent uses to
-pick it up for review/fix-review/merge.
+worktree, commits, and opens the PR **ready for review** — the skill opens the PR
+only once the implementation is done, so a finished run's PR is immediately ready
+for another agent to pick up for review/fix-review/merge. A **draft** is reserved
+for the narrow edge case of stopping with genuinely unfinished work (told to abort
+midway, or the stuck path) to preserve partial progress; it is never the state of
+a completed implementation.
 
 The run composes the maintained `ai-*` CLIs for its mechanical spine:
 `ai-new-worktree` (`@rmartz/worktree`) to provision the worktree,
@@ -30,11 +32,12 @@ coordinator's PR lifecycle.
 ## Hand-off
 
 The skill produces a **ready branch and an outcome** — implemented-and-ready, or
-stuck-with-a-diagnosis — and opens the PR itself: a draft while it works, then
-marked ready-for-review as its final action on the done path (a stuck run leaves
-it a draft). That branch-plus-outcome is the contract any downstream coordinator
-(e.g. [PR Shepherd](../pr-shepherd-handoff.md)) consumes; the skill itself never
-applies gate/verdict labels or drives the post-hand-off lifecycle.
+stuck-with-a-diagnosis — and opens the PR itself: **ready for review on the done
+path** (no draft step), and a `[WIP]` **draft only** on the stuck / told-to-abort
+path, to preserve unfinished work. That branch-plus-outcome is the contract any
+downstream coordinator (e.g. [PR Shepherd](../pr-shepherd-handoff.md)) consumes;
+the skill itself never applies gate/verdict labels or drives the post-hand-off
+lifecycle.
 
 The skill **stops when the implementation is done**: it never reviews,
 fix-reviews, or merges its own work.
