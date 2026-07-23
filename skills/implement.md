@@ -28,14 +28,16 @@ Implement the GitHub issue(s): $ARGUMENTS
 > **Emission (read this first).** This skill produces a **working branch and an
 > outcome** — implemented-and-ready, or stuck-with-a-diagnosis — and opens the PR
 > itself. Provision the worktree with `ai-new-worktree`, commit in it, and open
-> the PR with `ai-create-pr … --draft`. On the done path, as your **final
-> action**, mark it ready-for-review (`gh pr ready <pr>`) and report it: **the PR
-> is a draft only while you are working**, and a completed implementation is ready
-> for another agent to pick up for review/fix-review/merge, so you flip it to
-> ready the moment you finish (see Step 6). On the stuck path, leave the PR a
-> draft. Do not invent gate/verdict labels — those belong to whoever coordinates
-> the PR afterward — but the draft → ready-for-review transition **is** yours;
-> keep the title a Conventional-Commit summary.
+> the PR with `ai-create-pr`. You open the PR only **once the implementation is
+> done**, so **open it ready for review** (`ai-create-pr`, no `--draft`) — a
+> finished implementation is ready for another agent to pick up for
+> review/fix-review/merge, and there is no draft step to remember. **Draft is a
+> narrow edge case, not the default:** open a draft (with a `[WIP]` title) **only**
+> when you are stopping with the work genuinely _unfinished_ — you were told to
+> abort midway, or you hit the stuck path (see Step 6) — to preserve partial
+> progress. Never leave finished work as a draft. Do not invent gate/verdict
+> labels — those belong to whoever coordinates the PR afterward; keep the title a
+> Conventional-Commit summary.
 >
 > This skill **stops when the implementation is done** — it never reviews,
 > fix-reviews, or merges its own work. Do not invoke a review or merge skill from
@@ -203,21 +205,22 @@ the duplicate. This is the final net for a parallel implementation that Step 3b'
 survey missed; it is cheaper to catch here than in review.
 
 Then hand off. Commit the work in the worktree and open the PR yourself with
-`ai-create-pr … --draft` — a Conventional-Commit title summarizing the change and
-a body (written to a file, passed as `--body <file>`) stating the purpose, the
-reuse/extend/new decision from Step 3b, which criteria pass, and the issue it
-closes. Then, as your **final action, mark the PR ready-for-review**
-(`gh pr ready <pr>`): the draft state means "implement is still working on this,"
-so a **finished** implementation must always end **ready** — that is the signal
-another agent uses to pick it up for review → fix-review → merge. Never leave a
-completed PR sitting as a draft.
+`ai-create-pr` — **ready for review**, no `--draft` — with a Conventional-Commit
+title summarizing the change and a body (written to a file, passed as
+`--body <file>`) stating the purpose, the reuse/extend/new decision from Step 3b,
+which criteria pass, and the issue it closes. You reached this step because the
+implementation is done, so the PR is immediately ready for another agent to pick
+up for review → fix-review → merge — there is no separate "mark ready" step to
+remember.
 
-On the **stuck** path, do the opposite: if you open a PR at all, **leave it a
-draft** (or a `[WIP]` title) — the work is not finished, so it is not ready for
-pickup — and report the diagnosis instead of marking it ready.
+**Only the stuck path opens a draft.** If you take the stuck path and choose to
+open a PR at all to preserve partial progress, open it as a **draft** with a
+`[WIP]` title — the work is genuinely unfinished, so it is not ready for pickup —
+and report the diagnosis. Draft is reserved for this unfinished-work case (and the
+told-to-abort-midway case); it is never the state of a completed implementation.
 
-**This skill stops here.** Marking the PR ready-for-review is a hand-off signal,
-not a review — it does not review, fix-review, or merge its own work; that is a
-separate concern with a separate owner. When several issues were implemented in
-parallel, aggregate their outcomes into one hand-off so the reader sees every
-branch, its state (ready / stuck), and any blocking diagnosis at a glance.
+**This skill stops here.** Opening the ready PR is a hand-off signal, not a review
+— it does not review, fix-review, or merge its own work; that is a separate
+concern with a separate owner. When several issues were implemented in parallel,
+aggregate their outcomes into one hand-off so the reader sees every branch, its
+state (ready / stuck), and any blocking diagnosis at a glance.
