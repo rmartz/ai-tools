@@ -213,7 +213,7 @@ implementation is done, so the PR is immediately ready for another agent to pick
 up for review → fix-review → merge — there is no separate "mark ready" step to
 remember.
 
-**Only the stuck path opens a draft.** If you take the stuck path and choose to
+**Only the stuck/abort path opens a draft.** If you take the stuck path and choose to
 open a PR at all to preserve partial progress, open it as a **draft** with a
 `[WIP]` title — the work is genuinely unfinished, so it is not ready for pickup —
 and report the diagnosis. Draft is reserved for this unfinished-work case (and the
