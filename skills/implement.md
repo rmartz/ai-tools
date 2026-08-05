@@ -64,6 +64,29 @@ preference, and the "stop at implementation; do not review or merge" boundary),
 and enumerate the tool permissions it will need up front so it never stalls
 mid-run on a missing grant.
 
+### Complex or dependent work → a `gh stack`
+
+One sprawling PR is hard to review. When an issue is **large** — or its
+implementation naturally splits into layers that build on each other (data model →
+API → UI) — deliver it as a **stack of small, focused PRs** using GitHub's native
+stacked pull requests (`gh stack`: `init` to start the chain off the default
+branch, `add` for each subsequent layer, `submit` to open the PRs). Each PR is one
+coherent, reviewable increment, so review complexity stays bounded. And when this
+issue **can't start until another task lands but that task's PR is still open**,
+stack this work on that PR's branch rather than idling — `gh stack` records the
+base→parent link so the child never merges before its parent.
+
+**Only stack a _linear_ chain** (A→B→C, each building on exactly one predecessor).
+When the dependencies branch (a diamond/tree), topologically sort and land the
+prerequisites first instead of forcing an awkward stack.
+
+How a stack **merges is the coordinator's call, not this skill's** — but shape the
+stack knowing the two modes: an **epic** stack (its top PR carries the `epic`
+label) merges **atomically** once the whole stack is approved and mergeable
+(`gh stack merge`), with children foldable into their parent as they're approved;
+every other stack merges **top-down** — a child never merges until its parent has
+merged into the default branch first (GitHub then auto-retargets the child).
+
 ## Step 1 — Understand the issue and its acceptance criteria
 
 Read the issue in full. Extract its acceptance criteria in priority order:
