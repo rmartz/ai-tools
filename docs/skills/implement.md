@@ -63,6 +63,18 @@ fix-reviews, or merges its own work.
    duplicates existing logic, then hand off (the skill stops; it does not review
    or merge).
 
+## Stacking complex or dependent work
+
+A large issue — or one that splits into layers that build on each other, or that
+depends on another task whose PR hasn't merged — is delivered as a **stack** of
+small focused PRs via GitHub's native stacks (`gh stack`), not one sprawling PR:
+each layer reviews on its own and review complexity stays bounded. Linear chains
+only (branching deps topologically sort). How the stack merges is the
+coordinator's call — an **epic** stack (top PR `epic` label) merges atomically
+once fully approved (`gh stack merge`); every other stack merges top-down, a child
+never before its parent lands on the default branch. (The full `gh stack` adoption
+across implement / implement-all / drive-to-merge is tracked in ai-tools #145.)
+
 ## See also
 
 - Sibling authoring skill: [`create-issue`](./create-issue.md).
