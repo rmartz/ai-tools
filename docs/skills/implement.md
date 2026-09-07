@@ -73,7 +73,7 @@ only (branching deps topologically sort). How the stack merges is the
 coordinator's call, per the **atomic-segment** model: mark each atomic feature's
 **base PR** with the `atomic-base` label and its segment (up to the next
 `atomic-base`) merges atomically (`gh stack merge`) once fully approved, while
-unlabeled PRs merge top-down — all bottom-up in stack order, a child never before
+unlabeled PRs merge one at a time, bottom-up in stack order — a child never before
 its parent lands on the default branch. (The full `gh stack` adoption across
 implement / implement-all / drive-to-merge is tracked in ai-tools #145.)
 

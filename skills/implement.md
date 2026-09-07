@@ -85,11 +85,11 @@ for the model: an **atomic feature** is a contiguous run of stacked PRs that mus
 ship all-or-nothing. Mark that run's **base (root) PR** with the `atomic-base`
 label; its **segment** — that PR up to the one just below the next `atomic-base`
 (or the top of the stack) — then merges **together, atomically** (`gh stack merge`)
-once the whole segment is approved. An **unlabeled** PR merges on its own,
-**top-down** — never before its parent lands on the default branch. Everything
-merges bottom-up in stack order regardless, so draw each `atomic-base` segment
-around exactly one feature that must land as a unit (whole-stack-atomic = one
-`atomic-base` on the bottom PR; no labels = plain per-PR top-down).
+once the whole segment is approved. An **unlabeled** PR merges on its own, **one at a time** — never before its
+parent lands on the default branch. Everything merges bottom-up in stack order,
+so draw each `atomic-base` segment around exactly one feature that must land as
+a unit (whole-stack-atomic = one `atomic-base` on the bottom PR; no labels =
+plain per-PR merge, bottom-up).
 
 ## Step 1 — Understand the issue and its acceptance criteria
 
