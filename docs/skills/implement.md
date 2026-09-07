@@ -70,10 +70,12 @@ depends on another task whose PR hasn't merged — is delivered as a **stack** o
 small focused PRs via GitHub's native stacks (`gh stack`), not one sprawling PR:
 each layer reviews on its own and review complexity stays bounded. Linear chains
 only (branching deps topologically sort). How the stack merges is the
-coordinator's call — an **epic** stack (top PR `epic` label) merges atomically
-once fully approved (`gh stack merge`); every other stack merges top-down, a child
-never before its parent lands on the default branch. (The full `gh stack` adoption
-across implement / implement-all / drive-to-merge is tracked in ai-tools #145.)
+coordinator's call, per the **atomic-segment** model: mark each atomic feature's
+**base PR** with the `atomic-base` label and its segment (up to the next
+`atomic-base`) merges atomically (`gh stack merge`) once fully approved, while
+unlabeled PRs merge one at a time, bottom-up in stack order — a child never before
+its parent lands on the default branch. (The full `gh stack` adoption across
+implement / implement-all / drive-to-merge is tracked in ai-tools #145.)
 
 ## See also
 

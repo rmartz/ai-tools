@@ -80,12 +80,16 @@ base→parent link so the child never merges before its parent.
 When the dependencies branch (a diamond/tree), topologically sort and land the
 prerequisites first instead of forcing an awkward stack.
 
-How a stack **merges is the coordinator's call, not this skill's** — but shape the
-stack knowing the two modes: an **epic** stack (its top PR carries the `epic`
-label) merges **atomically** once the whole stack is approved and mergeable
-(`gh stack merge`), with children foldable into their parent as they're approved;
-every other stack merges **top-down** — a child never merges until its parent has
-merged into the default branch first (GitHub then auto-retargets the child).
+How a stack **merges is the coordinator's call, not this skill's**, but shape it
+for the model: an **atomic feature** is a contiguous run of stacked PRs that must
+ship all-or-nothing. Mark that run's **base (root) PR** with the `atomic-base`
+label; its **segment** — that PR up to the one just below the next `atomic-base`
+(or the top of the stack) — then merges **together, atomically** (`gh stack merge`)
+once the whole segment is approved. An **unlabeled** PR merges on its own, **one at a time** — never before its
+parent lands on the default branch. Everything merges bottom-up in stack order,
+so draw each `atomic-base` segment around exactly one feature that must land as
+a unit (whole-stack-atomic = one `atomic-base` on the bottom PR; no labels =
+plain per-PR merge, bottom-up).
 
 ## Step 1 — Understand the issue and its acceptance criteria
 
