@@ -100,8 +100,49 @@ export function buildDependabotFixIssue(input: DependabotFixIssueInput): Dependa
   lines.push('');
   lines.push(
     'Make the fix on its own branch and open a PR whose body contains the line ' +
-      `\`${FIXES_DEPENDABOT_PREFIX}${input.prNumber}\` so the change links back to the bump. ` +
-      '**Do not edit `package.json` or the lockfile** — only application code; let Dependabot own the version bump.',
+      `\`${FIXES_DEPENDABOT_PREFIX}${input.prNumber}\` so the change links back to the bump.`,
+  );
+  lines.push('');
+  lines.push('### Manifest scope');
+  lines.push('');
+  lines.push(
+    '**Default: application code only.** Prefer a fix that touches no manifest — leave ' +
+      '`package.json` and the lockfile alone and let Dependabot own the version bump, so the ' +
+      'fix PR stays orthogonal to it.',
+  );
+  lines.push('');
+  lines.push(
+    '**Exception — the minimal set of package updates when the failure cannot be fixed without ' +
+      'them.** Some failures are inherent to the bump and cannot be resolved by application ' +
+      'code alone: the offending package must actually be at its new version for the fix to ' +
+      'mean anything, or its new version needs a sibling to move in lockstep. Then the fix PR ' +
+      '**may** update the **minimal set** of packages needed to address the root cause — and ' +
+      'nothing more:',
+  );
+  lines.push('');
+  lines.push(
+    '- **The offending bumped package itself** — when a grouped PR bumps A, B, and C and the ' +
+      'failure comes from C and cannot be fixed without C present, include C’s bump in the fix ' +
+      'PR (e.g. `@sentry/nextjs`) rather than shimming around a version that isn’t there.',
+  );
+  lines.push(
+    '- **Lockstep siblings absent from the original PR** — when C’s new version requires ' +
+      'package D to move in lockstep and D was not part of the original A/B/C bump, update C ' +
+      'and D together.',
+  );
+  lines.push('');
+  lines.push(
+    'Keep the set as small as possible — only the package(s) whose omission leaves the failure ' +
+      'genuinely unfixable, never an unrelated or opportunistic bump, and never the whole group ' +
+      'when a subset suffices. If you do include package changes, regenerate the lockfile with ' +
+      'the package manager (`pnpm install`) rather than editing it by hand.',
+  );
+  lines.push('');
+  lines.push(
+    '**How Dependabot reacts.** Merging a fix PR that advances C (and any lockstep D) is safe: ' +
+      'the coordinator’s post-merge `@dependabot rebase` makes Dependabot **reduce the scope** ' +
+      'of its grouped PR — dropping the package(s) the fix already advanced — or **close** it if ' +
+      'nothing remains to bump.',
   );
 
   if (input.failingCheck) {
@@ -119,7 +160,11 @@ export function buildDependabotFixIssue(input: DependabotFixIssueInput): Dependa
   lines.push('## Acceptance criteria');
   lines.push('');
   lines.push(`- [ ] Root cause of the CI failure on PR #${input.prNumber} identified`);
-  lines.push('- [ ] Fix applied to application code only (no manifest/lockfile edits)');
+  lines.push(
+    '- [ ] Fix scoped to application code — or, only when the failure cannot be fixed ' +
+      'without it, the minimal package set (offending package and/or lockstep sibling; ' +
+      'no unrelated/opportunistic bumps; lockfile regenerated via the package manager)',
+  );
   lines.push('- [ ] Local verification (lint / typecheck / test) passes');
   lines.push(`- [ ] Fix PR opened linking back to Dependabot PR #${input.prNumber}`);
 

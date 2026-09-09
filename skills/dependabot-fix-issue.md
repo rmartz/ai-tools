@@ -58,11 +58,23 @@ Pick the category that best fits; it shapes the issue's guidance:
 - The body must carry the back-link line `Fixes Dependabot PR #<N>` so the
   eventual fix PR links to the bump (this is the convention PR Shepherd's
   mechanics parse).
-- State the **manifest guardrail** explicitly: the fix touches **application code
-  only** — never `package.json` or the lockfile. Dependabot owns the version bump;
-  a foreign edit to its branch's manifest breaks its rebase/recreate flow.
-- Give acceptance criteria: root cause identified, fix in app code only, local
-  verification (lint/typecheck/test) passes, fix PR opened linking back.
+- State the **manifest scope** explicitly. The **default** is a fix in
+  **application code only** — leave `package.json` and the lockfile alone and let
+  Dependabot own the version bump, so the fix PR stays orthogonal to it.
+  **Exception — the minimal set of package updates when the failure cannot be
+  fixed without them:** some failures are inherent to the bump and can't be shimmed
+  around in app code — the **offending bumped package itself** must be at its new
+  version (e.g. `@sentry/nextjs`), or its new version needs a **lockstep sibling**
+  absent from the original grouped PR to move with it. Then the fix PR may update
+  the **minimal** set of packages needed — only the ones whose omission leaves the
+  failure genuinely unfixable, never an unrelated/opportunistic bump, never the
+  whole group when a subset suffices — regenerating the lockfile via `pnpm install`
+  rather than editing it by hand. Note **how Dependabot reacts**: the coordinator's
+  post-merge `@dependabot rebase` makes Dependabot reduce the grouped PR's scope
+  (dropping the packages the fix advanced) or close it if nothing remains.
+- Give acceptance criteria: root cause identified; fix scoped to app code (or the
+  minimal package set when unavoidable); local verification (lint/typecheck/test)
+  passes; fix PR opened linking back.
 
 The library does all of this for you — call
 `createDependabotFixIssue(repo, { prNumber, dependency, toVersion, fromVersion,
