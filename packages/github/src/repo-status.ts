@@ -1,4 +1,9 @@
-import { ghCall, currentRepo, type GhCallOptions } from './gh-call.js';
+import {
+  ghCall,
+  resolveRepoTarget,
+  type GhCallOptions,
+  type RepoTargetOptions,
+} from './gh-call.js';
 
 /**
  * Gather open issues, milestones, and PR data for the `/status` and
@@ -91,9 +96,15 @@ function resolveIssueNumbers(p: RawPr, repo: string): number[] {
   return matchAll(PR_BODY_CLOSING_RE, p.body ?? '');
 }
 
-/** Fetch and structure the repo's open issues, milestones, and PRs. */
-export async function gatherRepoStatus(opts: GhCallOptions = {}): Promise<RepoStatus> {
-  const repo = await currentRepo(opts);
+/**
+ * Fetch and structure the repo's open issues, milestones, and PRs. The target
+ * repo follows the uniform precedence of {@link resolveRepoTarget}: explicit
+ * `opts.repo` (a `--repo` flag) → `GH_REPO` → cwd `gh repo view`. Once resolved,
+ * every `gh` query is scoped to it (`--repo`), so a caller that cannot pin its
+ * cwd still reads the intended repo rather than whatever the cwd happens to be.
+ */
+export async function gatherRepoStatus(opts: RepoTargetOptions = {}): Promise<RepoStatus> {
+  const repo = await resolveRepoTarget(opts);
   if (!repo) throw new Error('could not determine repo');
 
   const [rawIssues, rawMilestones, rawPrs] = await Promise.all([
@@ -102,6 +113,8 @@ export async function gatherRepoStatus(opts: GhCallOptions = {}): Promise<RepoSt
         'gh',
         'issue',
         'list',
+        '--repo',
+        repo,
         '--state',
         'open',
         '--limit',
@@ -120,6 +133,8 @@ export async function gatherRepoStatus(opts: GhCallOptions = {}): Promise<RepoSt
         'gh',
         'pr',
         'list',
+        '--repo',
+        repo,
         '--state',
         'open',
         '--limit',

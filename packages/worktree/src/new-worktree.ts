@@ -266,7 +266,12 @@ export interface NewWorktreeOptions {
   base?: string;
   /** Skip the dependency-install step. */
   skipInstall?: boolean;
-  /** Working directory the command runs in (default `process.cwd()`). */
+  /**
+   * The local checkout to resolve the repo root from (default `process.cwd()`),
+   * exposed on the CLI as `-C`/`--repo-path`. The repo slug is derived strictly
+   * from this checkout — never `GH_REPO` — since a worktree is created from a
+   * local path, not an `owner/repo` slug.
+   */
   cwd?: string;
   /** Progress logger (defaults to stderr). */
   log?: Log;

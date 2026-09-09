@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@rmartz/agent-runtime": "workspace:*",
+    "@rmartz/github": "workspace:*",
     "yaml": "^2.5.0"
   },
   "devDependencies": {

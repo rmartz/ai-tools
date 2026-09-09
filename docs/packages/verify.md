@@ -75,9 +75,10 @@ Thin `bin/` wrappers; all logic stays in the library:
 - `ai-pre-push-verify [-C PATH] [--list] [--json]` — exit 0 when every selected
   check passes or none is detected; exit 1 when any fails (its output is
   printed).
-- `ai-detect-ci-infra-failure <pr> [--repo owner/name]` — resolves the PR head
-  SHA via `gh`, prints `{ infra_failure, reason }` JSON. Always exits 0; callers
-  branch on the field.
+- `ai-detect-ci-infra-failure <pr> [--repo owner/name]` — resolves the target repo
+  via the shared `resolveRepoTarget` precedence (explicit `--repo` → `GH_REPO` →
+  cwd), then the PR head SHA via `gh`, and prints `{ infra_failure, reason }` JSON.
+  Always exits 0; callers branch on the field.
 
 ## Testing
 

@@ -1,5 +1,10 @@
 import { boundedRun } from '@rmartz/agent-runtime';
-import { fetchPrSummary, gatherRepoStatus, type RepoStatus } from '@rmartz/github';
+import {
+  fetchPrSummary,
+  gatherRepoStatus,
+  resolveRepoTarget,
+  type RepoStatus,
+} from '@rmartz/github';
 import { STALE_AFTER_DAYS, classifyStaleBranches } from './branch-staleness.js';
 
 /**
@@ -38,6 +43,8 @@ export type Log = (message: string) => void;
 
 export interface CleanupOptions {
   cwd?: string;
+  /** Target `owner/repo`; overrides cwd/`GH_REPO` resolution (a `--repo` flag). */
+  repo?: string;
   log?: Log;
   /** Clock for staleness, epoch ms. Defaults to `Date.now()`; injected in tests. */
   now?: number;
@@ -144,7 +151,7 @@ export async function classifyBranches(
   cwd: string | undefined,
   log: Log,
 ): Promise<Map<string, PrState>> {
-  const status = await safeRepoStatus(cwd);
+  const status = await safeRepoStatus(repo, cwd);
   const openHeads = new Set((status?.openPrs ?? []).map((pr) => pr.headRefName));
   const out = new Map<string, PrState>();
   for (const branch of branches) {
@@ -157,9 +164,9 @@ export async function classifyBranches(
   return out;
 }
 
-async function safeRepoStatus(cwd: string | undefined): Promise<RepoStatus | null> {
+async function safeRepoStatus(repo: string, cwd: string | undefined): Promise<RepoStatus | null> {
   try {
-    return await gatherRepoStatus({ cwd });
+    return await gatherRepoStatus({ repo, cwd });
   } catch {
     return null;
   }
@@ -279,7 +286,7 @@ export async function runCleanup(opts: CleanupOptions = {}): Promise<CleanupResu
     return result;
   }
 
-  const repo = (await safeCurrentRepo(cwd)) ?? '';
+  const repo = (await resolveRepoTarget({ repo: opts.repo, cwd })) ?? '';
   const status = await classifyBranches(branchesToCheck, repo, cwd, log);
   const staleAfterDays = opts.staleAfterDays ?? STALE_AFTER_DAYS;
   const stale = await classifyStaleBranches(
@@ -361,18 +368,4 @@ export async function runCleanup(opts: CleanupOptions = {}): Promise<CleanupResu
       `(kept ${result.branchesKept}).`,
   );
   return result;
-}
-
-async function safeCurrentRepo(cwd: string | undefined): Promise<string | null> {
-  try {
-    const r = await boundedRun(
-      'gh',
-      ['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner'],
-      { timeoutMs: GIT_TIMEOUT_MS, cwd },
-    );
-    if ((r.code ?? 1) !== 0) return null;
-    return r.stdout.trim() || null;
-  } catch {
-    return null;
-  }
 }

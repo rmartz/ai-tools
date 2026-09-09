@@ -75,10 +75,12 @@ in `gh-call.ts`.
   is surfaced with its patch. Falls back to a single unified diff when there is no
   merge commit, the chain can't be reconstructed, or the compare is truncated
   (>250 commits). `repo` defaults to the git remote (`currentRepo`).
-- `gatherRepoStatus({ cwd? })` — open issues (blocked/manual filtered, deps
+- `gatherRepoStatus({ cwd?, repo? })` — open issues (blocked/manual filtered, deps
   parsed from the body), milestones, and open PRs with resolved closing-issue
   numbers (same-repo closing refs → `feat/issue-<N>-*` branch → `Closes #N` body).
-  Keys are camelCase TS-native (not the Python snake_case).
+  Keys are camelCase TS-native (not the Python snake_case). Targets the repo via
+  `resolveRepoTarget` (explicit `repo` → `GH_REPO` → cwd) and scopes every `gh`
+  query to it, so it works from a caller that cannot pin its cwd.
 
 ### Write craft (`pr-comment.ts`, `threads.ts`)
 
@@ -126,7 +128,17 @@ The GraphQL Discussions client (no REST / `gh` equivalent), targeting `rmartz/ai
 
 ### Shared
 
-- `currentRepo({ cwd? })` — resolve the current `owner/repo` from the git remote.
+- `currentRepo({ cwd? })` — resolve the current `owner/repo` strictly from the
+  git remote (`gh repo view`). This is the **cwd-derived** slug; it ignores
+  `GH_REPO`, so it stays correct for callers that need the local checkout's repo
+  (e.g. new-worktree assigning an issue).
+- `resolveRepoTarget({ repo?, env?, cwd? })` — the one shared resolver every
+  cwd-only PR/GitHub CLI routes through, with a uniform precedence: **explicit
+  `repo` (a `--repo` flag) → `GH_REPO` → cwd `gh repo view`**. `GH_REPO` is
+  consulted _before_ shelling to `gh repo view` (which ignores it), so it is a real
+  override — the fix for sub-agents whose Bash cwd resets between calls and can't
+  pin a cwd. Soft-fails to `null`; the cwd fallback runs through `ghCall`, so
+  rate-limit classification still applies at the resolution step.
 
 ## CLIs
 
