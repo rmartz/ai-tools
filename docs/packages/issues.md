@@ -34,8 +34,11 @@ dependency, fromVersion?, toVersion?, category?, failingCheck?,
 failureExcerpt?, labels? }` it returns `{ title, body, labels }`. The title
   carries the stable `Dependabot #<N>` fragment (the dedup key); the body carries
   the `Fixes Dependabot PR #<N>` back-link (`FIXES_DEPENDABOT_PREFIX`), the
-  category-specific guidance, the failure excerpt, the application-code-only
-  guardrail, and an acceptance-criteria checklist. No I/O.
+  category-specific guidance, the failure excerpt, the manifest-scope guidance
+  (application code by default, with the minimal-package-set exception — the
+  offending bumped package and/or a lockstep sibling — for failures that can't be
+  fixed without it, plus the post-merge `@dependabot rebase` reaction), and an
+  acceptance-criteria checklist. No I/O.
 - `createDependabotFixIssue(repo, input, opts?)` — dedups against an open issue
   (`findOpenIssue` on the title fragment, unless `skipDedup`) then creates via
   `createIssue`. Returns `{ url, outcome }` where `outcome` ∈ `created` |
