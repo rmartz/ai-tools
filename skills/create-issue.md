@@ -9,9 +9,12 @@ Create a GitHub issue from a description: `$ARGUMENTS`.
 
 This skill is the **craft** of authoring one good issue — dedup, title, body,
 labels, milestone. It is runner-agnostic: it does not post a verdict marker and
-does not assume PR Shepherd. When run directly by the harness, create the issue
-with `@rmartz/github`'s `createIssue` (or the `gh issue create` fallback the CLIs
-wrap). Under PR Shepherd, express the drafted issue and let the engine emit.
+does not assume PR Shepherd. When run directly by the harness, **prefer the
+first-party `mcp__github__issue_write` MCP tool** to create the issue (a thin 1:1
+op that also sets labels/milestone/assignees, and is what the desktop app detects);
+`@rmartz/github`'s `createIssue` CLI (or the `gh issue create` it wraps) is the
+fallback when MCP is unavailable. Under PR Shepherd, express the drafted issue and
+let the engine emit — the library path uses `createIssue` directly.
 
 ## Before writing anything: dedup
 

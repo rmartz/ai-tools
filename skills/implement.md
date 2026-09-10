@@ -16,10 +16,14 @@ Implement the GitHub issue(s): $ARGUMENTS
 > mechanical spine composes the maintained `ai-*` CLIs: `ai-new-worktree`
 > (`@rmartz/worktree`) to provision the isolated worktree, `ai-pre-push-verify`
 > (`@rmartz/verify`) to re-run the project's own CI-derived checks before
-> hand-off, and `ai-create-pr` / `ai-create-issue` (`@rmartz/github`) for the PR
-> and any issue write. Prefer a GitHub MCP tool (`mcp__github__*`) where it is
-> richer (e.g. reading an issue body); fall back to `gh` only where neither a CLI
-> nor an MCP tool fits.
+> hand-off. For the GitHub writes themselves — opening the PR, writing any issue —
+> **prefer the first-party MCP tool in this agent turn**: `mcp__github__create_pull_request`
+> to open the PR and `mcp__github__issue_write` to create an issue (both are thin
+> 1:1 operations the desktop app detects, so the PR chip attaches to the session).
+> The `ai-create-pr` / `ai-create-issue` (`@rmartz/github`) CLIs are the **fallback**
+> when the MCP tool is unavailable (and the path a purely scripted/sub-shell caller
+> uses). Prefer a GitHub MCP tool for reads too (e.g. reading an issue body); fall
+> back to `gh` only where neither an MCP tool nor a CLI fits.
 >
 > **Assumption**: the project tests with **Vitest**. This skill designs the
 > approach, then writes tests that validate that design, then implements until

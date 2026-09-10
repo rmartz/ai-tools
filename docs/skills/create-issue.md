@@ -15,7 +15,10 @@ repo's domain/status labels and milestone. It does not assign the issue.
 
 Lives in `@rmartz/issues` (layer-2) because issue authoring composes layer-0
 `@rmartz/github` primitives — `findOpenIssue` for client-side-exact dedup and
-`createIssue` for the REST-first create.
+`createIssue` for the REST-first create. A direct harness run prefers the
+first-party `mcp__github__issue_write` MCP tool to create the issue (detected by
+the desktop app); the `createIssue` library path is the fallback and the one PR
+Shepherd's library callers use.
 
 ## Runner-agnostic emission
 
