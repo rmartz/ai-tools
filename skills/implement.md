@@ -32,10 +32,12 @@ Implement the GitHub issue(s): $ARGUMENTS
 > **Emission (read this first).** This skill produces a **working branch and an
 > outcome** — implemented-and-ready, or stuck-with-a-diagnosis — and opens the PR
 > itself. Provision the worktree with `ai-new-worktree`, commit in it, and open
-> the PR with `ai-create-pr`. You open the PR only **once the implementation is
-> done**, so **open it ready for review** (`ai-create-pr`, no `--draft`) — a
-> finished implementation is ready for another agent to pick up for
-> review/fix-review/merge, and there is no draft step to remember. **Draft is a
+> the PR with `mcp__github__create_pull_request` (preferred in agent turns; the
+> desktop app attaches the PR chip); fall back to `ai-create-pr` when the MCP
+> tool is unavailable. You open the PR only **once the implementation is done**,
+> so **open it ready for review** (no `--draft`) — a finished implementation is
+> ready for another agent to pick up for review/fix-review/merge, and there is no
+> draft step to remember. **Draft is a
 > narrow edge case, not the default:** open a draft (with a `[WIP]` title) **only**
 > when you are stopping with the work genuinely _unfinished_ — you were told to
 > abort midway, or you hit the stuck path (see Step 6) — to preserve partial
@@ -245,11 +247,13 @@ If either is yes, **consolidate** — call or extend the existing code and delet
 the duplicate. This is the final net for a parallel implementation that Step 3b's
 survey missed; it is cheaper to catch here than in review.
 
-Then hand off. Commit the work in the worktree and open the PR yourself with
-`ai-create-pr` — **ready for review**, no `--draft` — with a Conventional-Commit
-title summarizing the change and a body (written to a file, passed as
-`--body <file>`) stating the purpose, the reuse/extend/new decision from Step 3b,
-which criteria pass, and the issue it closes. You reached this step because the
+Then hand off. Commit the work in the worktree and open the PR yourself —
+**ready for review**, no `--draft` — with a Conventional-Commit title
+summarizing the change and a body (written to a file) stating the purpose, the
+reuse/extend/new decision from Step 3b, which criteria pass, and the issue it
+closes. Prefer `mcp__github__create_pull_request` in this agent turn (the
+desktop app attaches the PR chip); fall back to `ai-create-pr` when the MCP
+tool is unavailable. You reached this step because the
 implementation is done, so the PR is immediately ready for another agent to pick
 up for review → fix-review → merge — there is no separate "mark ready" step to
 remember.

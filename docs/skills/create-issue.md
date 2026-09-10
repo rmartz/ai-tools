@@ -25,7 +25,9 @@ Shepherd's library callers use.
 Per the [PR Shepherd handoff](../pr-shepherd-handoff.md), the skill describes the
 **judgment** only. It does **not** bake in PR Shepherd's `<!-- skill-outcome -->`
 marker or its own posting. In direct-harness mode it creates the issue via
-`@rmartz/github`; under PR Shepherd the engine renders and posts the outcome.
+`mcp__github__issue_write` (preferred; detected by the desktop app), falling back
+to `@rmartz/github`'s `createIssue` / `ai-create-issue` when MCP is unavailable;
+under PR Shepherd the engine renders and posts the outcome via the library path.
 
 ## See also
 
