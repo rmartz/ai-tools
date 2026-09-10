@@ -1,9 +1,9 @@
 #!/usr/bin/env tsx
 /**
  * OKF frontmatter conformance — port of dotfiles'
- * test_docs_okf_frontmatter.py. Every `docs/**` page except the index
- * (docs/README.md) must carry valid Open Knowledge Format frontmatter, and a
- * non-Design page's `resource` must point to a file that exists.
+ * test_docs_okf_frontmatter.py. Every `docs/**` page except the reserved index
+ * (docs/index.md, §3.1) must carry valid Open Knowledge Format frontmatter, and
+ * a non-Design page's `resource` must point to a file that exists.
  */
 import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -21,7 +21,7 @@ function walk(dir: string): string[] {
 function main(): void {
   const errors: string[] = [];
   for (const path of walk('docs')) {
-    if (path === join('docs', 'README.md')) continue;
+    if (path === join('docs', 'index.md')) continue;
     const { data } = matter(readFileSync(path, 'utf8'));
 
     if (!TYPES.has(data.type)) errors.push(`${path}: type must be one of ${[...TYPES].join('|')}`);
