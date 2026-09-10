@@ -27,8 +27,13 @@ describe('buildDependabotFixIssue', () => {
     // Category guidance and the failure excerpt (trimmed) are present.
     expect(body).toContain('lint rule');
     expect(body).toContain('```\nsrc/foo.ts: no-explicit-any\n```');
-    // The manifest/lockfile guardrail is always stated.
-    expect(body).toContain('Do not edit `package.json`');
+    // Manifest scope: default is application code only, with the minimal
+    // package-set exception and the Dependabot-reaction note.
+    expect(body).toContain('application code only');
+    expect(body).toContain('minimal set');
+    expect(body).toContain('reduce the scope');
+    // The old absolute prohibition is gone.
+    expect(body).not.toContain('Do not edit `package.json`');
     expect(labels).toEqual([]);
   });
 

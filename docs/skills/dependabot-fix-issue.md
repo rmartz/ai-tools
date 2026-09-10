@@ -13,7 +13,8 @@ accompanying **code change** (a new lint rule, a renamed API, a stricter type, a
 compatibility shim), this skill is the judgment for filing a clear fix issue:
 first rule out non-fixable infrastructure failures and flakes, classify _why_ the
 bump needs a change, then author a deduped issue carrying the `Fixes Dependabot
-PR #<N>` back-link and the application-code-only guardrail.
+PR #<N>` back-link and the manifest-scope guidance (application code by default;
+the minimal package set only when the failure can't be fixed without it).
 
 It owns only the **judgment**. The Dependabot _mechanics_ (sweep, spawn fix PR,
 rebase/recreate, merge arbitration) belong to PR Shepherd and are explicitly out
