@@ -74,7 +74,13 @@ export async function ghCall(
   return null;
 }
 
-/** Resolve the current `owner/repo` from the git remote via `gh`, or `null`. */
+/**
+ * Resolve the current `owner/repo` strictly from the git remote via `gh repo
+ * view`, or `null`. This is the **cwd-derived** slug — it deliberately ignores
+ * `GH_REPO` (which `gh repo view` itself ignores), so callers that need the repo
+ * of the *local checkout* (e.g. new-worktree assigning an issue) resolve it here
+ * rather than through the `GH_REPO`-aware {@link resolveRepoTarget}.
+ */
 export async function currentRepo(opts: GhCallOptions = {}): Promise<string | null> {
   const out = await ghCall(
     { argv: ['gh', 'repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner'] },
@@ -82,6 +88,38 @@ export async function currentRepo(opts: GhCallOptions = {}): Promise<string | nu
     opts,
   );
   return out && out.trim() ? out.trim() : null;
+}
+
+/** Options for {@link resolveRepoTarget}: `GhCallOptions` + an explicit repo and env bag. */
+export interface RepoTargetOptions extends GhCallOptions {
+  /** Explicit `owner/repo` from a `--repo` flag; highest precedence. */
+  repo?: string | null;
+  /** Environment consulted for `GH_REPO` (defaults to `process.env`). Injectable for tests. */
+  env?: Record<string, string | undefined>;
+}
+
+/**
+ * Resolve the target `owner/repo` with a single uniform precedence:
+ * **explicit `repo` (a `--repo` flag) → `GH_REPO` → cwd `gh repo view`**.
+ *
+ * `GH_REPO` is consulted *before* shelling to `gh repo view`, because
+ * `gh repo view --json nameWithOwner` returns the **cwd-derived** repo even when
+ * `GH_REPO` is set — a resolver that shelled straight to it would silently ignore
+ * the override. This is the one shared resolver every cwd-only PR/GitHub CLI
+ * routes through, so a caller that cannot pin its cwd — most importantly a
+ * sub-agent, whose Bash cwd resets between calls — can still target a repo via
+ * `--repo`/`GH_REPO`.
+ *
+ * The cwd fallback runs through {@link ghCall}, so its rate-limit classification
+ * and REST→GraphQL backoff apply at the resolution step too. Soft-fails to `null`
+ * when nothing resolves (e.g. not in a repo and no override given).
+ */
+export async function resolveRepoTarget(opts: RepoTargetOptions = {}): Promise<string | null> {
+  const explicit = opts.repo?.trim();
+  if (explicit) return explicit;
+  const ghRepo = (opts.env ?? process.env).GH_REPO?.trim();
+  if (ghRepo) return ghRepo;
+  return currentRepo(opts);
 }
 
 /** A repo's identity plus the current HEAD of its default branch. */

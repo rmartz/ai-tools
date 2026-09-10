@@ -3,6 +3,11 @@
 // in the library so PR Shepherd and the harness share one implementation. On
 // success the worktree's absolute path is the final stdout line (progress logs
 // go to stderr), so callers can chain into `cd "$(ai-new-worktree …)"`.
+//
+// Unlike the other CLIs, new-worktree needs a **local checkout path** (you cannot
+// create a worktree from an `owner/repo` slug), so it takes `-C`/`--repo-path <dir>`
+// — the directory to resolve the repo root from — rather than `--repo`. Its repo
+// slug is derived strictly from that checkout (cwd), never from `GH_REPO`.
 import {
   runNewWorktree,
   VALID_BRANCH_PREFIXES,
@@ -15,6 +20,7 @@ function parseArgs(argv: string[]): NewWorktreeOptions {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--name') opts.name = argv[++i];
+    else if (arg === '-C' || arg === '--repo-path') opts.cwd = argv[++i];
     else if (arg === '--branch-prefix') {
       const value = argv[++i];
       if (value === undefined || !VALID_BRANCH_PREFIXES.includes(value as BranchPrefix)) {

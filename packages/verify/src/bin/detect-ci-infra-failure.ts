@@ -4,6 +4,7 @@
 // the classifier, and prints `{ infra_failure, reason }` JSON. Always exits 0 —
 // callers branch on the `infra_failure` field, not the exit code.
 import { boundedRun } from '@rmartz/agent-runtime';
+import { resolveRepoTarget } from '@rmartz/github';
 import { isInfraFailure } from '../index.js';
 
 const GH_TIMEOUT_MS = 30_000;
@@ -43,12 +44,21 @@ async function main(): Promise<void> {
     return;
   }
 
-  let repo = args.repo;
+  // Resolve the target via the shared precedence (explicit --repo → GH_REPO → cwd),
+  // so a caller that cannot pin its cwd still targets the right repo.
+  const repo = await resolveRepoTarget({ repo: args.repo });
+  if (!repo) {
+    console.log(
+      JSON.stringify({
+        infra_failure: false,
+        reason: 'could not resolve repo (pass --repo or set GH_REPO)',
+      }),
+    );
+    return;
+  }
+
   let headSha: string;
   try {
-    if (!repo) {
-      repo = await gh(['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner']);
-    }
     // Scope `gh pr view` to the resolved repo so the PR number is not looked up
     // in whatever repo the cwd happens to be.
     headSha = await gh([
@@ -65,7 +75,7 @@ async function main(): Promise<void> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.log(
-      JSON.stringify({ infra_failure: false, reason: `could not resolve repo/head sha: ${msg}` }),
+      JSON.stringify({ infra_failure: false, reason: `could not resolve head sha: ${msg}` }),
     );
     return;
   }

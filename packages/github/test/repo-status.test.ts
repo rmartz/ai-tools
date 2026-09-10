@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const boundedRun = vi.fn();
 vi.mock('@rmartz/agent-runtime', () => ({ boundedRun }));
@@ -8,17 +8,23 @@ const json = (v: unknown) => ok(JSON.stringify(v));
 
 const { gatherRepoStatus } = await import('../src/repo-status.js');
 
-// Call order: currentRepo, then Promise.all(issues, milestones, prs).
+// Call order: resolveRepoTarget (gh repo view), then Promise.all(issues, milestones, prs).
 function arrange(opts: { issues: unknown; milestones: unknown; prs: unknown }) {
   boundedRun
-    .mockResolvedValueOnce(ok('rmartz/ai-tools\n')) // currentRepo
+    .mockResolvedValueOnce(ok('rmartz/ai-tools\n')) // resolveRepoTarget → gh repo view
     .mockResolvedValueOnce(json(opts.issues))
     .mockResolvedValueOnce(json(opts.milestones))
     .mockResolvedValueOnce(json(opts.prs));
 }
 
 describe('gatherRepoStatus', () => {
-  beforeEach(() => boundedRun.mockReset());
+  // Resolution now consults GH_REPO before shelling — neutralize it so the cwd
+  // path (gh repo view) is exercised deterministically regardless of the host env.
+  beforeEach(() => {
+    boundedRun.mockReset();
+    vi.stubEnv('GH_REPO', '');
+  });
+  afterEach(() => vi.unstubAllEnvs());
 
   it('filters blocked/manual issues and parses deps from the body', async () => {
     arrange({
@@ -106,5 +112,24 @@ describe('gatherRepoStatus', () => {
     expect(status.openPrs[1].issueNumbers).toEqual([56]);
     expect(status.openPrs[2].issueNumbers).toEqual([57]);
     expect(status.openPrs[3].issueNumbers).toEqual([]); // `feature/` is not a CC type
+  });
+
+  it('targets an explicit --repo without a cwd gh repo view, scoping every query', async () => {
+    // Only three calls now — resolveRepoTarget short-circuits on the explicit repo.
+    boundedRun
+      .mockResolvedValueOnce(json([])) // issues
+      .mockResolvedValueOnce(json([])) // milestones
+      .mockResolvedValueOnce(json([])); // prs
+
+    await gatherRepoStatus({ repo: 'other/target' });
+
+    const argvs = boundedRun.mock.calls.map((c) => c[1] as string[]);
+    // No `gh repo view` was needed; the issue and PR lists are scoped to the repo.
+    expect(argvs.some((a) => a[0] === 'repo' && a[1] === 'view')).toBe(false);
+    expect(argvs).toContainEqual(
+      expect.arrayContaining(['issue', 'list', '--repo', 'other/target']),
+    );
+    expect(argvs).toContainEqual(expect.arrayContaining(['pr', 'list', '--repo', 'other/target']));
+    expect(argvs).toContainEqual(expect.arrayContaining(['api', 'repos/other/target/milestones']));
   });
 });

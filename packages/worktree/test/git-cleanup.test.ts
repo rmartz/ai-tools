@@ -4,7 +4,8 @@ const boundedRun = vi.fn();
 vi.mock('@rmartz/agent-runtime', () => ({ boundedRun }));
 const fetchPrSummary = vi.fn();
 const gatherRepoStatus = vi.fn();
-vi.mock('@rmartz/github', () => ({ fetchPrSummary, gatherRepoStatus }));
+const resolveRepoTarget = vi.fn();
+vi.mock('@rmartz/github', () => ({ fetchPrSummary, gatherRepoStatus, resolveRepoTarget }));
 
 const result = (over: Partial<{ stdout: string; stderr: string; code: number }> = {}) => ({
   stdout: '',
@@ -21,6 +22,9 @@ beforeEach(() => {
   boundedRun.mockReset();
   fetchPrSummary.mockReset();
   gatherRepoStatus.mockReset();
+  resolveRepoTarget.mockReset();
+  // Default: the cwd resolves to o/r unless a test scripts an explicit override.
+  resolveRepoTarget.mockResolvedValue('o/r');
 });
 
 describe('parseSecondaryWorktrees', () => {
@@ -306,5 +310,26 @@ describe('runCleanup', () => {
       branchesKept: 0,
     });
     expect(log.mock.calls.some((c) => String(c[0]).includes('Nothing to clean up'))).toBe(true);
+  });
+
+  it('threads an explicit --repo through resolution and the repo-status query', async () => {
+    resolveRepoTarget.mockResolvedValue('other/target'); // the resolver honors the flag
+    gatherRepoStatus.mockResolvedValue({ openPrs: [] });
+    scriptGit((cmd, args) => {
+      if (cmd === 'git' && args[0] === 'symbolic-ref' && args[1] === 'refs/remotes/origin/HEAD')
+        return result({ stdout: 'refs/remotes/origin/main\n' });
+      if (cmd === 'git' && args[0] === 'symbolic-ref') return result({ stdout: 'main\n' });
+      if (cmd === 'git' && args[0] === 'worktree' && args[1] === 'list')
+        return result({ stdout: '' });
+      if (cmd === 'git' && args[0] === 'branch') return result({ stdout: 'main\nfeat/other\n' });
+      return undefined;
+    });
+
+    await runCleanup({ cwd: '/repo', repo: 'other/target', log: vi.fn() });
+
+    // The explicit repo reaches the shared resolver…
+    expect(resolveRepoTarget).toHaveBeenCalledWith({ repo: 'other/target', cwd: '/repo' });
+    // …and the branch classification queries that same repo, not the cwd's.
+    expect(gatherRepoStatus).toHaveBeenCalledWith({ repo: 'other/target', cwd: '/repo' });
   });
 });

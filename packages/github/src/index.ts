@@ -4,8 +4,20 @@ export type { PrSummary } from './pr-summary.js';
 export { listPrReviews, listIssueComments } from './pr-reads.js';
 export type { PrReview, IssueComment } from './pr-reads.js';
 
-export { ghCall, issueNumber, currentRepo, resolveProjectRef } from './gh-call.js';
-export type { Transport, GhCallOptions, Sleeper, ProjectRef } from './gh-call.js';
+export {
+  ghCall,
+  issueNumber,
+  currentRepo,
+  resolveRepoTarget,
+  resolveProjectRef,
+} from './gh-call.js';
+export type {
+  Transport,
+  GhCallOptions,
+  RepoTargetOptions,
+  Sleeper,
+  ProjectRef,
+} from './gh-call.js';
 
 export { computePrDiff } from './pr-diff.js';
 export type { PrDiffOptions } from './pr-diff.js';

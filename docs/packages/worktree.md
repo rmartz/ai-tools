@@ -23,7 +23,11 @@ defaultBranch }`. Fetches the base branch, `git worktree add`s under
   `<repo>/.git-worktrees/<branch-leaf>`, symlinks the shared Claude settings,
   optionally installs deps, and assigns the issue to the current `gh` user.
   Throws on a fatal step (not a git repo, repo-slug resolution, git fetch/add,
-  dep install); issue assignment is non-fatal.
+  dep install); issue assignment is non-fatal. `cwd` is the local checkout to
+  resolve the repo from — the CLI's `-C`/`--repo-path`. Unlike the other CLIs
+  this takes a **checkout path, not a `--repo` slug** (you cannot create a worktree
+  from a slug), and its repo slug stays cwd-derived (`currentRepo`), never
+  `GH_REPO`, so it always names the local checkout.
 - `resolveDefaultBranch({ cwd?, log? })` — the repo's default branch via
   `gh repo view`, with a graceful local-git (`origin/HEAD`, then `git remote show
 origin`) → `"main"` fallback so a GitHub API outage never aborts creation. The
@@ -54,7 +58,7 @@ and `python_env` interpreter discovery are dropped entirely.
 
 ### Cleanup (`git-cleanup.ts`)
 
-- `runCleanup({ cwd?, log?, now?, staleAfterDays? })` — remove secondary
+- `runCleanup({ cwd?, repo?, log?, now?, staleAfterDays? })` — remove secondary
   worktrees and local branches whose PR is **closed/merged**, or whose **latest
   commit is at least `staleAfterDays` (default 30) days old**, in three phases
   (worktrees → branches → `git worktree prune`). Recent-commit branches with an
@@ -63,7 +67,10 @@ and `python_env` interpreter discovery are dropped entirely.
   cleaned, which is the only way a no-PR branch is ever removed. Never uses
   `--force`, and skips a worktree with uncommitted/untracked changes even when its
   branch is closed or stale. `now`/`staleAfterDays` are injectable for tests.
-  Returns removed/kept counts.
+  Returns removed/kept counts. `repo` scopes the GitHub PR-state queries to that
+  repo via `resolveRepoTarget` (explicit → `GH_REPO` → cwd); git operations
+  (worktree enumeration, branch deletion, `git worktree prune`) still run against
+  the local checkout at `cwd` — exposed as the CLI's `--repo owner/repo`.
 - `decideCleanup(state, stale, staleAfterDays)` — folds PR state + staleness into
   one `{ remove, reason }` decision. `isStale(commitEpochMs, nowMs, days)` /
   `STALE_AFTER_DAYS` (`branch-staleness.ts`) back the staleness sweep; unknown
@@ -99,12 +106,16 @@ worktrees/**)` grants plus **absolute, repo-scoped** equivalents
 Thin `bin/` wrappers; all logic stays in the library:
 
 - `ai-new-worktree <issue> [--name slug] [--branch-prefix fix|chore|…] [--base
-branch|PR] [--skip-install]` — prints the worktree's absolute path as the final
-  stdout line (progress logs go to stderr), so callers can chain into
-  `cd "$(ai-new-worktree …)"`. The branch is unprefixed by default
+branch|PR] [--skip-install] [-C|--repo-path <dir>]` — prints the worktree's
+  absolute path as the final stdout line (progress logs go to stderr), so callers
+  can chain into `cd "$(ai-new-worktree …)"`. The branch is unprefixed by default
   (`issue-<N>-<slug>` / `<name>`); `--branch-prefix` prepends a Conventional-Commit
-  type.
-- `ai-git-cleanup` — no arguments; run from within the repository.
+  type. `-C`/`--repo-path` points at the local checkout to create the worktree
+  from (a **path**, not a `--repo` slug) — for callers that cannot pin their cwd.
+- `ai-git-cleanup [--repo owner/repo]` — run from within the repository. `--repo` /
+  `GH_REPO` scopes the GitHub PR-state queries to that repo (e.g. from a sub-agent
+  that can't pin its cwd); git operations still run against the local checkout at
+  `cwd`.
 
 `worker-permissions` is a library with no CLI.
 
