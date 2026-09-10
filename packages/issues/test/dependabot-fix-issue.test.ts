@@ -27,13 +27,14 @@ describe('buildDependabotFixIssue', () => {
     // Category guidance and the failure excerpt (trimmed) are present.
     expect(body).toContain('lint rule');
     expect(body).toContain('```\nsrc/foo.ts: no-explicit-any\n```');
-    // Manifest scope: default is application code only, with the minimal
-    // package-set exception and the Dependabot-reaction note.
-    expect(body).toContain('application code only');
-    expect(body).toContain('minimal set');
+    // Manifest scope: the default now bundles the offending package bump into
+    // the fix PR (closing the regression window), keeping the change minimal,
+    // with the Dependabot-reaction note.
+    expect(body).toContain('bundle the offending package bump');
+    expect(body).toContain('Keep the manifest change minimal');
     expect(body).toContain('reduce the scope');
-    // The old absolute prohibition is gone.
-    expect(body).not.toContain('Do not edit `package.json`');
+    // The old application-code-only default has been inverted.
+    expect(body).not.toContain('Default: application code only');
     expect(labels).toEqual([]);
   });
 

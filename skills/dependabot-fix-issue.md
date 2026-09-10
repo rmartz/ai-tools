@@ -58,23 +58,33 @@ Pick the category that best fits; it shapes the issue's guidance:
 - The body must carry the back-link line `Fixes Dependabot PR #<N>` so the
   eventual fix PR links to the bump (this is the convention PR Shepherd's
   mechanics parse).
-- State the **manifest scope** explicitly. The **default** is a fix in
-  **application code only** — leave `package.json` and the lockfile alone and let
-  Dependabot own the version bump, so the fix PR stays orthogonal to it.
-  **Exception — the minimal set of package updates when the failure cannot be
-  fixed without them:** some failures are inherent to the bump and can't be shimmed
-  around in app code — the **offending bumped package itself** must be at its new
-  version (e.g. `@sentry/nextjs`), or its new version needs a **lockstep sibling**
-  absent from the original grouped PR to move with it. Then the fix PR may update
-  the **minimal** set of packages needed — only the ones whose omission leaves the
-  failure genuinely unfixable, never an unrelated/opportunistic bump, never the
-  whole group when a subset suffices — regenerating the lockfile via `pnpm install`
-  rather than editing it by hand. Note **how Dependabot reacts**: the coordinator's
-  post-merge `@dependabot rebase` makes Dependabot reduce the grouped PR's scope
-  (dropping the packages the fix advanced) or close it if nothing remains.
-- Give acceptance criteria: root cause identified; fix scoped to app code (or the
-  minimal package set when unavoidable); local verification (lint/typecheck/test)
-  passes; fix PR opened linking back.
+- State the **manifest scope** explicitly. By **default the fix PR advances the
+  offending bumped package itself** (plus any sibling that must move in lockstep)
+  **to the version Dependabot targets, together with the code fix** — update
+  `package.json` and regenerate the lockfile via `pnpm install` rather than editing
+  it by hand, even when the code fix alone would compile against the old version.
+  **Why bundle the bump instead of leaving it to Dependabot:** a fix that touches
+  only application code leaves `main` on the _old_ version until Dependabot's bump
+  merges later. In that window `main` is built and tested against the old version,
+  so an unrelated PR can merge code the new version breaks — a regression that only
+  surfaces when the bump finally lands. Advancing the package in the fix PR makes
+  the new version take effect the instant the fix merges: CI thereafter tests
+  everything against it, closing the window entirely.
+- **Keep the manifest change minimal.** Bump only the package the fix is written
+  against and any lockstep sibling — never an unrelated or opportunistic bump, and
+  for a **grouped** Dependabot PR never the packages in the group the failure has
+  nothing to do with (leave those for Dependabot). An application-code-only fix is
+  acceptable **only** when the failure is genuinely independent of the version in
+  play — nothing about the new version needs to be in effect for the fix to be
+  correct; whenever the fix is written against the new version, advance that
+  version.
+- Note **how Dependabot reacts**: the coordinator's post-merge `@dependabot rebase`
+  makes Dependabot reduce the grouped PR's scope (dropping the package(s) the fix
+  advanced) or close it if nothing remains.
+- Give acceptance criteria: root cause identified; the offending package advanced
+  to its target version alongside the fix (or, in the version-independent case, a
+  documented app-code-only fix); local verification (lint/typecheck/test) passes;
+  fix PR opened linking back.
 
 The library does all of this for you — call
 `createDependabotFixIssue(repo, { prNumber, dependency, toVersion, fromVersion,
