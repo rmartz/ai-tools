@@ -16,10 +16,14 @@ Implement the GitHub issue(s): $ARGUMENTS
 > mechanical spine composes the maintained `ai-*` CLIs: `ai-new-worktree`
 > (`@rmartz/worktree`) to provision the isolated worktree, `ai-pre-push-verify`
 > (`@rmartz/verify`) to re-run the project's own CI-derived checks before
-> hand-off, and `ai-create-pr` / `ai-create-issue` (`@rmartz/github`) for the PR
-> and any issue write. Prefer a GitHub MCP tool (`mcp__github__*`) where it is
-> richer (e.g. reading an issue body); fall back to `gh` only where neither a CLI
-> nor an MCP tool fits.
+> hand-off. For the GitHub writes themselves — opening the PR, writing any issue —
+> **prefer the first-party MCP tool in this agent turn**: `mcp__github__create_pull_request`
+> to open the PR and `mcp__github__issue_write` to create an issue (both are thin
+> 1:1 operations the desktop app detects, so the PR chip attaches to the session).
+> The `ai-create-pr` / `ai-create-issue` (`@rmartz/github`) CLIs are the **fallback**
+> when the MCP tool is unavailable (and the path a purely scripted/sub-shell caller
+> uses). Prefer a GitHub MCP tool for reads too (e.g. reading an issue body); fall
+> back to `gh` only where neither an MCP tool nor a CLI fits.
 >
 > **Assumption**: the project tests with **Vitest**. This skill designs the
 > approach, then writes tests that validate that design, then implements until
@@ -28,10 +32,12 @@ Implement the GitHub issue(s): $ARGUMENTS
 > **Emission (read this first).** This skill produces a **working branch and an
 > outcome** — implemented-and-ready, or stuck-with-a-diagnosis — and opens the PR
 > itself. Provision the worktree with `ai-new-worktree`, commit in it, and open
-> the PR with `ai-create-pr`. You open the PR only **once the implementation is
-> done**, so **open it ready for review** (`ai-create-pr`, no `--draft`) — a
-> finished implementation is ready for another agent to pick up for
-> review/fix-review/merge, and there is no draft step to remember. **Draft is a
+> the PR with `mcp__github__create_pull_request` (preferred in agent turns; the
+> desktop app attaches the PR chip); fall back to `ai-create-pr` when the MCP
+> tool is unavailable. You open the PR only **once the implementation is done**,
+> so **open it ready for review** (no `--draft`) — a finished implementation is
+> ready for another agent to pick up for review/fix-review/merge, and there is no
+> draft step to remember. **Draft is a
 > narrow edge case, not the default:** open a draft (with a `[WIP]` title) **only**
 > when you are stopping with the work genuinely _unfinished_ — you were told to
 > abort midway, or you hit the stuck path (see Step 6) — to preserve partial
@@ -93,7 +99,17 @@ plain per-PR merge, bottom-up).
 
 ## Step 1 — Understand the issue and its acceptance criteria
 
-Read the issue in full. Extract its acceptance criteria in priority order:
+Read the issue in full. **Then name this session** so it is legible in the
+desktop app's session list — the app otherwise auto-summarizes a terse
+`/implement <number>` into an unhelpful label like "GitHub issue #12345". If the
+`mcp__ccd_session_mgmt__set_session_title` tool is available, call it with
+`session_id: "self"` and a title of the form `#<number> <issue title>` (e.g.
+`#1509 Add --repo to the cwd-only PR scripts`). Skip this **silently** when the
+tool is absent — a headless / CI / PR-Shepherd run has no session to name, so it
+is a convenience, never a gate. When Step 0 dispatched several issues to parallel
+workers, each worker names its own session this way from its single issue.
+
+Extract its acceptance criteria in priority order:
 
 1. A checklist under a heading like "Acceptance Criteria", "Definition of Done",
    "Requirements", or "Criteria" — each item is one criterion.
@@ -231,11 +247,13 @@ If either is yes, **consolidate** — call or extend the existing code and delet
 the duplicate. This is the final net for a parallel implementation that Step 3b's
 survey missed; it is cheaper to catch here than in review.
 
-Then hand off. Commit the work in the worktree and open the PR yourself with
-`ai-create-pr` — **ready for review**, no `--draft` — with a Conventional-Commit
-title summarizing the change and a body (written to a file, passed as
-`--body <file>`) stating the purpose, the reuse/extend/new decision from Step 3b,
-which criteria pass, and the issue it closes. You reached this step because the
+Then hand off. Commit the work in the worktree and open the PR yourself —
+**ready for review**, no `--draft` — with a Conventional-Commit title
+summarizing the change and a body (written to a file) stating the purpose, the
+reuse/extend/new decision from Step 3b, which criteria pass, and the issue it
+closes. Prefer `mcp__github__create_pull_request` in this agent turn (the
+desktop app attaches the PR chip); fall back to `ai-create-pr` when the MCP
+tool is unavailable. You reached this step because the
 implementation is done, so the PR is immediately ready for another agent to pick
 up for review → fix-review → merge — there is no separate "mark ready" step to
 remember.

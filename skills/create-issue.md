@@ -9,9 +9,12 @@ Create a GitHub issue from a description: `$ARGUMENTS`.
 
 This skill is the **craft** of authoring one good issue — dedup, title, body,
 labels, milestone. It is runner-agnostic: it does not post a verdict marker and
-does not assume PR Shepherd. When run directly by the harness, create the issue
-with `@rmartz/github`'s `createIssue` (or the `gh issue create` fallback the CLIs
-wrap). Under PR Shepherd, express the drafted issue and let the engine emit.
+does not assume PR Shepherd. When run directly by the harness, **prefer the
+first-party `mcp__github__issue_write` MCP tool** to create the issue (a thin 1:1
+op that also sets labels/milestone/assignees, and is what the desktop app detects);
+`ai-create-issue` (which calls `@rmartz/github`'s `createIssue` and falls back to
+`gh issue create`) is the fallback when MCP is unavailable. Under PR Shepherd, express the drafted issue and
+let the engine emit — the library path uses `createIssue` directly.
 
 ## Before writing anything: dedup
 
@@ -77,9 +80,10 @@ work.
 
 ## Create and report
 
-- Direct-harness mode: `createIssue(repo, { title, body, labels })` from
-  `@rmartz/github` (REST-first, soft-fails to `null`). The `gh issue create
---title … --body-file … --label …` form is the equivalent fallback.
+- Direct-harness mode: prefer `mcp__github__issue_write` (also sets
+  labels/milestone/assignees, and is what the desktop app detects). Fall back to
+  `ai-create-issue` (calls `createIssue` from `@rmartz/github`, soft-fails to
+  `null`; or `gh issue create --title … --body-file … --label …`).
 - Do **not** assign the issue to anyone — leave assignment to the user (or to the
   `/implement` flow that picks it up).
 - Report the new issue's **number and URL**. In chat, render the number as a
