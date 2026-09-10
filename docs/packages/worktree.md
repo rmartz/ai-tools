@@ -67,8 +67,10 @@ and `python_env` interpreter discovery are dropped entirely.
   cleaned, which is the only way a no-PR branch is ever removed. Never uses
   `--force`, and skips a worktree with uncommitted/untracked changes even when its
   branch is closed or stale. `now`/`staleAfterDays` are injectable for tests.
-  Returns removed/kept counts. `repo` targets another repo via `resolveRepoTarget`
-  (explicit → `GH_REPO` → cwd) — exposed as the CLI's `--repo owner/repo`.
+  Returns removed/kept counts. `repo` scopes the GitHub PR-state queries to that
+  repo via `resolveRepoTarget` (explicit → `GH_REPO` → cwd); git operations
+  (worktree enumeration, branch deletion, `git worktree prune`) still run against
+  the local checkout at `cwd` — exposed as the CLI's `--repo owner/repo`.
 - `decideCleanup(state, stale, staleAfterDays)` — folds PR state + staleness into
   one `{ remove, reason }` decision. `isStale(commitEpochMs, nowMs, days)` /
   `STALE_AFTER_DAYS` (`branch-staleness.ts`) back the staleness sweep; unknown
@@ -110,8 +112,10 @@ branch|PR] [--skip-install] [-C|--repo-path <dir>]` — prints the worktree's
   (`issue-<N>-<slug>` / `<name>`); `--branch-prefix` prepends a Conventional-Commit
   type. `-C`/`--repo-path` points at the local checkout to create the worktree
   from (a **path**, not a `--repo` slug) — for callers that cannot pin their cwd.
-- `ai-git-cleanup [--repo owner/repo]` — run from within the repository, or pass
-  `--repo` / set `GH_REPO` to target another repo (e.g. from a sub-agent).
+- `ai-git-cleanup [--repo owner/repo]` — run from within the repository. `--repo` /
+  `GH_REPO` scopes the GitHub PR-state queries to that repo (e.g. from a sub-agent
+  that can't pin its cwd); git operations still run against the local checkout at
+  `cwd`.
 
 `worker-permissions` is a library with no CLI.
 
