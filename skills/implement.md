@@ -97,7 +97,17 @@ plain per-PR merge, bottom-up).
 
 ## Step 1 — Understand the issue and its acceptance criteria
 
-Read the issue in full. Extract its acceptance criteria in priority order:
+Read the issue in full. **Then name this session** so it is legible in the
+desktop app's session list — the app otherwise auto-summarizes a terse
+`/implement <number>` into an unhelpful label like "GitHub issue #12345". If the
+`mcp__ccd_session_mgmt__set_session_title` tool is available, call it with
+`session_id: "self"` and a title of the form `#<number> <issue title>` (e.g.
+`#1509 Add --repo to the cwd-only PR scripts`). Skip this **silently** when the
+tool is absent — a headless / CI / PR-Shepherd run has no session to name, so it
+is a convenience, never a gate. When Step 0 dispatched several issues to parallel
+workers, each worker names its own session this way from its single issue.
+
+Extract its acceptance criteria in priority order:
 
 1. A checklist under a heading like "Acceptance Criteria", "Definition of Done",
    "Requirements", or "Criteria" — each item is one criterion.

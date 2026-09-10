@@ -31,6 +31,12 @@ the session) — with `ai-create-pr` / `ai-create-issue` (`@rmartz/github`) as t
 fallback when MCP is unavailable and the path scripted callers use. The skill never
 names a gate/verdict label and never bakes in a coordinator's PR lifecycle.
 
+Early in Step 1, once the issue's title is known, the run **names the session**
+after it (`mcp__ccd_session_mgmt__set_session_title`, `session_id: "self"`, title
+`#<number> <issue title>`) so a terse `/implement <number>` kickoff shows a
+descriptive label in the desktop app instead of the app's auto-summary. It is
+skipped silently when the tool is absent (headless / CI / PR-Shepherd runs).
+
 ## Hand-off
 
 The skill produces a **ready branch and an outcome** — implemented-and-ready, or
