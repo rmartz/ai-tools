@@ -70,9 +70,10 @@ For the rare case where a marker-like line must be committed intentionally:
 
 ## CLI
 
-`ai-check-conflict-markers [mode]` — thin `bin/` wrapper; defaults to `--staged`.
-Exit `0` when clean, `1` when markers are found (report on stderr), `2` on an
-unknown mode.
+`ai-check-conflict-markers [mode] [-C <dir>]` — thin `bin/` wrapper; defaults to
+`--staged`. `-C`/`--cwd <dir>` runs the git scan in that directory, so a caller
+that cannot pin its cwd never needs `cd <dir> && ai-*`. Exit `0` when clean, `1`
+when markers are found (report on stderr), `2` on an unknown argument.
 
 ## Testing
 

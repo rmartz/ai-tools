@@ -74,7 +74,8 @@ in `gh-call.ts`.
   merge changed relative to **both** parents (a conflict resolution / evil merge)
   is surfaced with its patch. Falls back to a single unified diff when there is no
   merge commit, the chain can't be reconstructed, or the compare is truncated
-  (>250 commits). `repo` defaults to the git remote (`currentRepo`).
+  (>250 commits). `repo` follows `resolveRepoTarget` precedence (explicit →
+  `GH_REPO` → cwd), so it works from a caller that cannot pin its cwd.
 - `gatherRepoStatus({ cwd?, repo? })` — open issues (blocked/manual filtered, deps
   parsed from the body), milestones, and open PRs with resolved closing-issue
   numbers (same-repo closing refs → `feat/issue-<N>-*` branch → `Closes #N` body).
@@ -142,16 +143,23 @@ The GraphQL Discussions client (no REST / `gh` equivalent), targeting `rmartz/ai
 
 ## CLIs
 
-Thin `bin/` wrappers; all logic stays in the library: `ai-pr-summary`,
-`ai-pr-diff <base> <head> [owner/repo]`, `ai-repo-status`,
-`ai-pr-comment --model <m> [--keep-body] <pr> <body-or-file>`,
+Thin `bin/` wrappers; all logic stays in the library:
+`ai-pr-summary [owner/repo] <pr> [--repo <owner/repo>]`,
+`ai-pr-diff <base> <head> [owner/repo] [--repo <owner/repo>]`,
+`ai-repo-status [--repo <owner/repo>]`,
+`ai-pr-comment --model <m> [--repo <owner/repo>] [--keep-body] <pr> <body-or-file>`,
 `ai-create-pr --base <b> --head <h> --title <t> [--body <body-or-file>] [--draft] [--repo <owner/repo>]`,
 `ai-create-issue --title <t> [--body <body-or-file>] [--label <l> …] [--repo <owner/repo>]`,
 `ai-resolve-thread <id>…`, `ai-dismiss-thread <id> <reply>`.
 
-`ai-create-pr` / `ai-create-issue` resolve the repo from `--repo` or the git
-remote (`currentRepo`), read a file-or-literal body, and print the new URL. They
-are the write path a direct (non-coordinator) run of `/implement`,
+Every repo-scoped CLI here resolves its target through `resolveRepoTarget`
+(explicit `--repo`/positional `owner/repo` → `GH_REPO` → cwd `gh repo view`), so a
+caller that cannot pin its cwd — a sub-agent, most of all — targets the repo with a
+flag or `GH_REPO` and **never needs `cd <dir> && ai-*`**. (`ai-resolve-thread` /
+`ai-dismiss-thread` are repo-agnostic — they act on `PRRT_` GraphQL node IDs.)
+
+`ai-create-pr` / `ai-create-issue` read a file-or-literal body and print the new
+URL. They are the write path a direct (non-coordinator) run of `/implement`,
 `/weekly-tech-debt`, and `/weekly-tune-up` composes; label/milestone/lifecycle
 policy stays with the coordinator.
 

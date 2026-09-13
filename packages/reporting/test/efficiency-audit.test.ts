@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const currentRepo = vi.fn();
-vi.mock('@rmartz/github', () => ({ currentRepo }));
+// `resolveRepoTarget` is mocked to mirror its real precedence — an explicit
+// `repo` wins, otherwise the cwd/GH_REPO-derived `cwdRepo` (set per test).
+let cwdRepo: string | null = null;
+const resolveRepoTarget = vi.fn(
+  async (opts: { repo?: string | null } = {}) => opts.repo ?? cwdRepo,
+);
+vi.mock('@rmartz/github', () => ({ resolveRepoTarget }));
 
 // agent-runtime is only used by the real ghReader, which the tests never hit
 // (a stub GhReader is injected), but the import must resolve under mocking.
@@ -12,7 +17,8 @@ const { deriveCounts } = await import('../src/efficiency-derive.js');
 import type { GhReader } from '../src/efficiency-derive.js';
 
 beforeEach(() => {
-  currentRepo.mockReset();
+  resolveRepoTarget.mockClear();
+  cwdRepo = null;
 });
 
 const REVIEW_BODY = 'verdict <!-- skill-meta: {"skill":"review"} -->';
@@ -111,7 +117,7 @@ describe('deriveCounts', () => {
 
 describe('auditPrEfficiency', () => {
   it('emits the EfficiencyEvent shape with derived counts and resolved repo', async () => {
-    currentRepo.mockResolvedValue('rmartz/app');
+    cwdRepo = 'rmartz/app';
     const event = await auditPrEfficiency(7, { reader: reader({}) });
     expect(event.pr).toBe(7);
     expect(event.sourceRepo).toBe('rmartz/app');
@@ -120,10 +126,13 @@ describe('auditPrEfficiency', () => {
     expect(event.mergedAt).toBeUndefined();
   });
 
-  it('uses an explicit repo without calling currentRepo', async () => {
+  it('uses an explicit repo over cwd/GH_REPO', async () => {
+    cwdRepo = 'rmartz/from-cwd';
     const event = await auditPrEfficiency(7, { repo: 'rmartz/given', reader: reader({}) });
     expect(event.sourceRepo).toBe('rmartz/given');
-    expect(currentRepo).not.toHaveBeenCalled();
+    expect(resolveRepoTarget).toHaveBeenCalledWith(
+      expect.objectContaining({ repo: 'rmartz/given' }),
+    );
   });
 
   it('merges partial durationsMs enrichment, defaulting missing buckets to 0', async () => {
@@ -162,7 +171,7 @@ describe('auditPrEfficiency', () => {
   });
 
   it('throws when the repo cannot be resolved', async () => {
-    currentRepo.mockResolvedValue(null);
+    cwdRepo = null;
     await expect(auditPrEfficiency(7, { reader: reader({}) })).rejects.toThrow(
       'could not determine repo',
     );

@@ -54,12 +54,13 @@ gate/verdict labels — the roster here is the cross-cutting + meta set only.
 
 Thin `bin/` wrappers; all logic stays in the library:
 
-- `ai-ensure-labels [owner/repo]` — reconcile the default roster on the given
-  repo (or the current `gh` repo). Prints a per-label outcome summary; exits
-  non-zero if any label failed.
-- `ai-ensure-project-config` — detect the repo root (`git rev-parse
---show-toplevel`) and ensure the golden ignore blocks. Prints a per-file
-  outcome summary.
+- `ai-ensure-labels [owner/repo]` — reconcile the default roster on the target
+  repo, resolved through `resolveRepoTarget` (positional `owner/repo` → `GH_REPO`
+  → cwd), so a caller that cannot pin its cwd never needs `cd <dir> && ai-*`.
+  Prints a per-label outcome summary; exits non-zero if any label failed.
+- `ai-ensure-project-config [-C <dir>]` — detect the repo root (`git rev-parse
+--show-toplevel`, run in `-C`/`--cwd <dir>` when given) and ensure the golden
+  ignore blocks. Prints a per-file outcome summary.
 
 ## Testing
 

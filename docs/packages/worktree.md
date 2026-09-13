@@ -106,16 +106,17 @@ worktrees/**)` grants plus **absolute, repo-scoped** equivalents
 Thin `bin/` wrappers; all logic stays in the library:
 
 - `ai-new-worktree <issue> [--name slug] [--branch-prefix fix|chore|…] [--base
-branch|PR] [--skip-install] [-C|--repo-path <dir>]` — prints the worktree's
+branch|PR] [--skip-install] [-C|--cwd|--repo-path <dir>]` — prints the worktree's
   absolute path as the final stdout line (progress logs go to stderr), so callers
   can chain into `cd "$(ai-new-worktree …)"`. The branch is unprefixed by default
   (`issue-<N>-<slug>` / `<name>`); `--branch-prefix` prepends a Conventional-Commit
-  type. `-C`/`--repo-path` points at the local checkout to create the worktree
-  from (a **path**, not a `--repo` slug) — for callers that cannot pin their cwd.
-- `ai-git-cleanup [--repo owner/repo]` — run from within the repository. `--repo` /
-  `GH_REPO` scopes the GitHub PR-state queries to that repo (e.g. from a sub-agent
-  that can't pin its cwd); git operations still run against the local checkout at
-  `cwd`.
+  type. `-C`/`--cwd`/`--repo-path` points at the local checkout to create the
+  worktree from (a **path**, not a `--repo` slug) — for callers that cannot pin
+  their cwd, so they never need `cd <dir> && ai-*`.
+- `ai-git-cleanup [--repo owner/repo] [-C <dir>]` — run from within the repository
+  by default. `-C`/`--cwd <dir>` points git at another local checkout, and `--repo`
+  / `GH_REPO` scopes the GitHub PR-state queries to that repo — so a sub-agent that
+  can't pin its cwd targets both without `cd <dir> && ai-*`.
 
 `worker-permissions` is a library with no CLI.
 

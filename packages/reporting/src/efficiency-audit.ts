@@ -1,4 +1,4 @@
-import { currentRepo, type GhCallOptions } from '@rmartz/github';
+import { resolveRepoTarget, type GhCallOptions } from '@rmartz/github';
 import {
   deriveCounts,
   ghReader,
@@ -104,9 +104,9 @@ export async function auditPrEfficiency(
   pr: number,
   opts: AuditPrEfficiencyOptions = {},
 ): Promise<EfficiencyEvent> {
-  const repo = opts.repo ?? (await currentRepo(opts.call ?? {}));
+  const repo = await resolveRepoTarget({ ...(opts.call ?? {}), repo: opts.repo });
   if (!repo) {
-    throw new Error('could not determine repo — pass repo as owner/repo');
+    throw new Error('could not determine repo — pass repo as owner/repo, or set GH_REPO');
   }
 
   const counts = await deriveCounts(repo, pr, opts.reader ?? ghReader);

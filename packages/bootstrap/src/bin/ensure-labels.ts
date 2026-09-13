@@ -1,15 +1,16 @@
 #!/usr/bin/env node
-// Thin CLI wrapper over `ensureLabels`. Resolves the target repo (positional arg
-// or the current `gh` repo) and prints a per-label outcome summary; all
-// reconciliation logic stays in the library.
-import { currentRepo } from '@rmartz/github';
+// Thin CLI wrapper over `ensureLabels`. Resolves the target repo (positional
+// `owner/repo` → `GH_REPO` → cwd, via `resolveRepoTarget`) and prints a per-label
+// outcome summary; all reconciliation logic stays in the library.
+import { resolveRepoTarget } from '@rmartz/github';
 import { ensureLabels } from '../ensure-labels.js';
 
 async function main(): Promise<void> {
-  const arg = process.argv[2];
-  const repo = arg ?? (await currentRepo());
+  const repo = await resolveRepoTarget({ repo: process.argv[2] });
   if (!repo) {
-    throw new Error('could not resolve repository (pass owner/repo or run inside a gh repo)');
+    throw new Error(
+      'could not resolve repository (pass owner/repo, set GH_REPO, or run in a repo)',
+    );
   }
 
   const result = await ensureLabels(repo);

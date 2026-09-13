@@ -2,7 +2,7 @@ import {
   findOpenIssue,
   createIssue,
   addIssueComment,
-  currentRepo,
+  resolveRepoTarget,
   type GhCallOptions,
 } from '@rmartz/github';
 import { boundedRun } from '@rmartz/agent-runtime';
@@ -132,7 +132,7 @@ export async function reportToTracking(
   const label = opts.label ?? TRACKING_LABEL;
   const call = opts.call ?? {};
 
-  const sourceRepo = opts.sourceRepo ?? (await currentRepo(call)) ?? undefined;
+  const sourceRepo = opts.sourceRepo ?? (await resolveRepoTarget(call)) ?? undefined;
   const coordinatorSha = opts.coordinatorSha ?? (await coordinatorGitSha(opts.cwd)) ?? undefined;
 
   const fullBody = formatOccurrence(body, {

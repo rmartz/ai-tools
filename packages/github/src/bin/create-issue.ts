@@ -7,7 +7,7 @@
 //                        [--label <label> ...] [--repo <owner/repo>]
 import { existsSync, readFileSync } from 'node:fs';
 import { createIssue } from '../issue-ops.js';
-import { currentRepo } from '../gh-call.js';
+import { resolveRepoTarget } from '../gh-call.js';
 
 interface Args {
   title: string;
@@ -40,8 +40,9 @@ function parse(argv: string[]): Args {
 
 async function main(): Promise<void> {
   const { title, body, labels, repo: repoArg } = parse(process.argv.slice(2));
-  const repo = repoArg || (await currentRepo());
-  if (!repo) throw new Error('could not resolve repository (gh repo view failed)');
+  const repo = await resolveRepoTarget({ repo: repoArg });
+  if (!repo)
+    throw new Error('could not resolve repository (pass --repo, set GH_REPO, or run in a repo)');
 
   const url = await createIssue(repo, { title, body, labels });
   if (url === null) throw new Error(`failed to create issue "${title}" on ${repo}`);
