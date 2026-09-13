@@ -100,6 +100,17 @@ in `gh-call.ts`.
   failed — retry `resolveThread` without re-posting) / `'failed'`. Single-shot
   (no retry) so a non-idempotent reply POST is never duplicated.
 
+### Hidden-JSON markers (`json-marker.ts`)
+
+- `renderJsonMarker(kind, value)` — render a machine-readable record as a hidden
+  `<!-- <kind>: <base64-json> -->` comment. Base64 (not raw JSON) so a record may
+  carry free-form markdown, braces, or `-->` without a delimiter collision.
+- `parseLatestJsonMarker(kind, commentBodies, { match? })` — return the LAST marker
+  of `kind` that parses and satisfies `match` (bodies are chronological, so latest
+  wins), else `null`. Malformed markers are skipped, never thrown. This is the
+  carrier the review-cycle craft skills use to emit records for a runner; the typed
+  record shapes live in `@rmartz/pr-review` (`review-records.ts`).
+
 ### PR-write primitives (`pr-ops.ts`)
 
 - `createPullRequest(repo, { base, head, title, body?, draft? })` — open a PR,
@@ -147,7 +158,10 @@ Thin `bin/` wrappers; all logic stays in the library: `ai-pr-summary`,
 `ai-pr-comment --model <m> [--keep-body] <pr> <body-or-file>`,
 `ai-create-pr --base <b> --head <h> --title <t> [--body <body-or-file>] [--draft] [--repo <owner/repo>]`,
 `ai-create-issue --title <t> [--body <body-or-file>] [--label <l> …] [--repo <owner/repo>]`,
-`ai-resolve-thread <id>…`, `ai-dismiss-thread <id> <reply>`.
+`ai-resolve-thread <id>…`, `ai-dismiss-thread <id> <reply>`,
+`ai-post-json-marker [--repo <owner/repo>] <pr> <kind> <json-file-or-literal>` (post
+a record as a hidden marker), `ai-read-json-marker [--repo <owner/repo>]
+[--match-pr-head <sha>] <pr> <kind>` (print the latest such record, exit 1 if none).
 
 `ai-create-pr` / `ai-create-issue` resolve the repo from `--repo` or the git
 remote (`currentRepo`), read a file-or-literal body, and print the new URL. They

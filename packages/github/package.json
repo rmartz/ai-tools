@@ -21,7 +21,9 @@
     "ai-start-discussion": "./dist/bin/start-discussion.js",
     "ai-discussion-read": "./dist/bin/discussion-read.js",
     "ai-discussion-answer": "./dist/bin/discussion-answer.js",
-    "ai-discussion-comment": "./dist/bin/discussion-comment.js"
+    "ai-discussion-comment": "./dist/bin/discussion-comment.js",
+    "ai-post-json-marker": "./dist/bin/post-json-marker.js",
+    "ai-read-json-marker": "./dist/bin/read-json-marker.js"
   },
   "files": [
     "dist"

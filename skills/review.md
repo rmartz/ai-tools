@@ -138,9 +138,28 @@ is a finding.
 
 ## Step 3 — Emit the findings
 
-Express the findings as declarative data — **the single terminal action**. A pass
-that reviews but emits nothing (when it found nothing) still emits an empty
-findings record, never exits silently; silence is indistinguishable from a crash.
+Express the findings as one declarative **findings record** — the single terminal
+action. A pass that found nothing still emits a record with an empty `findings`
+array, never exits silently; silence is indistinguishable from a crash.
+
+The record shape (`review-findings`):
+
+```json
+{
+  "skill": "review",
+  "prHead": "<the PR head SHA you reviewed>",
+  "diffScope": "full",
+  "findings": [
+    {
+      "category": "correctness",
+      "severity": "blocking",
+      "location": { "path": "src/x.ts", "line": 42 },
+      "summary": "…",
+      "suggestedText": "…"
+    }
+  ]
+}
+```
 
 Each finding carries:
 
@@ -160,6 +179,10 @@ Each finding carries:
   replacement to apply; for a code finding, the concrete fix if there is an
   obvious one.
 
-Do not rank, dedupe against existing threads, or decide what is deferrable —
-`synthesize-review` does that. Then report the findings (and the diff scope) to
-the caller.
+**Emit it — do not post a verdict.** Write the record to a JSON file and hand it to
+the runner with `ai-post-json-marker <pr> review-findings <file>`: that posts the
+record as a hidden marker `synthesize-review` reads, and changes **no** labels and
+posts **no** review event. Deciding the verdict is `synthesize-review`'s; posting it
+is the runner's. Do not rank, dedupe against existing threads, or decide what is
+deferrable — `synthesize-review` does that. (Under PR Shepherd the engine renders
+and posts the record with your credentials scrubbed; the record content is identical.)

@@ -16,6 +16,8 @@ export default defineConfig({
     'src/bin/discussion-read.ts',
     'src/bin/discussion-answer.ts',
     'src/bin/discussion-comment.ts',
+    'src/bin/post-json-marker.ts',
+    'src/bin/read-json-marker.ts',
   ],
   format: ['esm'],
   dts: { entry: 'src/index.ts' },

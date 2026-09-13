@@ -33,6 +33,9 @@ export type {
 export { postPrComment, appendSignature } from './pr-comment.js';
 export type { PostPrCommentOptions } from './pr-comment.js';
 
+export { renderJsonMarker, parseLatestJsonMarker } from './json-marker.js';
+export type { ParseJsonMarkerOptions } from './json-marker.js';
+
 export { resolveThread, dismissThread } from './threads.js';
 export type { DismissResult } from './threads.js';
 
