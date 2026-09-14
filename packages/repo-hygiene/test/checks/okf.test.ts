@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { FileSet } from '../../src/discovery.js';
@@ -30,11 +30,15 @@ describe('validateDoc', () => {
   const valid = { type: 'Library', title: 'x', description: 'y', resource: 'resource.ts' };
 
   it('passes a well-formed page whose resource exists', () => {
-    expect(validateDoc('docs/a.md', page(valid), DEFAULTS, dir)).toEqual([]);
+    expect(
+      validateDoc('docs/a.md', page(valid), DEFAULTS, (p) => existsSync(join(dir, p))),
+    ).toEqual([]);
   });
 
   it('flags a type outside the vocabulary', () => {
-    const findings = validateDoc('docs/a.md', page({ ...valid, type: 'Nope' }), DEFAULTS, dir);
+    const findings = validateDoc('docs/a.md', page({ ...valid, type: 'Nope' }), DEFAULTS, (p) =>
+      existsSync(join(dir, p)),
+    );
     expect(findings.map((f) => f.message)).toContain(
       'type must be one of Skill|Script|Library|Design',
     );
@@ -45,7 +49,7 @@ describe('validateDoc', () => {
       'docs/a.md',
       page({ type: 'Library', resource: 'resource.ts' }),
       DEFAULTS,
-      dir,
+      (p) => existsSync(join(dir, p)),
     );
     expect(findings.map((f) => f.message)).toEqual(
       expect.arrayContaining(['missing title', 'missing description']),
@@ -57,7 +61,7 @@ describe('validateDoc', () => {
       'docs/a.md',
       page({ type: 'Library', title: 'x', description: 'y' }),
       DEFAULTS,
-      dir,
+      (p) => existsSync(join(dir, p)),
     );
     expect(findings.map((f) => f.message)).toContain('Library page needs a resource');
   });
@@ -67,7 +71,7 @@ describe('validateDoc', () => {
       'docs/a.md',
       page({ ...valid, resource: 'missing.ts' }),
       DEFAULTS,
-      dir,
+      (p) => existsSync(join(dir, p)),
     );
     expect(findings.map((f) => f.message)).toContain('resource not found: missing.ts');
   });
@@ -78,7 +82,7 @@ describe('validateDoc', () => {
         'docs/a.md',
         page({ type: 'Design', title: 'x', description: 'y' }),
         DEFAULTS,
-        dir,
+        (p) => existsSync(join(dir, p)),
       ),
     ).toEqual([]);
   });
@@ -90,7 +94,7 @@ describe('validateDoc', () => {
         'docs/a.md',
         page({ type: 'Guide', title: 'x', description: 'y', resource: 'resource.ts' }),
         cfg,
-        dir,
+        (p) => existsSync(join(dir, p)),
       ),
     ).toEqual([]);
   });

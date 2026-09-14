@@ -187,7 +187,7 @@ functions stay exported for reuse; `actionPinsCheck` filters the file set to
 ai-tools runs both checks against itself through the published CLI: its
 `check:okf` and `check:actions` package scripts invoke
 `ai-repo-hygiene <check> --check`, replacing the former standalone
-`scripts/check-*.ts` (now deleted). Because the scripts run the built CLI, the
+`scripts/check-okf-frontmatter.ts` and `scripts/check-action-pins.ts` (now deleted). Because the scripts run the built CLI, the
 `okf` and `action-pins` CI jobs build the workspace first (as the `test` job
 does).
 
