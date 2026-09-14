@@ -101,6 +101,14 @@ a block spliced into user content.
     action SHAs, including the auto-merge workflow's `fetch-metadata`, fresh) plus
     the `npm` ecosystem (the ideal for the JS repos this toolkit targets), both
     grouped. Written only if absent; a repo then owns and tailors it.
+  - `repo-hygiene.yml` (**`manage`**): runs the **universally-safe `action-pins`**
+    check via the published `@rmartz/repo-hygiene` CLI (consumer shape). Only
+    `action-pins` is fleet-safe — the other registered checks (`okf` /
+    `md-pairing` / `file-caps`) are ai-tools conventions that would false-fail on
+    an arbitrary repo (e.g. `okf` flags any docs lacking OKF frontmatter), so
+    distributing them fleet-wide is a deliberate **per-repo curation** decision
+    (tracked with the gate-set curation follow-up), not part of the universal
+    golden set. Advisory; `gateChecks: []`.
 
   `goldenGateChecks` is the union of every entry's `gateChecks` — the cross-repo
   **floor** of the gate.

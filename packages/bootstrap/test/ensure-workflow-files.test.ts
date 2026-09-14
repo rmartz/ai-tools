@@ -176,3 +176,32 @@ describe('goldenWorkflowFiles — the seeded Dependabot config', () => {
     expect(content).toContain('package-ecosystem: npm');
   });
 });
+
+// #213 — the seeded repo-hygiene CI workflow (consumer shape; the universal
+// action-pins check only).
+describe('goldenWorkflowFiles — the seeded repo-hygiene workflow', () => {
+  const repoHygiene = goldenWorkflowFiles.find(
+    (w) => w.filename === '.github/workflows/repo-hygiene.yml',
+  );
+
+  it('is present in the golden set', () => {
+    expect(repoHygiene).toBeDefined();
+  });
+
+  it('installs the published @rmartz/repo-hygiene CLI and runs action-pins', () => {
+    const content = repoHygiene?.content ?? '';
+    expect(content).toContain('npm install -g "@rmartz/repo-hygiene@');
+    expect(content).toContain('ai-repo-hygiene action-pins --check');
+  });
+
+  it('runs only the universal action-pins check, not the ai-tools-specific ones', () => {
+    const content = repoHygiene?.content ?? '';
+    expect(content).not.toContain('okf');
+    expect(content).not.toContain('file-caps');
+    expect(content).not.toContain('md-pairing');
+  });
+
+  it('pins actions/checkout to a full 40-char SHA with a major.minor.patch comment', () => {
+    expect(repoHygiene?.content).toMatch(/actions\/checkout@[0-9a-f]{40} # v\d+\.\d+\.\d+/);
+  });
+});
