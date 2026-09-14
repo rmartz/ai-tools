@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // Thin CLI wrapper over `ensureProjectConfig`. Resolves the repo root (via
 // `git rev-parse`) and prints a per-file outcome summary; all fs logic stays in
-// the library.
+// the library. `-C`/`--cwd <dir>` resolves the repo root from that directory, so
+// a caller that cannot pin its cwd never needs `cd <dir> && ai-ensure-project-config`.
 import { boundedRun } from '@rmartz/agent-runtime';
 import { ensureProjectConfig } from '../ensure-project-config.js';
 
-async function detectRepoRoot(): Promise<string> {
-  const r = await boundedRun('git', ['rev-parse', '--show-toplevel'], { timeoutMs: 10_000 });
+async function detectRepoRoot(cwd?: string): Promise<string> {
+  const r = await boundedRun('git', ['rev-parse', '--show-toplevel'], { timeoutMs: 10_000, cwd });
   if (r.code !== 0 || !r.stdout.trim()) {
     throw new Error(`could not detect repo root: ${r.stderr.trim() || 'git rev-parse failed'}`);
   }
@@ -14,7 +15,18 @@ async function detectRepoRoot(): Promise<string> {
 }
 
 async function main(): Promise<void> {
-  const root = await detectRepoRoot();
+  let cwd: string | undefined;
+  const argv = process.argv.slice(2);
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '-C' || a === '--cwd') cwd = argv[++i];
+    else {
+      console.error(`unknown argument: ${a}`);
+      console.error('usage: ai-ensure-project-config [-C <dir>]');
+      process.exit(2);
+    }
+  }
+  const root = await detectRepoRoot(cwd);
   const result = ensureProjectConfig(root);
   console.log(`Repo root: ${result.root}\n`);
   for (const o of result.outcomes) {

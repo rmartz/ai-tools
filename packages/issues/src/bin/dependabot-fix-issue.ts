@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { createDependabotFixIssue } from '../dependabot-fix-issue.js';
 import type { FixCategory } from '../dependabot-fix-issue.js';
-import { currentRepo } from '@rmartz/github';
+import { resolveRepoTarget } from '@rmartz/github';
 
 interface Args {
   prNumber: number;
@@ -65,8 +65,10 @@ function parse(argv: string[]): Args {
 
 async function main(): Promise<void> {
   const args = parse(process.argv.slice(2));
-  const repo = args.repo ?? (await currentRepo());
-  if (!repo) throw new Error('could not resolve repository (pass --repo or run inside a git repo)');
+  const repo = await resolveRepoTarget({ repo: args.repo });
+  if (!repo) {
+    throw new Error('could not resolve repository (pass --repo, set GH_REPO, or run in a repo)');
+  }
 
   const failureExcerpt = args.failureFile ? readFileSync(args.failureFile, 'utf8') : undefined;
   const result = await createDependabotFixIssue(

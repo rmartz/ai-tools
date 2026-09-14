@@ -52,9 +52,10 @@ Thin `bin/` wrapper; all logic stays in the library:
 
 - `ai-dependabot-fix-issue --pr <n> --dependency <name> [--to <v>] [--from <v>]
 [--category <cat>] [--check <name>] [--failure-file <path>] [--label <l>]…
-[--repo <owner/repo>] [--skip-dedup]` — resolves the repo from the git remote
-  when `--repo` is omitted, then calls `createDependabotFixIssue` and prints the
-  resulting (created or existing) issue URL.
+[--repo <owner/repo>] [--skip-dedup]` — resolves the target through
+  `resolveRepoTarget` (`--repo` → `GH_REPO` → cwd), so a caller that cannot pin its
+  cwd never needs `cd <dir> && ai-*`, then calls `createDependabotFixIssue` and
+  prints the resulting (created or existing) issue URL.
 
 ## Testing
 

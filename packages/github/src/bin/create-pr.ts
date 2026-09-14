@@ -8,7 +8,7 @@
 //                     [--body <body-or-file>] [--draft] [--repo <owner/repo>]
 import { existsSync, readFileSync } from 'node:fs';
 import { createPullRequest } from '../pr-ops.js';
-import { currentRepo } from '../gh-call.js';
+import { resolveRepoTarget } from '../gh-call.js';
 
 interface Args {
   base: string;
@@ -47,8 +47,9 @@ function parse(argv: string[]): Args {
 
 async function main(): Promise<void> {
   const { base, head, title, body, draft, repo: repoArg } = parse(process.argv.slice(2));
-  const repo = repoArg || (await currentRepo());
-  if (!repo) throw new Error('could not resolve repository (gh repo view failed)');
+  const repo = await resolveRepoTarget({ repo: repoArg });
+  if (!repo)
+    throw new Error('could not resolve repository (pass --repo, set GH_REPO, or run in a repo)');
 
   const url = await createPullRequest(repo, { base, head, title, body, draft });
   if (url === null) throw new Error(`failed to open PR for ${head} → ${base} on ${repo}`);

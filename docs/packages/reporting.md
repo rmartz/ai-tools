@@ -26,8 +26,8 @@ occurrences of one pattern into a single issue — one comment per occurrence �
 rather than filing a new issue each time. `reportToTracking` owns the entire
 **find-or-create-or-append** process:
 
-1. Resolve the source repo (`sourceRepo`, else `currentRepo()`) and coordinator
-   sha (`coordinatorSha`, else `coordinatorGitSha()`).
+1. Resolve the source repo (`sourceRepo`, else `resolveRepoTarget()` — `GH_REPO` →
+   cwd) and coordinator sha (`coordinatorSha`, else `coordinatorGitSha()`).
 2. Prepend the standardized metadata header (below) to the body.
 3. Find an open issue with the exact title and the `tracking` label.
 4. **If found**, append the body as a comment; **if not**, create the issue with
@@ -51,14 +51,14 @@ supersedes the retired "self-report into PR Shepherd's own issues" pattern.)
 order — each omitted when its value is absent, returning the body unchanged when
 no metadata exists:
 
-| Field            | Header line                      | Source                       |
-| ---------------- | -------------------------------- | ---------------------------- |
-| `sourceRepo`     | `**Repository:** \`owner/repo\`` | `sourceRepo` / `currentRepo` |
-| `coordinatorSha` | `**Coordinator:** \`sha\``       | `coordinatorSha` / git HEAD  |
-| `skill`          | `**Skill:** \`/name\``           | `skill`                      |
-| `pr`             | `**PR:** owner/repo#N` (or `#N`) | `pr`                         |
-| `transcriptId`   | `**Transcript:** \`id\``         | `transcriptId`               |
-| `skillMeta`      | `**Skill metadata:** \`marker\`` | `skillMeta`                  |
+| Field            | Header line                      | Source                             |
+| ---------------- | -------------------------------- | ---------------------------------- |
+| `sourceRepo`     | `**Repository:** \`owner/repo\`` | `sourceRepo` / `resolveRepoTarget` |
+| `coordinatorSha` | `**Coordinator:** \`sha\``       | `coordinatorSha` / git HEAD        |
+| `skill`          | `**Skill:** \`/name\``           | `skill`                            |
+| `pr`             | `**PR:** owner/repo#N` (or `#N`) | `pr`                               |
+| `transcriptId`   | `**Transcript:** \`id\``         | `transcriptId`                     |
+| `skillMeta`      | `**Skill metadata:** \`marker\`` | `skillMeta`                        |
 
 ### API
 
@@ -235,6 +235,7 @@ through one injectable `GhReader` (default shells out via `boundedRun('gh',
 ai-efficiency-audit <pr> [--repo <owner/repo>] [--merged-at <iso>]
 ```
 
-Prints the derived `EfficiencyEvent` as JSON. `durationsMs` enrichment is an
-in-process API affordance only (the CLI derives counts; it does not measure
-timing).
+Prints the derived `EfficiencyEvent` as JSON. The repo is resolved through
+`resolveRepoTarget` (`--repo` → `GH_REPO` → cwd), so a caller that cannot pin its
+cwd never needs `cd <dir> && ai-*`. `durationsMs` enrichment is an in-process API
+affordance only (the CLI derives counts; it does not measure timing).
