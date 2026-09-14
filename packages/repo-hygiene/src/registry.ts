@@ -1,6 +1,7 @@
 import type { Check } from './types.js';
 import { conflictMarkersCheck } from './checks/conflict-markers.js';
 import { okfCheck } from './checks/okf.js';
+import { okfIndexCheck } from './checks/okf-index.js';
 import { actionPinsCheck } from './checks/action-pins.js';
 import { mdPairingCheck } from './checks/md-pairing.js';
 import { fileCapsCheck } from './checks/file-caps.js';
@@ -13,7 +14,14 @@ import { fileCapsCheck } from './checks/file-caps.js';
 
 /** Every check the package ships, in stable order. */
 export function builtinChecks(): Check[] {
-  return [conflictMarkersCheck, okfCheck, actionPinsCheck, mdPairingCheck, fileCapsCheck];
+  return [
+    conflictMarkersCheck,
+    okfCheck,
+    okfIndexCheck,
+    actionPinsCheck,
+    mdPairingCheck,
+    fileCapsCheck,
+  ];
 }
 
 export interface Registry {
