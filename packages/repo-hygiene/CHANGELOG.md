@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.4.0...repo-hygiene-v0.5.0) (2026-09-14)
+
+
+### Features
+
+* **repo-hygiene:** add okf-index check for OKF index-tree navigability ([#201](https://github.com/rmartz/ai-tools/issues/201)) ([7175aa6](https://github.com/rmartz/ai-tools/commit/7175aa653e1483787ff5d42af155dae5bac32412))
+* **repo-hygiene:** enforce bare @AGENTS.md wrapper in md-pairing ([#205](https://github.com/rmartz/ai-tools/issues/205)) ([cd2494b](https://github.com/rmartz/ai-tools/commit/cd2494b259ad32287ff552b4866f0bbe26f1d82b))
+
 ## [0.4.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.3.0...repo-hygiene-v0.4.0) (2026-09-14)
 
 
