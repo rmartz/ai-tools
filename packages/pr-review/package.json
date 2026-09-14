@@ -8,6 +8,9 @@
       "import": "./dist/index.js"
     }
   },
+  "bin": {
+    "ai-merge-safety": "./dist/bin/merge-safety.js"
+  },
   "files": [
     "dist"
   ],

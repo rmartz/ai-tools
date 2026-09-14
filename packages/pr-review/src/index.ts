@@ -44,3 +44,21 @@ export type {
   ReviewSynthesisRecord,
   FixConfirmationRecord,
 } from './review-records.js';
+
+export {
+  MERGE_SAFETY_LABELS,
+  isBreakingCommitMessage,
+  isCiCommitMessage,
+  isBreakingTitle,
+  hasFileOverlap,
+  evaluateMergeSafety,
+} from './merge-safety.js';
+export type {
+  MergeSafetyLabel,
+  MergeSafetyFacts,
+  MergeSafetyConclusion,
+  MergeSafetyDecision,
+} from './merge-safety.js';
+
+export { gatherMergeSafetyFacts, makeGitRunner } from './merge-safety-facts.js';
+export type { GitRunner, PrMergeMeta, GatherOptions } from './merge-safety-facts.js';
