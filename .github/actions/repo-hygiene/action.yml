@@ -22,7 +22,7 @@ inputs:
     required: false
     default: ''
   mode:
-    description: 'Scan mode: --check (all tracked files, the CI backstop; default), --staged, or --check-diff.'
+    description: 'Scan mode: --check (all tracked files, the CI backstop; default), --staged, or --check-diff (files changed vs origin/main). Note: --check-diff requires a non-shallow checkout with origin/main fetched — add fetch-depth: 0 to your checkout step and run git fetch origin main before this Action, or it will scan no files and silently pass.'
     required: false
     default: '--check'
   config:

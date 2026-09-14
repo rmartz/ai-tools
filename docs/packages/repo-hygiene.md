@@ -224,6 +224,12 @@ consumer's `package.json` pin so local and CI never skew), `checks`, `mode`,
 `config`, `node-version`, and `token` (defaults to the job token). The internal
 `setup-node` step is SHA-pinned, so the Action passes `action-pins` when consumed.
 
+**`--check-diff` prerequisite**: `--check-diff` compares `origin/main...HEAD` and
+returns an empty file set when `origin/main` is absent, so it silently passes
+without scanning anything on a default shallow checkout. To use it, add
+`fetch-depth: 0` to your `actions/checkout` step and run `git fetch origin main`
+before invoking this Action.
+
 ## CLIs
 
 - `ai-repo-hygiene [<check>...] [--staged|--check|--check-diff] [--config <path>]`
