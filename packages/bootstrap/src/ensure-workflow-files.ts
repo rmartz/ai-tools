@@ -38,9 +38,22 @@ function isBootstrapManaged(text: string): boolean {
   return text.includes(WORKFLOW_MANAGED_MARKER);
 }
 
-/** Ensure one golden workflow file is present and current, without clobbering user content. */
+/** Ensure one golden file is present and current, per its {@link GoldenWorkflowFile.policy}. */
 function ensureWorkflowFile(root: string, file: GoldenWorkflowFile): WorkflowOutcome {
   const path = join(root, file.filename);
+
+  // `seed`: write the plain content once (no managed header — the repo owns it
+  // thereafter) and never touch it again once present, whoever authored it.
+  if ((file.policy ?? 'manage') === 'seed') {
+    if (existsSync(path)) return { filename: file.filename, action: 'unchanged' };
+    mkdirSync(dirname(path), { recursive: true });
+    const body = file.content.endsWith('\n') ? file.content : `${file.content}\n`;
+    writeFileSync(path, body, 'utf8');
+    return { filename: file.filename, action: 'created' };
+  }
+
+  // `manage` (default): bootstrap owns the file — write if absent, overwrite if a
+  // previously-managed file has drifted, and leave a user-authored file untouched.
   const golden = renderManagedWorkflow(file);
   if (!existsSync(path)) {
     mkdirSync(dirname(path), { recursive: true });
