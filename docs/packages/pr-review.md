@@ -63,6 +63,22 @@ as review craft.
   `3.8.4 → 3.9.4`), under-stating the delta and the risk. The review composes this **before**
   `assessDependabotRisk` and re-titles the PR from the diff on a mismatch.
 
+### Review-cycle records (`review-records.ts`)
+
+The typed contract for the records the craft skills emit, carried as hidden
+PR-comment markers (`@rmartz/github`'s `renderJsonMarker`), keyed by `prHead`:
+
+- Types: `ReviewFindingsRecord` (`review` / `dependabot-review`),
+  `ReviewSynthesisRecord` (`synthesize-review`'s verdict + `threadDispositions` +
+  `actionList` + `uat`), `FixConfirmationRecord` (`fix-review`), plus `ReviewFinding`,
+  `ReviewVerdict`, `ThreadDisposition`, `ReviewActionList`, and `REVIEW_RECORD_KINDS`.
+- `renderFindingsRecord` / `renderSynthesisRecord` / `renderFixConfirmationRecord` —
+  produce the marker string (used by the `ai-post-json-marker` bin / PR Shepherd).
+- `readLatestFindings` / `readLatestSynthesis` / `readLatestFixConfirmation`
+  `(repo, pr, prHead, opts?)` — fetch the PR's comments and return the latest record
+  of that kind for `prHead`, or `null`. The "express, don't post" seam: skills emit
+  these; a runner reads and posts. (ai-tools #176.)
+
 ## Verdict mapping
 
 The `review` skill maps its analysis onto the runner-agnostic outcome enum

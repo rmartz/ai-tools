@@ -35,11 +35,13 @@ Synthesize the reviews on the pull request: $ARGUMENTS
 Get PR metadata with `ai-pr-summary $ARGUMENTS` (number, title, draft, labels,
 mergeability, CI state). Then collect the full picture:
 
-- **Findings** from `review` / `dependabot-review` for the current head — read
-  them from the review-cycle store. _(Placeholder contract: the findings-record
-  format and where it lives are being finalized with PR Shepherd — see
-  `docs/pr-shepherd-handoff.md`. Until then, treat the most recent findings record
-  on the PR as the input.)_
+- **PR head SHA** — fetch it explicitly, since `ai-pr-summary` does not include it:
+  `gh pr view $ARGUMENTS --json headRefOid --jq '.headRefOid'`
+- **Findings** from `review` / `dependabot-review` for the current head — read the
+  latest `review-findings` record for the PR head with
+  `ai-read-json-marker --match-pr-head <head> <pr> review-findings` (prints the
+  record JSON, or exits non-zero when none exists — treat that as "no Claude
+  findings this pass" and synthesize from the other reviewers alone).
 - **Existing threads** — open inline threads and their authors (`ai-pr-summary` /
   `listIssueComments`), including Copilot and human reviewers.
 - **Prior verdict**, if any, and which of its required items each still-open
@@ -117,19 +119,42 @@ reaches no verdict strands the PR:
 
 ## Step 5 — Emit the verdict and action list
 
-Express one record (the single terminal action):
+Express one declarative **synthesis record** (`review-synthesis`) — the single
+terminal action:
 
-- **`verdict`** — one of the outcomes above, with a one-sentence rationale.
-- **`threadDispositions`** — per thread: `{ url, disposition, replyText }`.
-- **`actionList`** — for `fix-review`: the required changes (each with location and
-  fix guidance), the issues to file for deferred items, and any title/description
-  **`suggestedText`** to apply. This is the machine-readable hand-off; its exact
-  shape is the **placeholder contract** being finalized with PR Shepherd
-  (`docs/pr-shepherd-handoff.md`).
-- **`reviewBody`** — the human-readable summary a direct run would post: `## Prior
-items` (✅/❌ per preceding required change), `## Requested changes` (one bullet
-  each, self-contained), `## Verdict` (one sentence), `## Deferred` (optional, each
-  linked to its filed issue).
+```json
+{
+  "skill": "synthesize-review",
+  "prHead": "<the PR head SHA>",
+  "verdict": "soft_reject",
+  "reviewBody": "## Prior items … ## Requested changes … ## Verdict … ## Deferred …",
+  "threadDispositions": [{ "url": "…", "disposition": "fix", "replyText": "…" }],
+  "actionList": {
+    "requiredChanges": [
+      { "location": { "path": "src/x.ts", "line": 42 }, "guidance": "…", "suggestedText": "…" }
+    ],
+    "issuesToFile": [{ "title": "…", "body": "…" }],
+    "titleDescriptionEdits": { "title": "…", "body": "…" }
+  },
+  "uat": { "status": "pending" }
+}
+```
 
-Do not post, resolve, edit, or label anything. Report the verdict and action list
-to the caller.
+- **`verdict`** — one of the outcomes above, rationale carried in `reviewBody`.
+- **`threadDispositions`** — per thread: `{ url, disposition, replyText }`
+  (`disposition` ∈ `fix`/`defer`/`dismiss`/`resolve`/`merge`).
+- **`actionList`** — the machine-readable hand-off `fix-review` executes:
+  `requiredChanges` (location + fix guidance, optional `suggestedText`),
+  `issuesToFile` for deferred items, and `titleDescriptionEdits` to apply.
+- **`reviewBody`** — the human-readable summary the runner posts: `## Prior items`
+  (✅/❌ per preceding required change), `## Requested changes` (one self-contained
+  bullet each), `## Verdict` (one sentence), `## Deferred` (optional, each linked to
+  its filed issue).
+- **`uat.status`** — `exempt` / `pending` / `ready`, for the runner's UAT labelling.
+
+**Emit it — do not post, resolve, edit, or label anything.** Write the record to a
+JSON file and hand it to the runner with
+`ai-post-json-marker <pr> review-synthesis <file>`. The runner maps the verdict to
+`post-review-verdict.py`, posts `reviewBody`, applies the thread dispositions and
+UAT label, and dispatches `fix-review` with the action list. (Under PR Shepherd the
+engine performs this emission with your credentials scrubbed.)
