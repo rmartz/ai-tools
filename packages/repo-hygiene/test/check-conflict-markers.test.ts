@@ -91,6 +91,11 @@ describe('worktreeContent', () => {
   it('returns empty string for a missing file', () => {
     expect(worktreeContent(join(dir, 'nope.txt'))).toBe('');
   });
+
+  it('resolves a relative path against opts.cwd', () => {
+    writeFileSync(join(dir, 'rel.txt'), 'relative');
+    expect(worktreeContent('rel.txt', { cwd: dir })).toBe('relative');
+  });
 });
 
 describe('file-list helpers', () => {
@@ -122,6 +127,16 @@ describe('file-list helpers', () => {
     boundedRun.mockResolvedValueOnce(ok(''));
     await trackedFiles({ cwd: '/repo' });
     expect(boundedRun.mock.calls[0]?.[2]).toMatchObject({ cwd: '/repo' });
+  });
+
+  it('trackedFiles throws when git ls-files fails', async () => {
+    boundedRun.mockResolvedValueOnce(fail('fatal: not a git repository'));
+    await expect(trackedFiles()).rejects.toThrow(/git ls-files failed/);
+  });
+
+  it('stagedFiles throws when git diff --cached fails', async () => {
+    boundedRun.mockResolvedValueOnce(fail('fatal: not a git repository'));
+    await expect(stagedFiles()).rejects.toThrow(/git diff --cached failed/);
   });
 });
 

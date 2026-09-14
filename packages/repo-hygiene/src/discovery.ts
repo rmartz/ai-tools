@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { isAbsolute, join } from 'node:path';
 import { boundedRun } from '@rmartz/agent-runtime';
 
 /**
@@ -48,16 +49,18 @@ function splitNul(stdout: string): string[] {
 
 /** Paths added/copied/modified/renamed in the index (NUL-delimited for safety). */
 export async function stagedFiles(opts: ScanOptions = {}): Promise<string[]> {
-  const { stdout } = await runGit(
+  const { stdout, code } = await runGit(
     ['diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z'],
     opts.cwd,
   );
+  if (code !== 0) throw new Error(`git diff --cached failed with code ${code}`);
   return splitNul(stdout);
 }
 
 /** All git-tracked files (NUL-delimited). */
 export async function trackedFiles(opts: ScanOptions = {}): Promise<string[]> {
-  const { stdout } = await runGit(['ls-files', '-z'], opts.cwd);
+  const { stdout, code } = await runGit(['ls-files', '-z'], opts.cwd);
+  if (code !== 0) throw new Error(`git ls-files failed with code ${code}`);
   return splitNul(stdout);
 }
 
@@ -79,9 +82,10 @@ export async function stagedContent(path: string, opts: ScanOptions = {}): Promi
 }
 
 /** Worktree content for `path`; empty string if missing or undecodable. */
-export function worktreeContent(path: string): string {
+export function worktreeContent(path: string, opts: ScanOptions = {}): string {
+  const fullPath = opts.cwd != null && !isAbsolute(path) ? join(opts.cwd, path) : path;
   try {
-    return readFileSync(path, 'utf8');
+    return readFileSync(fullPath, 'utf8');
   } catch {
     return ''; // missing or binary — no text markers to find
   }
@@ -93,7 +97,7 @@ export async function resolveFileSet(mode: Mode, opts: ScanOptions = {}): Promis
     return { paths: await stagedFiles(opts), read: (p) => stagedContent(p, opts) };
   }
   if (mode === '--check') {
-    return { paths: await trackedFiles(opts), read: worktreeContent };
+    return { paths: await trackedFiles(opts), read: (p) => worktreeContent(p, opts) };
   }
-  return { paths: await changedVsMain(opts), read: worktreeContent };
+  return { paths: await changedVsMain(opts), read: (p) => worktreeContent(p, opts) };
 }

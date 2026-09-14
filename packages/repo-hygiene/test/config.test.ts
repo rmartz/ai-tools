@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CONFIG_FILENAME, emptyConfig, loadConfig, parseConfig } from '../src/config.js';
@@ -37,6 +37,10 @@ describe('parseConfig', () => {
   it('rejects a non-mapping check section', () => {
     expect(() => parseConfig('checks:\n  x: 3\n')).toThrow(/check "x" must be a mapping/);
   });
+
+  it('prefixes YAML syntax errors with the config filename', () => {
+    expect(() => parseConfig(': invalid: yaml: {')).toThrow(new RegExp(`^${CONFIG_FILENAME}: `));
+  });
 });
 
 describe('loadConfig', () => {
@@ -57,6 +61,18 @@ describe('loadConfig', () => {
         'checks:\n  conflict-markers:\n    severity: warn\n',
       );
       expect(loadConfig({ cwd: dir }).checks['conflict-markers']).toEqual({ severity: 'warn' });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('rethrows non-ENOENT read errors', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'rh-cfg-'));
+    try {
+      const file = join(dir, CONFIG_FILENAME);
+      // A directory where a file is expected triggers EISDIR, not ENOENT.
+      mkdirSync(file);
+      expect(() => loadConfig({ cwd: dir })).toThrow();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

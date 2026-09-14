@@ -40,7 +40,12 @@ function validateCheckConfig(name: string, value: unknown): CheckConfig {
 
 /** Parse and validate raw YAML text into a config. Throws on a malformed shape. */
 export function parseConfig(text: string): RepoHygieneConfig {
-  const raw = parse(text) as unknown;
+  let raw: unknown;
+  try {
+    raw = parse(text);
+  } catch (err) {
+    throw new Error(`${CONFIG_FILENAME}: ${(err as Error).message}`);
+  }
   if (raw == null) return emptyConfig();
   if (!isPlainObject(raw)) {
     throw new Error(`${CONFIG_FILENAME}: top level must be a mapping`);
@@ -65,7 +70,8 @@ export function loadConfig(opts: { cwd?: string; path?: string } = {}): RepoHygi
   let text: string;
   try {
     text = readFileSync(file, 'utf8');
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
     return emptyConfig();
   }
   return parseConfig(text);
