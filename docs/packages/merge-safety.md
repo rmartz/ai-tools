@@ -66,12 +66,30 @@ otherwise lack the head.
 ## CLI
 
 ```
-ai-merge-safety evaluate --pr <n> [--repo <owner/repo>] [--base <ref>] [--cwd <path>]
+ai-merge-safety evaluate --pr <n> [--json] [--repo <owner/repo>] [--base <ref>] [--cwd <path>]
 ai-merge-safety invalidate [--exclude <n>] [--repo <owner/repo>] [--cwd <path>]
 ```
 
 `evaluate` fails **safe**: if facts can't be gathered (bad merge-base, etc.) it
 posts `failure` rather than leave a stale green that could auto-merge.
+
+### Decision-only mode (`--json`)
+
+`evaluate --pr <n> --json` (alias `--dry-run`) prints the `MergeSafetyDecision`
+as JSON to stdout and performs **no side effects** — no check-run is posted and no
+labels are reconciled. This is the seam the coordinator consumes (dotfiles#1524):
+it asks for the **verdict** (`needsUpdate` / `conclusion` / `reasons`) without the
+emission, so it can share this one implementation instead of re-porting the
+predicate.
+
+Exit codes make the two outcomes distinguishable:
+
+- **exit 0** — a real verdict was computed (even a `failure` / `needsUpdate` one);
+  the JSON is the answer.
+- **exit 1** — the PR was **ungatherable** (unreadable PR, bad merge-base, a failed
+  git command); stdout still carries a fail-safe `failure`-shaped decision
+  (`errorMergeSafetyDecision`), so a caller that trusts the verdict treats it as
+  unsafe rather than green.
 
 ## Required-check setup
 

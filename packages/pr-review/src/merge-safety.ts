@@ -158,3 +158,23 @@ export function evaluateMergeSafety(facts: MergeSafetyFacts): MergeSafetyDecisio
     labels: { add, remove },
   };
 }
+
+/**
+ * The verdict for a PR whose facts could not be gathered (bad merge-base, a git
+ * command that failed, an unreadable PR). Fail-safe: `failure`, so a consumer
+ * that trusts the verdict treats an ungatherable PR as unsafe rather than green.
+ * `needsUpdate` / `hasConflict` stay `false` because they are genuinely unknown —
+ * the `failure` conclusion is what carries the safety, not a fabricated axis. No
+ * labels are proposed: an ungatherable state is not evidence for adding or
+ * removing either label.
+ */
+export function errorMergeSafetyDecision(message: string): MergeSafetyDecision {
+  return {
+    conclusion: 'failure',
+    needsUpdate: false,
+    hasConflict: false,
+    reasons: [message],
+    summary: `Could not evaluate merge safety: ${message}`,
+    labels: { add: [], remove: [] },
+  };
+}

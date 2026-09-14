@@ -52,6 +52,7 @@ export {
   isBreakingTitle,
   hasFileOverlap,
   evaluateMergeSafety,
+  errorMergeSafetyDecision,
 } from './merge-safety.js';
 export type {
   MergeSafetyLabel,

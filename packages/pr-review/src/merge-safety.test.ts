@@ -6,6 +6,7 @@ import {
   isBreakingTitle,
   hasFileOverlap,
   evaluateMergeSafety,
+  errorMergeSafetyDecision,
   type MergeSafetyFacts,
 } from './merge-safety.js';
 
@@ -141,5 +142,16 @@ describe('evaluateMergeSafety', () => {
     expect(d.labels.remove).toEqual([]);
     // Conflict is the most severe reason, listed first.
     expect(d.reasons[0]).toMatch(/merge conflict/i);
+  });
+});
+
+describe('errorMergeSafetyDecision', () => {
+  it('is a fail-safe failure verdict carrying the message and proposing no labels', () => {
+    const d = errorMergeSafetyDecision('git log failed for BASE..origin/main');
+    expect(d.conclusion).toBe('failure');
+    expect(d.needsUpdate).toBe(false); // genuinely unknown — safety rides on `failure`
+    expect(d.hasConflict).toBe(false);
+    expect(d.reasons).toEqual(['git log failed for BASE..origin/main']);
+    expect(d.labels).toEqual({ add: [], remove: [] });
   });
 });

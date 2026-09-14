@@ -7,7 +7,11 @@
 //               auto-merge until each PR re-clears against the new base.
 // All judgment lives in the library; this only parses args and talks to `gh`.
 import { ghCall, resolveRepoTarget, addLabels, removeLabel } from '@rmartz/github';
-import { evaluateMergeSafety } from '../merge-safety.js';
+import {
+  evaluateMergeSafety,
+  errorMergeSafetyDecision,
+  type MergeSafetyDecision,
+} from '../merge-safety.js';
 import { gatherMergeSafetyFacts, makeGitRunner, type PrMergeMeta } from '../merge-safety-facts.js';
 
 const CHECK_NAME = 'merge-safety';
@@ -19,11 +23,13 @@ interface Args {
   repo?: string;
   baseRef: string;
   cwd?: string;
+  /** Decision-only: print the verdict as JSON and perform no side effects. */
+  json: boolean;
 }
 
 function usage(): never {
   console.error(
-    'usage: ai-merge-safety evaluate --pr <n> [--repo <o/r>] [--base <ref>] [--cwd <path>]\n' +
+    'usage: ai-merge-safety evaluate --pr <n> [--json] [--repo <o/r>] [--base <ref>] [--cwd <path>]\n' +
       '       ai-merge-safety invalidate [--exclude <n>] [--repo <o/r>] [--cwd <path>]',
   );
   process.exit(2);
@@ -32,7 +38,7 @@ function usage(): never {
 function parse(argv: string[]): Args {
   const mode = argv[0];
   if (mode !== 'evaluate' && mode !== 'invalidate') usage();
-  const args: Args = { mode, baseRef: 'origin/main' };
+  const args: Args = { mode, baseRef: 'origin/main', json: false };
   for (let i = 1; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--pr') args.pr = Number(argv[++i]);
@@ -40,6 +46,7 @@ function parse(argv: string[]): Args {
     else if (a === '--repo') args.repo = argv[++i];
     else if (a === '--base') args.baseRef = argv[++i] ?? args.baseRef;
     else if (a === '--cwd') args.cwd = argv[++i];
+    else if (a === '--json' || a === '--dry-run') args.json = true;
     else usage();
   }
   if (mode === 'evaluate' && !args.pr) usage();
@@ -117,7 +124,12 @@ async function reconcileLabels(
 
 async function runEvaluate(repo: string, pr: number, args: Args): Promise<void> {
   const view = await fetchPrView(repo, pr, args.cwd);
-  if (!view) throw new Error(`could not read PR #${pr}`);
+  if (!view) {
+    // A PR we can't even read is ungatherable — same fail-safe verdict.
+    const msg = `could not read PR #${pr}`;
+    if (args.json) return emitDecisionJson(errorMergeSafetyDecision(msg), true);
+    throw new Error(msg);
+  }
   const meta: PrMergeMeta = {
     headSha: view.headRefOid,
     title: view.title,
@@ -125,27 +137,17 @@ async function runEvaluate(repo: string, pr: number, args: Args): Promise<void> 
     mergeable: view.mergeable,
   };
 
+  let decision: MergeSafetyDecision;
   try {
     const facts = await gatherMergeSafetyFacts(meta, {
       baseRef: args.baseRef,
       git: makeGitRunner(args.cwd),
     });
-    const decision = evaluateMergeSafety(facts);
-    const detail = decision.reasons.length
-      ? decision.reasons.map((r) => `- ${r}`).join('\n')
-      : decision.summary;
-    await postCheck(
-      repo,
-      meta.headSha,
-      { title: 'Merge safety', summary: `${decision.summary}\n\n${detail}` },
-      decision.conclusion,
-      args.cwd,
-    );
-    await reconcileLabels(repo, pr, decision.labels.add, decision.labels.remove, args.cwd);
-    console.log(`#${pr}: ${decision.conclusion} — ${decision.summary}`);
+    decision = evaluateMergeSafety(facts);
   } catch (err) {
-    // Ungatherable → fail safe: never leave a stale green that could auto-merge.
+    // Ungatherable → fail safe: never report a stale-safe verdict.
     const msg = err instanceof Error ? err.message : String(err);
+    if (args.json) return emitDecisionJson(errorMergeSafetyDecision(msg), true);
     await postCheck(
       repo,
       meta.headSha,
@@ -155,7 +157,32 @@ async function runEvaluate(repo: string, pr: number, args: Args): Promise<void> 
     );
     console.error(`#${pr}: failure — could not evaluate: ${msg}`);
     process.exitCode = 1;
+    return;
   }
+
+  // Decision-only mode: print the verdict, touch nothing. Exit 0 — a real verdict
+  // (even `failure`/`needsUpdate`) is a successful evaluation; non-zero is reserved
+  // for the ungatherable error above, so a caller can tell "must update" from "broke".
+  if (args.json) return emitDecisionJson(decision, false);
+
+  const detail = decision.reasons.length
+    ? decision.reasons.map((r) => `- ${r}`).join('\n')
+    : decision.summary;
+  await postCheck(
+    repo,
+    meta.headSha,
+    { title: 'Merge safety', summary: `${decision.summary}\n\n${detail}` },
+    decision.conclusion,
+    args.cwd,
+  );
+  await reconcileLabels(repo, pr, decision.labels.add, decision.labels.remove, args.cwd);
+  console.log(`#${pr}: ${decision.conclusion} — ${decision.summary}`);
+}
+
+/** Print a decision as JSON. `isError` marks the ungatherable case with exit 1. */
+function emitDecisionJson(decision: MergeSafetyDecision, isError: boolean): void {
+  console.log(JSON.stringify(decision, null, 2));
+  if (isError) process.exitCode = 1;
 }
 
 async function runInvalidate(repo: string, args: Args): Promise<void> {
