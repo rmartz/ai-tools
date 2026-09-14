@@ -1,7 +1,7 @@
 ---
 type: Library
 title: repo-hygiene
-description: Layer-1 repo-quality gates — a pluggable check framework (registry, config, severity, reporter) with the merge-conflict-marker checker as its reference check.
+description: Layer-1 repo-quality gates — a pluggable check framework (registry, config, severity, reporter) shipping conflict-markers, md-pairing, and file-caps checks.
 resource: packages/repo-hygiene/src/index.ts
 tags: [tooling, quality-gates, ci, merge]
 ---
@@ -17,8 +17,9 @@ The package exists to end the per-repo duplication of the same hygiene checks
 (OKF frontmatter, `CLAUDE.md`/`AGENTS.md` pairing, file-length caps, action-pin
 enforcement): one tested implementation here, thin callers everywhere else. This
 page documents the **framework** (the check contract, config, dispatch, output
-contract) and the **reference check** it ships with, `conflict-markers`. Further
-checks land on top of this foundation (epic #163).
+contract) and the checks it ships: `conflict-markers` (the reference check),
+`md-pairing`, and `file-caps`. Further checks land on top of this foundation
+(epic #163).
 
 ## The check framework
 
@@ -145,6 +146,63 @@ For the rare case where a marker-like line must be committed intentionally:
 - set `ALLOW_CONFLICT_MARKERS=1`, which makes `--staged` pass. The bypass applies
   only in `--staged` mode — the CI backstop (`--check`) still catches markers.
 
+## Check: `md-pairing`
+
+`CLAUDE.md` / `AGENTS.md` must travel together: a directory that carries one must
+carry the other, and each must be a **regular file**, never a symlink. A
+symlinked directive file is detected by its git index mode (`120000`) and
+flagged as a violation rather than followed — keeping both as real files means a
+tool that reads only one of the two names sees the same content. Pairing is a
+whole-tree invariant, so the check reads the full tracked set and its git modes
+(via `trackedFileModes`) regardless of the run mode. `evaluatePairing(modes)` is
+the pure evaluator; findings are file-level `error`s.
+
+## Check: `file-caps`
+
+Per-glob file size caps with a migration ramp. Config is an ordered `overrides`
+list — **most-specific first, first-match-wins** (the first matching glob supplies
+the whole `{ lines, bytes }` config for a file; no merge with later entries; an
+unmatched file is uncapped):
+
+```yaml
+checks:
+  file-caps:
+    overrides:
+      - glob: '**/AGENTS.md'
+        lines: { warn: 200 } # warn on lines, no line error…
+        bytes: { error: '40KB' } # …but a hard byte cap
+      - glob: '**/*.test.ts'
+        lines: { error: 720 } # tests: hard cap only
+      - glob: '**/*'
+        lines: { warn: 240, error: 480 } # catch-all, last
+```
+
+- **Two independent metrics.** `lines` (integer counts) and `bytes` (a raw
+  integer or a human size string like `"40KB"` / `"1.5MB"`, binary units,
+  normalized to bytes by `parseByteSize`). Each metric carries its own optional
+  `warn` / `error` tier; a file can `warn` on one and `error` on the other in the
+  same run.
+- **Severity.** Over the `error` cap → `error`; over only the `warn` threshold →
+  `warn`.
+
+### Migration ramp (`.repo-hygiene-baseline.json`)
+
+For repos adopting caps with existing over-limit files, a committed baseline
+grandfathers them. On adoption, every file over its hard (`error`) cap is
+recorded at its current size and reported as a `warn` instead of blocking.
+Thereafter the baseline **only shrinks**, tracked **per metric**:
+
+- a file that shrinks (but stays over cap) ratchets its ceiling down;
+- a file that drops under the cap is removed;
+- a file that grows past its recorded ceiling loses the grandfather and
+  hard-errors;
+- a brand-new file over cap is never auto-grandfathered — it errors.
+
+Regenerate the baseline with `ai-repo-hygiene --update-baseline` (adoption when
+no baseline file exists yet, a ratchet-down otherwise). Because each metric is
+tracked separately, a file grandfathered on bytes still hard-errors if it later
+crosses the line cap.
+
 ## CLIs
 
 - `ai-repo-hygiene [<check>...] [--staged|--check|--check-diff] [--config <path>]`
@@ -152,6 +210,8 @@ For the rare case where a marker-like line must be committed intentionally:
   status); naming one or more runs just those (independent per-check statuses).
   Mode defaults to `--staged`. Exit `0` when clean or warn-only, `1` on any error
   finding (report on stderr), `2` on a usage error or unknown check.
+  - `--update-baseline` regenerates the file-caps grandfather baseline
+    (`.repo-hygiene-baseline.json`) instead of running checks, then exits `0`.
 - `ai-check-conflict-markers [mode] [-C <dir>]` — the original single-check wrapper,
   kept for its existing pre-commit-hook consumers; defaults to `--staged`.
   `-C`/`--cwd <dir>` runs the git scan in that directory, so a caller that cannot
@@ -166,3 +226,8 @@ tested with fake checks (registry lookup, per-check and all-checks dispatch, exi
 codes, and the severity-override ramp in both directions); the config loader is
 covered for valid, empty, and malformed shapes; conflict-marker detection is
 covered as a pure function alongside the framework adapter and the env bypass.
+`md-pairing` is covered through `evaluatePairing` (missing pair, symlink
+violation, per-directory independence); `file-caps` covers the byte-size parser,
+config validation, `computeMetrics`, `evaluateFileCaps` (first-match-wins,
+independent metrics, warn/error tiers, and the grandfather downgrade / regrowth /
+new-file cases), and the baseline build / ratchet-down / drop / never-add logic.

@@ -1,5 +1,7 @@
 import type { Check } from './types.js';
 import { conflictMarkersCheck } from './checks/conflict-markers.js';
+import { mdPairingCheck } from './checks/md-pairing.js';
+import { fileCapsCheck } from './checks/file-caps.js';
 
 /**
  * The check registry: the lookup the CLI dispatches through. It is built from an
@@ -9,7 +11,7 @@ import { conflictMarkersCheck } from './checks/conflict-markers.js';
 
 /** Every check the package ships, in stable order. */
 export function builtinChecks(): Check[] {
-  return [conflictMarkersCheck];
+  return [conflictMarkersCheck, mdPairingCheck, fileCapsCheck];
 }
 
 export interface Registry {

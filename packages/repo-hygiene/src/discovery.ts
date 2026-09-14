@@ -91,6 +91,27 @@ export function worktreeContent(path: string, opts: ScanOptions = {}): string {
   }
 }
 
+/**
+ * Every tracked file mapped to its git index mode (`100644` regular, `100755`
+ * executable, `120000` symlink). Read from `git ls-files -s`, so a symlink is
+ * seen as a symlink rather than followed — which is how the md-pairing check
+ * treats a symlinked directive file as a violation instead of reading through it.
+ */
+export async function trackedFileModes(opts: ScanOptions = {}): Promise<Map<string, string>> {
+  const { stdout } = await runGit(['ls-files', '-s', '-z'], opts.cwd);
+  const modes = new Map<string, string>();
+  for (const record of stdout.split('\0')) {
+    if (!record) continue;
+    // Each record is `<mode> <object> <stage>\t<path>`.
+    const tab = record.indexOf('\t');
+    if (tab === -1) continue;
+    const mode = record.slice(0, tab).split(' ')[0];
+    const path = record.slice(tab + 1);
+    if (mode) modes.set(path, mode);
+  }
+  return modes;
+}
+
 /** Resolve the path list and per-path reader for a mode. */
 export async function resolveFileSet(mode: Mode, opts: ScanOptions = {}): Promise<FileSet> {
   if (mode === '--staged') {
