@@ -42,10 +42,17 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
     steps:
+      # Build the tool from `main`, never the PR: a gate must apply the trusted,
+      # merged logic — immune to the PR compiling, and never running PR-authored
+      # build scripts under this write-scoped token. The PR is consumed purely as
+      # git data fetched below, so no PR working tree is needed.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: main
           fetch-depth: 0 # merge-base + diffs need full history
-      - run: git fetch --quiet origin main # ensure origin/main ref exists
+      # Fetch the PR head as git data so merge-base/diffs resolve — the dispatched
+      # (workflow_dispatch) path checks out main and would otherwise lack the head.
+      - run: git fetch --quiet origin main "pull/${PR_NUMBER}/head"
       - uses: ./.github/actions/setup
       - run: pnpm build --filter @rmartz/pr-review
       - run: node packages/pr-review/dist/bin/merge-safety.js evaluate --pr "$PR_NUMBER" --repo "$GITHUB_REPOSITORY"
