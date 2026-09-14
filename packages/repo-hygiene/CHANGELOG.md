@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.3.0...repo-hygiene-v0.4.0) (2026-09-14)
+
+
+### Features
+
+* **repo-hygiene:** add md-pairing + file-caps checks with migration ramp ([#187](https://github.com/rmartz/ai-tools/issues/187)) ([83d7033](https://github.com/rmartz/ai-tools/commit/83d7033ff44553570611c3a1e9dea432d539d044))
+
 ## [0.3.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.2.0...repo-hygiene-v0.3.0) (2026-09-14)
 
 
