@@ -239,6 +239,44 @@ updates:
         dependency-type: production
 `;
 
+// Generic repo-hygiene CI, consumer shape (installs the published
+// @rmartz/repo-hygiene CLI rather than building from source). It runs only the
+// universally-safe `action-pins` check — every repo with workflows benefits from
+// SHA-pinned actions. The other registered checks (okf / md-pairing / file-caps)
+// are ai-tools-specific conventions that would false-fail on an arbitrary repo
+// (okf flags any docs lacking OKF frontmatter; file-caps needs a per-repo
+// baseline), so distributing them fleet-wide is a deliberate per-repo curation
+// decision, not part of the universal golden set. `push` fires on `main`.
+const REPO_HYGIENE = `name: repo-hygiene
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  REPO_HYGIENE_VERSION: 0.4.0
+
+jobs:
+  action-pins:
+    name: GitHub Actions SHA pins
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install ai-repo-hygiene
+        env:
+          NODE_AUTH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '@rmartz:registry=https://npm.pkg.github.com\\n//npm.pkg.github.com/:_authToken=%s\\n' "\${NODE_AUTH_TOKEN}" > ~/.npmrc
+          npm install -g "@rmartz/repo-hygiene@\${REPO_HYGIENE_VERSION}"
+      - run: ai-repo-hygiene action-pins --check
+`;
+
 /**
  * Golden whole files distributed to every repo. Two idempotency policies (see
  * {@link GoldenWorkflowFile.policy}): `manage` (bootstrap-owned, overwrite drift)
@@ -254,6 +292,8 @@ updates:
  *   *provides* the check the auto-merge file depends on rather than consuming one.
  * - `.github/dependabot.yml` (`seed`) — a starting Dependabot config the repo then
  *   owns; bootstrap writes it only if absent and never overwrites local edits.
+ * - `repo-hygiene.yml` (`manage`) — runs the universally-safe `action-pins` check
+ *   via the published `@rmartz/repo-hygiene` CLI. Advisory; `gateChecks: []`.
  */
 export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
   {
@@ -271,6 +311,11 @@ export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
     content: DEPENDABOT_CONFIG,
     gateChecks: [],
     policy: 'seed',
+  },
+  {
+    filename: '.github/workflows/repo-hygiene.yml',
+    content: REPO_HYGIENE,
+    gateChecks: [],
   },
 ];
 
