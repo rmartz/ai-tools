@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { boundedRun } from '@rmartz/agent-runtime';
 
 /**
@@ -113,9 +114,9 @@ export async function stagedContent(path: string, opts: ScanOptions = {}): Promi
 }
 
 /** Worktree content for `path`; empty string if missing or undecodable. */
-export function worktreeContent(path: string): string {
+export function worktreeContent(path: string, cwd?: string): string {
   try {
-    return readFileSync(path, 'utf8');
+    return readFileSync(cwd ? resolve(cwd, path) : path, 'utf8');
   } catch {
     return ''; // missing or binary — no text markers to find
   }
@@ -144,9 +145,9 @@ function readerFor(
     return { paths: () => stagedFiles(opts), read: (p) => stagedContent(p, opts) };
   }
   if (mode === '--check') {
-    return { paths: () => trackedFiles(opts), read: worktreeContent };
+    return { paths: () => trackedFiles(opts), read: (p) => worktreeContent(p, opts.cwd) };
   }
-  return { paths: () => changedVsMain(opts), read: worktreeContent };
+  return { paths: () => changedVsMain(opts), read: (p) => worktreeContent(p, opts.cwd) };
 }
 
 export interface CheckOptions extends ScanOptions {

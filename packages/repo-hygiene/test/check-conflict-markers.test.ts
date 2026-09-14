@@ -98,6 +98,11 @@ describe('worktreeContent', () => {
   it('returns empty string for a missing file', () => {
     expect(worktreeContent(join(dir, 'nope.txt'))).toBe('');
   });
+
+  it('resolves a relative path against the given cwd', () => {
+    writeFileSync(join(dir, 'rel.txt'), 'content');
+    expect(worktreeContent('rel.txt', dir)).toBe('content');
+  });
 });
 
 describe('file-list helpers', () => {
@@ -161,6 +166,19 @@ describe('checkConflictMarkers', () => {
       const violations = await checkConflictMarkers('--check', { cwd: dir, env: {} });
       expect(violations.map((v) => v.path)).toEqual([bad, bad, bad]);
       expect(violations.map((v) => v.lineno)).toEqual([2, 4, 6]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('--check resolves relative paths from git against cwd', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'rh-chk-rel-'));
+    try {
+      writeFileSync(join(dir, 'rel.ts'), FULL_CONFLICT.join('\n'));
+      // ls-files returns repo-root-relative paths; cwd resolves them.
+      boundedRun.mockResolvedValueOnce(ok('rel.ts\0'));
+      const violations = await checkConflictMarkers('--check', { cwd: dir, env: {} });
+      expect(violations.map((v) => v.path)).toEqual(['rel.ts', 'rel.ts', 'rel.ts']);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

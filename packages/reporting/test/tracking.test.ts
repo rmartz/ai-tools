@@ -126,6 +126,19 @@ describe('reportToTracking', () => {
     expect(opts.labels).toEqual(['coordinator-self-report']);
   });
 
+  it('forwards cwd to resolveRepoTarget when sourceRepo is omitted', async () => {
+    resolveRepoTarget.mockResolvedValue('rmartz/from-cwd');
+    boundedRun.mockResolvedValue({ stdout: '', stderr: '', code: 1, timedOut: false });
+    findOpenIssue.mockResolvedValue(null);
+    createIssue.mockResolvedValue('u');
+
+    await reportToTracking('t', 'b', { cwd: '/other/checkout' });
+
+    expect(resolveRepoTarget).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: '/other/checkout' }),
+    );
+  });
+
   it('does not resolve the repo when sourceRepo is supplied', async () => {
     boundedRun.mockResolvedValue({ stdout: 'sha\n', stderr: '', code: 0, timedOut: false });
     findOpenIssue.mockResolvedValue(null);

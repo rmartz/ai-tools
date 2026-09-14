@@ -132,7 +132,8 @@ export async function reportToTracking(
   const label = opts.label ?? TRACKING_LABEL;
   const call = opts.call ?? {};
 
-  const sourceRepo = opts.sourceRepo ?? (await resolveRepoTarget(call)) ?? undefined;
+  const sourceRepo =
+    opts.sourceRepo ?? (await resolveRepoTarget({ ...call, cwd: opts.cwd })) ?? undefined;
   const coordinatorSha = opts.coordinatorSha ?? (await coordinatorGitSha(opts.cwd)) ?? undefined;
 
   const fullBody = formatOccurrence(body, {
