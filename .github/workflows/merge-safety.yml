@@ -1,0 +1,64 @@
+name: merge-safety
+
+# Surfaces the coordinator's "must this PR be brought current before merge?"
+# verdict as a `merge-safety` check-run, and — via the push fan-out — invalidates
+# every open PR's verdict when the base moves. POC for issue #185.
+#
+# Two paths:
+#   - pull_request / workflow_dispatch → evaluate ONE PR and resolve its check.
+#   - push to main                     → invalidate every other open PR (flip to
+#                                        pending + dispatch its own evaluate),
+#                                        so a moved base holds auto-merge until
+#                                        each PR re-clears against the new base.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: PR number to evaluate
+        required: true
+
+permissions:
+  checks: write # post/flip the merge-safety check-run
+  pull-requests: write # reconcile the update-required / merge-conflict labels
+  contents: read
+  actions: write # dispatch per-PR evaluate runs from the push fan-out
+
+concurrency:
+  group: merge-safety-${{ github.event_name == 'push' && 'invalidate' || github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    name: Evaluate one PR
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # merge-base + diffs need full history
+      - run: git fetch --quiet origin main # ensure origin/main ref exists
+      - uses: ./.github/actions/setup
+      - run: pnpm build --filter @rmartz/pr-review
+      - run: node packages/pr-review/dist/bin/merge-safety.js evaluate --pr "$PR_NUMBER" --repo "$GITHUB_REPOSITORY"
+
+  invalidate:
+    name: Invalidate open PRs (base moved)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm build --filter @rmartz/pr-review
+      - run: node packages/pr-review/dist/bin/merge-safety.js invalidate --repo "$GITHUB_REPOSITORY"
