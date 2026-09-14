@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/rmartz/ai-tools/compare/pr-review-v0.2.0...pr-review-v0.3.0) (2026-09-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **pr-review:** merge-safety predicate + externally-invalidated check (POC) ([#186](https://github.com/rmartz/ai-tools/issues/186))
+
+### Features
+
+* **pr-review:** merge-safety predicate + externally-invalidated check (POC) ([#186](https://github.com/rmartz/ai-tools/issues/186)) ([18816f7](https://github.com/rmartz/ai-tools/commit/18816f729742b8465393eb6d91a638aa93444644))
+
 ## [0.2.0](https://github.com/rmartz/ai-tools/compare/pr-review-v0.1.2...pr-review-v0.2.0) (2026-09-14)
 
 
