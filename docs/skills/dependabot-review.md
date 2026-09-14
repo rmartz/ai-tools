@@ -37,7 +37,8 @@ identically.
    matching) emits no risk finding, `review`/`high`/misstated emits a `blocking`
    `dependency-bump` finding. A `github_actions` bump adds a finding that merging
    needs the `workflows` OAuth scope.
-4. **Emit the findings** — declarative, with the diff-derived from/to versions.
+4. **Emit the findings** — a `review-findings` record (same schema as `review`,
+   `skill: "dependabot-review"`) via `ai-post-json-marker <pr> review-findings <file>`.
 
 ## See also
 

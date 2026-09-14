@@ -26,9 +26,10 @@ This is one of three skills the single-purpose `review` was split into:
 The skill produces **findings** and stops — it never posts them, mutates the PR,
 resolves a thread, or decides merge. Each finding is declarative data; _deciding_
 a finding and _acting_ on it are separate responsibilities, and this skill owns
-only the deciding. A direct run expresses the findings and a thin executor records
-them; a coordinator captures them into the review-cycle store `synthesize-review`
-reads.
+only the deciding. It emits a `review-findings` record via
+`ai-post-json-marker <pr> review-findings <file>` — a hidden PR-comment marker
+`synthesize-review` reads (`ai-tools #176`); a coordinator (PR Shepherd) posts it
+with credentials scrubbed. No label, no review event.
 
 Each finding carries a `category`, a proposed `severity`
 (`blocking` / `non-blocking` / `needs-human-input` — a proposal, not the verdict),

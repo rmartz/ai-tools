@@ -51,11 +51,14 @@ Protocol consumes (`docs/pr-shepherd-handoff.md`): `approve` / `soft_reject` /
 
 ## Contract status
 
-The **findings-record** input format and the **action-list** hand-off to
-`fix-review` are a placeholder pending coordination with PR Shepherd, which owns
-the review-cycle store boundary (`docs/pr-shepherd-handoff.md`). The verdict enum
-and the "express, don't post" seam are stable; the payload shapes are being
-finalized in the design discussion.
+Finalized (ai-tools #176). The **findings-record** input (`review-findings`) is read
+with `ai-read-json-marker --match-pr-head <head> <pr> review-findings`; the verdict +
+**action-list** hand-off is emitted as a `review-synthesis` record via
+`ai-post-json-marker <pr> review-synthesis <file>`. Both are hidden PR-comment
+markers keyed by `prHead` — the interim form of PR Shepherd's review-cycle store
+(`docs/pr-shepherd-handoff.md`). The verdict enum and the "express, don't post" seam
+are stable; the runner maps the verdict onto the Skill-Outcome Protocol and performs
+all posting.
 
 ## See also
 
