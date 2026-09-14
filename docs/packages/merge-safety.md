@@ -119,6 +119,18 @@ treat as blocking until it has. A merge coordinator (e.g. PR Shepherd /
   (`needsUpdate` / `conclusion` / `reasons`) with no side effects. Exit 0 = a real
   verdict; exit 1 = ungatherable (treat as unsafe). See the CLI section above.
 
+**For a fix-review agent** (the SOP destination for a failing check): a
+`merge-safety` failure whose only reason is `update required` (no `merge conflict`)
+is resolved by **bringing the branch current and letting CI re-run — no code change
+is expected** for the check itself. A clean sync makes the PR current, which clears
+the verdict outright (`needsUpdate` can only be true while the branch is behind).
+So treat "sync the branch, re-run" as the complete fix here; do **not** go hunting
+for code to change. The two cases that _do_ need hands-on work announce themselves
+separately: a `merge conflict` reason (resolve the conflict), or a genuine
+incompatibility the update surfaces — which shows up as a **different** failing
+check (typecheck/tests) after the re-run, handled by the normal fix-review flow.
+That different-check failure is exactly what the overlap clause exists to catch.
+
 Only once a repo opts into gating (next section) should automation treat the check
 as merge-blocking — and even then, a coordinator that serializes merges remains the
 authority (see the TOCTOU limitation below).
