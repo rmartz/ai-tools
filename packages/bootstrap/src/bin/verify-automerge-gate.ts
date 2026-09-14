@@ -51,7 +51,8 @@ async function main(): Promise<void> {
   console.log(`allow_auto_merge: ${result.allowAutoMerge ? 'on' : 'off'}`);
   console.log(`Gate checks:     ${result.gateChecks.join(', ') || '(none)'}`);
   console.log(`Required checks: ${result.requiredChecks.join(', ') || '(none)'}`);
-  if (result.applied) console.log('\nApplied: enabled auto-merge and set the required gate checks.');
+  if (result.applied)
+    console.log('\nApplied: enabled auto-merge and set the required gate checks.');
 
   if (result.satisfied) {
     console.log('\n✓ Auto-merge gate satisfied.');

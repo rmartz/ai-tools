@@ -57,7 +57,18 @@ async function readJson<T>(argv: string[], opts: RepoTargetOptions): Promise<T |
 /** Resolve the repo's default branch name via `gh repo view`. */
 async function defaultBranch(repo: string, opts: RepoTargetOptions): Promise<string> {
   const out = await ghCall(
-    { argv: ['gh', 'repo', 'view', repo, '--json', 'defaultBranchRef', '--jq', '.defaultBranchRef.name'] },
+    {
+      argv: [
+        'gh',
+        'repo',
+        'view',
+        repo,
+        '--json',
+        'defaultBranchRef',
+        '--jq',
+        '.defaultBranchRef.name',
+      ],
+    },
     null,
     opts,
   );
@@ -127,7 +138,15 @@ async function applyGate(
   });
   const out = await ghCall(
     {
-      argv: ['gh', 'api', '--method', 'PUT', `repos/${repo}/branches/${branch}/protection`, '--input', '-'],
+      argv: [
+        'gh',
+        'api',
+        '--method',
+        'PUT',
+        `repos/${repo}/branches/${branch}/protection`,
+        '--input',
+        '-',
+      ],
       stdin: body,
     },
     null,

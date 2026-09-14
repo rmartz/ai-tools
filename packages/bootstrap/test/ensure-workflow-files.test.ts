@@ -3,10 +3,7 @@ import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, mkdirSync
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 
-import {
-  ensureWorkflowFiles,
-  renderManagedWorkflow,
-} from '../src/ensure-workflow-files.js';
+import { ensureWorkflowFiles, renderManagedWorkflow } from '../src/ensure-workflow-files.js';
 import {
   goldenWorkflowFiles,
   WORKFLOW_MANAGED_MARKER,
@@ -60,7 +57,10 @@ describe('ensureWorkflowFiles — whole-file management', () => {
 
   it('overwrites a drifted managed file back to golden', () => {
     // A previously-managed file (carries the marker) that a user edited.
-    writeAt(fixture.filename, renderManagedWorkflow(fixture).replace('on: push', 'on: pull_request'));
+    writeAt(
+      fixture.filename,
+      renderManagedWorkflow(fixture).replace('on: push', 'on: pull_request'),
+    );
     const [outcome] = ensureWorkflowFiles(dir, { workflows: [fixture] });
     expect(outcome?.action).toBe('updated');
     expect(read(fixture.filename)).toBe(renderManagedWorkflow(fixture));
@@ -88,9 +88,7 @@ describe('goldenWorkflowFiles — the seeded Dependabot auto-merge workflow', ()
   });
 
   it('pins dependabot/fetch-metadata to a full 40-char SHA with a major.minor.patch comment', () => {
-    expect(dependabot?.content).toMatch(
-      /dependabot\/fetch-metadata@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
-    );
+    expect(dependabot?.content).toMatch(/dependabot\/fetch-metadata@[0-9a-f]{40} # v\d+\.\d+\.\d+/);
   });
 
   it('enables auto-merge only for semver-patch and semver-minor (majors stay manual)', () => {
