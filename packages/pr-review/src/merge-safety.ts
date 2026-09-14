@@ -124,8 +124,8 @@ export function evaluateMergeSafety(facts: MergeSafetyFacts): MergeSafetyDecisio
   }
   if (stale && facts.fileOverlap) {
     reasons.push(
-      'This PR edits files also changed on the base since merge-base — rebase to catch a ' +
-        'semantic conflict a clean textual merge would hide.',
+      'This PR changes files the base also changed since merge-base — sync with base and ' +
+        're-run CI before merging to ensure the changes are compatible.',
     );
   }
 

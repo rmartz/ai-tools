@@ -113,7 +113,7 @@ describe('evaluateMergeSafety', () => {
     const d = evaluateMergeSafety(makeFacts({ isCurrent: false, fileOverlap: true }));
     expect(d.conclusion).toBe('failure');
     expect(d.needsUpdate).toBe(true);
-    expect(d.reasons[0]).toMatch(/edits files also changed on the base/i);
+    expect(d.reasons[0]).toMatch(/files the base also changed since merge-base/i);
   });
 
   it('passes a stale PR with no breaking/ci/overlap triggers', () => {
