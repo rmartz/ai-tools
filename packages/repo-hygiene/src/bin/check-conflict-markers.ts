@@ -7,7 +7,8 @@
 // origin/main). `-C`/`--cwd <dir>` runs the git scan in that directory, so a
 // caller that cannot pin its cwd never needs `cd <dir> && ai-check-conflict-markers`.
 // Exit 0 when clean, 1 when markers are found, 2 on unknown mode.
-import { checkConflictMarkers, formatReport, type Mode } from '../check-conflict-markers.js';
+import { checkConflictMarkers, formatReport } from '../check-conflict-markers.js';
+import type { Mode } from '../discovery.js';
 
 const MODES: Mode[] = ['--staged', '--check', '--check-diff'];
 

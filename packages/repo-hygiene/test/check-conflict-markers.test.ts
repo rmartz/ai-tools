@@ -9,17 +9,10 @@ vi.mock('@rmartz/agent-runtime', () => ({ boundedRun }));
 const ok = (stdout: string) => ({ stdout, stderr: '', code: 0, timedOut: false });
 const fail = (stderr = '') => ({ stdout: '', stderr, code: 1, timedOut: false });
 
-const {
-  findConflictMarkers,
-  scan,
-  checkConflictMarkers,
-  worktreeContent,
-  formatReport,
-  stagedFiles,
-  trackedFiles,
-  changedVsMain,
-  stagedContent,
-} = await import('../src/check-conflict-markers.js');
+const { findConflictMarkers, scan, checkConflictMarkers, formatReport } =
+  await import('../src/check-conflict-markers.js');
+const { worktreeContent, stagedFiles, trackedFiles, changedVsMain, stagedContent } =
+  await import('../src/discovery.js');
 
 const FULL_CONFLICT = [
   'line',
@@ -99,9 +92,9 @@ describe('worktreeContent', () => {
     expect(worktreeContent(join(dir, 'nope.txt'))).toBe('');
   });
 
-  it('resolves a relative path against the given cwd', () => {
-    writeFileSync(join(dir, 'rel.txt'), 'content');
-    expect(worktreeContent('rel.txt', dir)).toBe('content');
+  it('resolves a relative path against opts.cwd', () => {
+    writeFileSync(join(dir, 'rel.txt'), 'relative');
+    expect(worktreeContent('rel.txt', { cwd: dir })).toBe('relative');
   });
 });
 
@@ -134,6 +127,16 @@ describe('file-list helpers', () => {
     boundedRun.mockResolvedValueOnce(ok(''));
     await trackedFiles({ cwd: '/repo' });
     expect(boundedRun.mock.calls[0]?.[2]).toMatchObject({ cwd: '/repo' });
+  });
+
+  it('trackedFiles throws when git ls-files fails', async () => {
+    boundedRun.mockResolvedValueOnce(fail('fatal: not a git repository'));
+    await expect(trackedFiles()).rejects.toThrow(/git ls-files failed/);
+  });
+
+  it('stagedFiles throws when git diff --cached fails', async () => {
+    boundedRun.mockResolvedValueOnce(fail('fatal: not a git repository'));
+    await expect(stagedFiles()).rejects.toThrow(/git diff --cached failed/);
   });
 });
 
