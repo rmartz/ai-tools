@@ -1,7 +1,7 @@
 ---
 type: Library
 title: repo-hygiene
-description: Layer-1 repo-quality gates — a pluggable check framework (registry, config, severity, reporter) shipping conflict-markers, OKF-frontmatter, action-pin, md-pairing, and file-caps checks.
+description: Layer-1 repo-quality gates — a pluggable check framework (registry, config, severity, reporter) shipping conflict-markers, OKF-frontmatter, OKF-index, action-pin, md-pairing, and file-caps checks.
 resource: packages/repo-hygiene/src/index.ts
 tags: [tooling, quality-gates, ci, merge]
 ---
@@ -18,8 +18,8 @@ The package exists to end the per-repo duplication of the same hygiene checks
 enforcement): one tested implementation here, thin callers everywhere else. This
 page documents the **framework** (the check contract, config, dispatch, output
 contract) and the checks it ships: `conflict-markers` (the reference check),
-`okf`, `action-pins`, `md-pairing`, and `file-caps`. Further checks land on top
-of this foundation (epic #163).
+`okf`, `okf-index`, `action-pins`, `md-pairing`, and `file-caps`. Further checks
+land on top of this foundation (epic #163).
 
 ## The check framework
 
@@ -179,6 +179,26 @@ actor-format fields (`generated.by`, `verified[].by`, `sources[].author` — one
 `verified` / `sources` shapes, and `executor` / `attester` each needing a
 `resource`.
 
+## Check: `okf-index`
+
+The OKF **index-tree navigability** invariant that `okf` (frontmatter) does not
+cover: an OKF docs bundle must be fully reachable by following `index.md` links
+from a root. Over the configured `roots`, a directory holding any `.md` is
+"documented" and must have an `index.md`; every content page in it must be linked
+from that `index.md`; and every documented sub-directory's `index.md` must be
+linked from its parent's — which, by induction, makes every page reachable from a
+root `index.md`. Only local `.md` link targets count (external, anchor-only, and
+non-`.md` links are ignored; `../` is resolved). It also folds in the
+**index-frontmatter rule**: an `index.md` carries no frontmatter, except a
+bundle-root `index.md` which may carry only `okf_version`.
+
+Config: `roots` (default `[docs]`) and `indexName` (default `index.md`). Like
+`md-pairing`, navigability is a whole-tree invariant, so the check reads the full
+tracked set rather than the mode-scoped file set. `evaluateOkfIndex(files, cfg)`
+is the pure evaluator (findings are file-level `error`s). Ported from
+firebase-nextjs-template's `validate-docs-index.mjs` + the `validateIndex` half of
+`validate-docs.mjs`, so that repo can retire its last bespoke docs script.
+
 ## Check: `action-pins`
 
 GitHub Actions SHA-pin conformance — ported from ai-tools'
@@ -331,4 +351,8 @@ pair, symlink violation, per-directory independence); `file-caps` covers the
 byte-size parser, config validation, `computeMetrics`, `evaluateFileCaps`
 (first-match-wins, independent metrics, warn/error tiers, and the grandfather
 downgrade / regrowth / new-file cases), and the baseline build / ratchet-down /
-drop / never-add logic.
+drop / never-add logic. `okf-index` is covered through `evaluateOkfIndex`
+(navigable bundle, unlinked page, missing directory index, unlinked sub-index,
+`../` resolution with external/anchor/non-md link skipping, and the
+index-frontmatter rule — bundle-root `okf_version`, extra-key and non-root
+frontmatter rejection, malformed block).
