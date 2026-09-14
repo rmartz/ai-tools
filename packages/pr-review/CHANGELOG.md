@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/rmartz/ai-tools/compare/pr-review-v0.3.0...pr-review-v0.4.0) (2026-09-14)
+
+
+### Features
+
+* **pr-review:** decision-only --json mode for ai-merge-safety ([#190](https://github.com/rmartz/ai-tools/issues/190)) ([bf2fc59](https://github.com/rmartz/ai-tools/commit/bf2fc59dffa41c269cbbf0e42a9e4b661996b074))
+
 ## [0.3.0](https://github.com/rmartz/ai-tools/compare/pr-review-v0.2.0...pr-review-v0.3.0) (2026-09-14)
 
 
