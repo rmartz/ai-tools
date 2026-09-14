@@ -91,6 +91,13 @@ export interface MergeSafetyDecision {
   needsUpdate: boolean;
   /** The PR has a hard git conflict (the mergeability axis). */
   hasConflict: boolean;
+  /**
+   * Short state phrase for the check-run title — the verdict at a glance. One of
+   * `No update required` / `Update required` / `Merge conflict` / `Could not
+   * evaluate`. The check-run *name* stays the stable `merge-safety` (so branch
+   * protection can match it); this varies with the outcome instead.
+   */
+  title: string;
   /** Ordered most→least severe, human-readable — the check-run output detail. */
   reasons: string[];
   /** One-line check-run summary. */
@@ -124,8 +131,8 @@ export function evaluateMergeSafety(facts: MergeSafetyFacts): MergeSafetyDecisio
   }
   if (stale && facts.fileOverlap) {
     reasons.push(
-      'This PR edits files also changed on the base since merge-base — rebase to catch a ' +
-        'semantic conflict a clean textual merge would hide.',
+      'This PR changes files the base also changed since merge-base — sync with base and ' +
+        're-run CI before merging to ensure the changes are compatible.',
     );
   }
 
@@ -141,8 +148,16 @@ export function evaluateMergeSafety(facts: MergeSafetyFacts): MergeSafetyDecisio
 
   const summary =
     conclusion === 'success'
-      ? 'Safe to merge as-is: current or no breaking/overlapping changes on the base, no conflict.'
+      ? 'No update required: current, or no breaking/overlapping changes on the base, and no conflict.'
       : (reasons[0] ?? 'Not safe to merge as-is.');
+
+  // Conflict is the more blocking, concrete problem, so it wins the title when a
+  // PR is both conflicting and stale; the summary still lists every reason.
+  const title = facts.hasConflict
+    ? 'Merge conflict'
+    : needsUpdate
+      ? 'Update required'
+      : 'No update required';
 
   const add: MergeSafetyLabel[] = [];
   if (needsUpdate) add.push('update required');
@@ -153,8 +168,30 @@ export function evaluateMergeSafety(facts: MergeSafetyFacts): MergeSafetyDecisio
     conclusion,
     needsUpdate,
     hasConflict: facts.hasConflict,
+    title,
     reasons,
     summary,
     labels: { add, remove },
+  };
+}
+
+/**
+ * The verdict for a PR whose facts could not be gathered (bad merge-base, a git
+ * command that failed, an unreadable PR). Fail-safe: `failure`, so a consumer
+ * that trusts the verdict treats an ungatherable PR as unsafe rather than green.
+ * `needsUpdate` / `hasConflict` stay `false` because they are genuinely unknown —
+ * the `failure` conclusion is what carries the safety, not a fabricated axis. No
+ * labels are proposed: an ungatherable state is not evidence for adding or
+ * removing either label.
+ */
+export function errorMergeSafetyDecision(message: string): MergeSafetyDecision {
+  return {
+    conclusion: 'failure',
+    needsUpdate: false,
+    hasConflict: false,
+    title: 'Could not evaluate',
+    reasons: [message],
+    summary: `Could not evaluate merge safety: ${message}`,
+    labels: { add: [], remove: [] },
   };
 }
