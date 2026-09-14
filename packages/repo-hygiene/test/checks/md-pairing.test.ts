@@ -54,3 +54,38 @@ describe('evaluatePairing', () => {
     expect(findings.map((f) => f.path)).toEqual(['CLAUDE.md']);
   });
 });
+
+describe('evaluatePairing — bare-wrapper rule', () => {
+  const paired = modes({ 'CLAUDE.md': REG, 'AGENTS.md': REG });
+  const wrapper = '@AGENTS.md';
+
+  it('accepts a CLAUDE.md whose only meaningful line is the import (blank lines ignored)', () => {
+    const contents = new Map([['CLAUDE.md', '\n@AGENTS.md\n\n']]);
+    expect(evaluatePairing(paired, { wrapper, contents })).toEqual([]);
+  });
+
+  it('flags a CLAUDE.md that carries content beyond the import line', () => {
+    const contents = new Map([['CLAUDE.md', '@AGENTS.md\n\n# Extra directives\n']]);
+    const findings = evaluatePairing(paired, { wrapper, contents });
+    expect(findings).toEqual([
+      {
+        check: 'md-pairing',
+        path: 'CLAUDE.md',
+        message:
+          'CLAUDE.md must contain only the bare import line `@AGENTS.md`, but found: ["@AGENTS.md","# Extra directives"]',
+        severity: 'error',
+      },
+    ]);
+  });
+
+  it('does not apply the wrapper rule when no wrapper is configured', () => {
+    const contents = new Map([['CLAUDE.md', '# Not a wrapper\n']]);
+    expect(evaluatePairing(paired, { contents })).toEqual([]);
+  });
+
+  it('does not apply the wrapper rule to AGENTS.md', () => {
+    // AGENTS.md holds directives; only CLAUDE.md must be the bare wrapper.
+    const contents = new Map([['CLAUDE.md', '@AGENTS.md\n']]);
+    expect(evaluatePairing(paired, { wrapper, contents })).toEqual([]);
+  });
+});
