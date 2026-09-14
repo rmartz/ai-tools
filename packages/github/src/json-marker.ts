@@ -27,6 +27,14 @@ export interface ParseJsonMarkerOptions<T> {
  * `match` predicate is given) satisfies it, or `null`. Bodies are assumed in
  * chronological order — GitHub returns issue comments oldest-first — so the last
  * match is the most recent record. Multiple markers in one body are all considered.
+ *
+ * A malformed marker (bad base64, bad JSON, or a valid-JSON non-object payload such
+ * as `null`, a number, or a string) is skipped, never thrown.
+ *
+ * **Trust**: no comment-author verification is performed — any PR commenter can post
+ * a marker this function returns. Callers in a trust-sensitive context must filter
+ * the comment list by expected authors before calling, or rely on an authenticated
+ * store (e.g. PR Shepherd's engine) to supply the bodies.
  */
 export function parseLatestJsonMarker<T = Record<string, unknown>>(
   kind: string,
@@ -45,6 +53,7 @@ export function parseLatestJsonMarker<T = Record<string, unknown>>(
       } catch {
         continue;
       }
+      if (parsed === null || typeof parsed !== 'object') continue;
       const value = parsed as T;
       if (opts.match && !opts.match(value)) continue;
       latest = value;

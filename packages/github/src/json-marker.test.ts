@@ -57,6 +57,15 @@ describe('renderJsonMarker / parseLatestJsonMarker', () => {
     expect(parseLatestJsonMarker('review-findings', bodies)).toBeNull();
   });
 
+  it('soft-fails on a valid-JSON non-object payload (null, number, string)', () => {
+    const bodies = [
+      renderJsonMarker('review-findings', null),
+      renderJsonMarker('review-findings', 42),
+      renderJsonMarker('review-findings', 'a string'),
+    ];
+    expect(parseLatestJsonMarker('review-findings', bodies)).toBeNull();
+  });
+
   it('returns null when no marker is present', () => {
     expect(parseLatestJsonMarker('review-findings', ['just a normal comment'])).toBeNull();
   });

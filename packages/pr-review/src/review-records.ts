@@ -95,7 +95,14 @@ export function renderFixConfirmationRecord(record: FixConfirmationRecord): stri
   return renderJsonMarker(REVIEW_RECORD_KINDS.fixConfirmation, record);
 }
 
-/** Fetch a PR's comments and return the latest record of `kind` for `prHead`, or null. */
+/**
+ * Fetch a PR's comments and return the latest record of `kind` for `prHead`, or null.
+ *
+ * **Trust**: no comment-author verification is performed — any PR commenter can post
+ * a marker this returns. Callers in a trust-sensitive context (e.g. acting on
+ * `actionList` / `threadDispositions` from a synthesis record) must filter comments
+ * by expected authors before calling, or rely on PR Shepherd's authenticated store.
+ */
 async function readLatest<T extends { prHead: string }>(
   kind: string,
   repo: string,

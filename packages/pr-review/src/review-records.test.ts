@@ -11,10 +11,13 @@ import { listIssueComments } from '@rmartz/github';
 import {
   renderFindingsRecord,
   renderSynthesisRecord,
+  renderFixConfirmationRecord,
   readLatestFindings,
   readLatestSynthesis,
+  readLatestFixConfirmation,
   type ReviewFindingsRecord,
   type ReviewSynthesisRecord,
+  type FixConfirmationRecord,
 } from './review-records.js';
 
 const findings: ReviewFindingsRecord = {
@@ -44,6 +47,13 @@ const synthesis: ReviewSynthesisRecord = {
   uat: { status: 'pending' },
 };
 
+const fixConfirmation: FixConfirmationRecord = {
+  skill: 'fix-review',
+  prHead: 'head-2',
+  outcome: 'fixed',
+  body: 'Fixed null guard in `json-marker.ts`.',
+};
+
 const asComments = (bodies: string[]) => bodies.map((body, i) => ({ id: i, author: 'x', body }));
 
 beforeEach(() => {
@@ -64,10 +74,23 @@ describe('review-records', () => {
     expect(got?.actionList.requiredChanges[0]?.guidance).toBe('fix it');
   });
 
+  it('renders a fix-confirmation record that reads back for the matching head', async () => {
+    (listIssueComments as Mock).mockResolvedValue(
+      asComments([renderFixConfirmationRecord(fixConfirmation)]),
+    );
+    expect(await readLatestFixConfirmation('o/r', 7, 'head-2')).toEqual(fixConfirmation);
+  });
+
   it('ignores a record left by an earlier head', async () => {
     const stale = renderFindingsRecord({ ...findings, prHead: 'head-1' });
     (listIssueComments as Mock).mockResolvedValue(asComments([stale]));
     expect(await readLatestFindings('o/r', 7, 'head-2')).toBeNull();
+  });
+
+  it('ignores a fix-confirmation record left by an earlier head', async () => {
+    const stale = renderFixConfirmationRecord({ ...fixConfirmation, prHead: 'head-1' });
+    (listIssueComments as Mock).mockResolvedValue(asComments([stale]));
+    expect(await readLatestFixConfirmation('o/r', 7, 'head-2')).toBeNull();
   });
 
   it('returns the latest of several same-head records', async () => {
@@ -75,5 +98,12 @@ describe('review-records', () => {
     const second = renderFindingsRecord({ ...findings, diffScope: 'full' });
     (listIssueComments as Mock).mockResolvedValue(asComments([first, second]));
     expect((await readLatestFindings('o/r', 7, 'head-2'))?.diffScope).toBe('full');
+  });
+
+  it('returns the latest fix-confirmation of several same-head records', async () => {
+    const first = renderFixConfirmationRecord(fixConfirmation);
+    const second = renderFixConfirmationRecord({ ...fixConfirmation, outcome: 'skipped' });
+    (listIssueComments as Mock).mockResolvedValue(asComments([first, second]));
+    expect((await readLatestFixConfirmation('o/r', 7, 'head-2'))?.outcome).toBe('skipped');
   });
 });

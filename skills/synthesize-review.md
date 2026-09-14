@@ -35,6 +35,8 @@ Synthesize the reviews on the pull request: $ARGUMENTS
 Get PR metadata with `ai-pr-summary $ARGUMENTS` (number, title, draft, labels,
 mergeability, CI state). Then collect the full picture:
 
+- **PR head SHA** — fetch it explicitly, since `ai-pr-summary` does not include it:
+  `gh pr view $ARGUMENTS --json headRefOid --jq '.headRefOid'`
 - **Findings** from `review` / `dependabot-review` for the current head — read the
   latest `review-findings` record for the PR head with
   `ai-read-json-marker --match-pr-head <head> <pr> review-findings` (prints the

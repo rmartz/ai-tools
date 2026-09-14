@@ -107,10 +107,15 @@ queue render and post the record.
 
 Implication for ai-tools skill craft (`review`, `create-issue`, dependabot
 judgments): the skill describes the **judgment** and expresses a verdict that maps
-onto that outcome enum, but it must stay **runner-agnostic about emission** —
-do **not** bake PR Shepherd's typed marker format or posting into the skill. When
-run directly by the harness, the skill posts via `@rmartz/github`
-(`postPrComment` / `submitReview`); under PR Shepherd, emission is the engine's.
+onto that outcome enum. Review-cycle craft skills (`review`, `dependabot-review`,
+`synthesize-review`) emit records via `ai-post-json-marker` — a **generic**
+`@rmartz/github` transport, not a PR-Shepherd-specific call. Under PR Shepherd the
+engine's own store implementation intercepts those marker calls, scrubs the skill's
+credentials, and posts with its own; the record _content_ is identical so the craft
+skills are consumed unchanged. Non-review-cycle skills (`create-issue`, etc.) that
+do not emit marker records still post via `@rmartz/github` primitives
+(`postPrComment` / `submitReview`) when run directly by the harness; under PR
+Shepherd, those calls are handled by the engine's credential-scrubbing layer.
 
 ### Review-cycle skills (the review split) — outcome + artifact contracts
 
