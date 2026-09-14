@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.2.0...repo-hygiene-v0.3.0) (2026-09-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **repo-hygiene:** port okf + action-pins checks and dogfood ai-tools ([#184](https://github.com/rmartz/ai-tools/issues/184))
+
+### Features
+
+* **repo-hygiene:** port okf + action-pins checks and dogfood ai-tools ([#184](https://github.com/rmartz/ai-tools/issues/184)) ([84d763d](https://github.com/rmartz/ai-tools/commit/84d763d4cf71b2e8af7193683a8a77f7bd64af09))
+
 ## [0.2.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.1.1...repo-hygiene-v0.2.0) (2026-09-14)
 
 
