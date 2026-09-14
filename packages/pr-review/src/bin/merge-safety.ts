@@ -50,6 +50,10 @@ function parse(argv: string[]): Args {
     else usage();
   }
   if (mode === 'evaluate' && !args.pr) usage();
+  // `--json`/`--dry-run` is evaluate-only: `invalidate` has no verdict to print,
+  // and silently accepting the flag there would run the full side-effecting
+  // fan-out under a "dry run" the caller expected to be a no-op.
+  if (args.json && mode !== 'evaluate') usage();
   return args;
 }
 
