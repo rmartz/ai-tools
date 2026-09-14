@@ -50,11 +50,13 @@ jobs:
         with:
           ref: main
           fetch-depth: 0 # merge-base + diffs need full history
-      # Fetch the PR head as git data so merge-base/diffs resolve — the dispatched
-      # (workflow_dispatch) path checks out main and would otherwise lack the head.
-      - run: git fetch --quiet origin main "pull/${PR_NUMBER}/head"
       - uses: ./.github/actions/setup
       - run: pnpm build --filter @rmartz/pr-review
+      # Fetch immediately before evaluate so the fetched head matches what
+      # gh pr view returns, minimising the race window to near-zero (CLI startup
+      # + one API call). The dispatched (workflow_dispatch) path checks out main
+      # and would otherwise lack the head entirely.
+      - run: git fetch --quiet origin main "pull/${PR_NUMBER}/head"
       - run: node packages/pr-review/dist/bin/merge-safety.js evaluate --pr "$PR_NUMBER" --repo "$GITHUB_REPOSITORY"
 
   invalidate:
