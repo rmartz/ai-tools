@@ -140,10 +140,15 @@ The GraphQL Discussions client (no REST / `gh` equivalent), targeting `rmartz/ai
 
 ### Shared
 
-- `currentRepo({ cwd? })` — resolve the current `owner/repo` strictly from the
-  git remote (`gh repo view`). This is the **cwd-derived** slug; it ignores
-  `GH_REPO`, so it stays correct for callers that need the local checkout's repo
-  (e.g. new-worktree assigning an issue).
+- `currentRepo({ cwd? })` — resolve the current `owner/repo` (the **cwd-derived**
+  slug). Prefers `gh repo view`, then **falls back to parsing the git remote**
+  (`git remote get-url origin` via `parseSlugFromRemoteUrl`) when that yields
+  nothing — `gh repo view` is GraphQL, so a throttled GraphQL pool would otherwise
+  strand slug resolution (it was blocking `ai-new-worktree`). It ignores `GH_REPO`,
+  so it stays correct for callers that need the local checkout's repo (e.g.
+  new-worktree assigning an issue).
+- `parseSlugFromRemoteUrl(url)` — pure helper: `owner/repo` from an ssh / https /
+  `git://` GitHub remote URL (with or without `.git`), or `null`.
 - `resolveRepoTarget({ repo?, env?, cwd? })` — the one shared resolver every
   cwd-only PR/GitHub CLI routes through, with a uniform precedence: **explicit
   `repo` (a `--repo` flag) → `GH_REPO` → cwd `gh repo view`**. `GH_REPO` is
