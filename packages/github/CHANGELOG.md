@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/rmartz/ai-tools/compare/github-v0.3.0...github-v0.4.0) (2026-09-14)
+
+
+### Features
+
+* complete repo/cwd targeting across every ai-* CLI ([#179](https://github.com/rmartz/ai-tools/issues/179)) ([7606572](https://github.com/rmartz/ai-tools/commit/7606572257cfd98fd36174c2320ccec9fe8441fb))
+* **pr-review:** finalize review-cycle record markers + craft-skill emission ([#177](https://github.com/rmartz/ai-tools/issues/177)) ([12d13ba](https://github.com/rmartz/ai-tools/commit/12d13ba9f9a1f205415daf8757cbe3325f4321f1))
+
 ## [0.3.0](https://github.com/rmartz/ai-tools/compare/github-v0.2.0...github-v0.3.0) (2026-09-10)
 
 
