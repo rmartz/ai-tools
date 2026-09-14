@@ -74,12 +74,27 @@ export async function ghCall(
   return null;
 }
 
+/** Parse an `owner/repo` slug from a GitHub remote URL (ssh, https, or `git://`), or `null`. */
+export function parseSlugFromRemoteUrl(url: string): string | null {
+  // Take the last two path segments before an optional `.git` / trailing slash,
+  // after either the ssh `:` or an https/`git://` `/`. Handles
+  // git@github.com:owner/repo.git, https://github.com/owner/repo(.git), ssh://….
+  const match = url.trim().match(/[/:]([^/:]+)\/([^/]+?)(?:\.git)?\/?$/);
+  return match ? `${match[1]}/${match[2]}` : null;
+}
+
 /**
- * Resolve the current `owner/repo` strictly from the git remote via `gh repo
- * view`, or `null`. This is the **cwd-derived** slug — it deliberately ignores
- * `GH_REPO` (which `gh repo view` itself ignores), so callers that need the repo
- * of the *local checkout* (e.g. new-worktree assigning an issue) resolve it here
- * rather than through the `GH_REPO`-aware {@link resolveRepoTarget}.
+ * Resolve the current `owner/repo` (the **cwd-derived** slug). Prefers `gh repo
+ * view`, then **falls back to the git remote directly** when that returns nothing
+ * — `gh repo view` is a GraphQL call, so a throttled/unavailable GraphQL pool
+ * would otherwise strand slug resolution (observed blocking `ai-new-worktree`).
+ * Both sources are the local checkout's own remote, so the fallback is equivalent,
+ * minus the API dependency.
+ *
+ * It deliberately ignores `GH_REPO` (which `gh repo view` itself ignores), so
+ * callers that need the repo of the *local checkout* (e.g. new-worktree assigning
+ * an issue) resolve it here rather than through the `GH_REPO`-aware
+ * {@link resolveRepoTarget}.
  */
 export async function currentRepo(opts: GhCallOptions = {}): Promise<string | null> {
   const out = await ghCall(
@@ -87,7 +102,12 @@ export async function currentRepo(opts: GhCallOptions = {}): Promise<string | nu
     null,
     opts,
   );
-  return out && out.trim() ? out.trim() : null;
+  if (out && out.trim()) return out.trim();
+  const remote = await boundedRun('git', ['remote', 'get-url', 'origin'], {
+    timeoutMs: GH_API_TIMEOUT_MS,
+    cwd: opts.cwd,
+  });
+  return remote.code === 0 ? parseSlugFromRemoteUrl(remote.stdout) : null;
 }
 
 /** Options for {@link resolveRepoTarget}: `GhCallOptions` + an explicit repo and env bag. */
