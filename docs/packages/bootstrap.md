@@ -60,16 +60,24 @@ workflow with zero project-specific logic is a copy-distribution candidate — t
 win is drift control, not code reuse — so it is managed as a **whole file**, not
 a block spliced into user content.
 
-- `ensureWorkflowFiles(root, { workflows? })` — pure fs. For each golden workflow:
-  **write if absent**, **overwrite if drifted** from the golden template, report
-  **unchanged** if identical, and **skip** if a _user-authored_ file (one lacking
-  the managed header) already sits at that path. The managed header
-  (`WORKFLOW_MANAGED_HEADER`, carrying `WORKFLOW_MANAGED_MARKER`) is the signal
-  that distinguishes "a file we own and may overwrite" from "leave it alone" — so
-  a hand-written workflow of the same name is never clobbered.
+- `ensureWorkflowFiles(root, { workflows? })` — pure fs. Two per-file idempotency
+  policies (`GoldenWorkflowFile.policy`):
+  - **`manage`** (default) — a bootstrap-owned file: **write if absent**,
+    **overwrite if drifted** from the golden template, report **unchanged** if
+    identical, and **skip** if a _user-authored_ file (one lacking the managed
+    header) already sits at that path. The managed header (`WORKFLOW_MANAGED_HEADER`,
+    carrying `WORKFLOW_MANAGED_MARKER`) distinguishes "a file we own and may
+    overwrite" from "leave it alone" — so a hand-written workflow of the same name
+    is never clobbered.
+  - **`seed`** — a starting point the repo then owns: write the plain content (no
+    managed header) **only if absent**, and never touch it again once present. For
+    files repos are expected to customize (`.github/dependabot.yml`), where
+    overwriting local edits on every bootstrap would be wrong.
+
   `ensureProjectConfig` composes this after the ignore blocks, returning one
   combined outcome list.
-- `goldenWorkflowFiles` — seeded with two workflows:
+
+- `goldenWorkflowFiles` — seeded with two `manage` workflows and one `seed` config:
   - `dependabot-auto-merge.yml`: on a green `semver-patch` / `semver-minor`
     Dependabot PR it enables GitHub-native auto-merge (majors stay manual).
     `dependabot/fetch-metadata` is pinned to a full commit SHA + `major.minor.patch`
@@ -88,6 +96,11 @@ a block spliced into user content.
     — it _provides_ the check the auto-merge file depends on, it doesn't consume
     one). Its `update required` / `merge conflict` labels are seeded by the label
     roster above.
+  - `.github/dependabot.yml` (**`seed`**): a starting Dependabot config — the
+    `github-actions` ecosystem (the minimum every repo wants; it keeps pinned
+    action SHAs, including the auto-merge workflow's `fetch-metadata`, fresh) plus
+    the `npm` ecosystem (the ideal for the JS repos this toolkit targets), both
+    grouped. Written only if absent; a repo then owns and tailors it.
 
   `goldenGateChecks` is the union of every entry's `gateChecks` — the cross-repo
   **floor** of the gate.

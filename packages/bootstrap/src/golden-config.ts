@@ -82,6 +82,17 @@ export interface GoldenWorkflowFile {
    * the gate it needs travel together.
    */
   gateChecks: readonly string[];
+  /**
+   * Idempotency policy for the file:
+   * - `manage` (default) — a fully bootstrap-owned file: write if absent,
+   *   overwrite if it has drifted from the golden template, guarded by the managed
+   *   header so a user-authored file at the path is never clobbered.
+   * - `seed` — a *starting point* the repo then owns: write it (no managed header)
+   *   only if absent, and never touch it again once present. For files repos are
+   *   expected to customize (`.github/dependabot.yml`), where overwriting local
+   *   edits on every bootstrap would be wrong.
+   */
+  policy?: 'manage' | 'seed';
 }
 
 // Generic Dependabot native-auto-merge workflow: on a green `semver-patch` /
@@ -200,17 +211,49 @@ jobs:
       - run: ai-merge-safety invalidate --repo "\${GITHUB_REPOSITORY}"
 `;
 
+// Generic Dependabot config, seeded (write-if-absent) as a starting point repos
+// then own. github-actions is the minimum every repo wants (it keeps pinned
+// action SHAs — including the auto-merge workflow's fetch-metadata — fresh); the
+// npm ecosystem is the ideal for the JS repos this toolkit targets (it also feeds
+// the native auto-merge path). Both are grouped so related bumps land as one PR.
+// A repo without an npm manifest, or wanting other ecosystems, edits its copy —
+// which the `seed` policy then leaves untouched.
+const DEPENDABOT_CONFIG = `version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-dependencies:
+        dependency-type: development
+      production-dependencies:
+        dependency-type: production
+`;
+
 /**
- * Golden whole-file workflows distributed to every repo:
+ * Golden whole files distributed to every repo. Two idempotency policies (see
+ * {@link GoldenWorkflowFile.policy}): `manage` (bootstrap-owned, overwrite drift)
+ * for the workflows, `seed` (write-once, repo-owned) for the Dependabot config.
  *
- * - `dependabot-auto-merge.yml` — GitHub-native auto-merge for green patch/minor
- *   Dependabot PRs. Depends on `merge-safety` being a *required* check — the gate
- *   the auto-merge verifier confirms before the file may be seeded (an ungated
- *   `gh pr merge --auto` merges *immediately*, so it must never land without the
- *   gate).
- * - `merge-safety.yml` — posts the advisory `merge-safety` check (consumer shape,
- *   installs `@rmartz/pr-review`). No `gateChecks` of its own: it *provides* the
- *   check the auto-merge file depends on rather than consuming one.
+ * - `dependabot-auto-merge.yml` (`manage`) — GitHub-native auto-merge for green
+ *   patch/minor Dependabot PRs. Depends on `merge-safety` being a *required* check
+ *   — the gate the auto-merge verifier confirms before the file may be seeded (an
+ *   ungated `gh pr merge --auto` merges *immediately*, so it must never land
+ *   without the gate).
+ * - `merge-safety.yml` (`manage`) — posts the advisory `merge-safety` check
+ *   (consumer shape, installs `@rmartz/pr-review`). No `gateChecks` of its own: it
+ *   *provides* the check the auto-merge file depends on rather than consuming one.
+ * - `.github/dependabot.yml` (`seed`) — a starting Dependabot config the repo then
+ *   owns; bootstrap writes it only if absent and never overwrites local edits.
  */
 export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
   {
@@ -222,6 +265,12 @@ export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
     filename: '.github/workflows/merge-safety.yml',
     content: MERGE_SAFETY,
     gateChecks: [],
+  },
+  {
+    filename: '.github/dependabot.yml',
+    content: DEPENDABOT_CONFIG,
+    gateChecks: [],
+    policy: 'seed',
   },
 ];
 

@@ -135,3 +135,44 @@ describe('goldenWorkflowFiles — the seeded merge-safety workflow', () => {
     expect(mergeSafety?.gateChecks).toEqual([]);
   });
 });
+
+// #209 — the `seed` policy: write-if-absent, repo-owned thereafter.
+describe('ensureWorkflowFiles — seed policy', () => {
+  const seed: GoldenWorkflowFile = {
+    filename: '.github/dependabot.yml',
+    content: 'version: 2\n',
+    gateChecks: [],
+    policy: 'seed',
+  };
+
+  it('writes plain content (no managed header) when absent', () => {
+    const [outcome] = ensureWorkflowFiles(dir, { workflows: [seed] });
+    expect(outcome).toEqual({ filename: seed.filename, action: 'created' });
+    const text = read(seed.filename);
+    expect(text).toBe('version: 2\n');
+    expect(text).not.toContain(WORKFLOW_MANAGED_MARKER);
+  });
+
+  it('never overwrites an existing file — leaves the repo-owned edits intact', () => {
+    const local = 'version: 2\n# customized by the repo\n';
+    writeAt(seed.filename, local);
+    const [outcome] = ensureWorkflowFiles(dir, { workflows: [seed] });
+    expect(outcome?.action).toBe('unchanged');
+    expect(read(seed.filename)).toBe(local);
+  });
+});
+
+// #209 — the seeded Dependabot config.
+describe('goldenWorkflowFiles — the seeded Dependabot config', () => {
+  const dependabotConfig = goldenWorkflowFiles.find((w) => w.filename === '.github/dependabot.yml');
+
+  it('is present with the seed policy', () => {
+    expect(dependabotConfig?.policy).toBe('seed');
+  });
+
+  it('covers github-actions (minimum) and npm (ideal) ecosystems', () => {
+    const content = dependabotConfig?.content ?? '';
+    expect(content).toContain('package-ecosystem: github-actions');
+    expect(content).toContain('package-ecosystem: npm');
+  });
+});
