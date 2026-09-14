@@ -14,12 +14,12 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check:okf": "tsx scripts/check-okf-frontmatter.ts",
+    "check:okf": "node packages/repo-hygiene/dist/bin/repo-hygiene.js okf --check",
     "check:pins": "tsx scripts/check-pins.ts",
-    "check:actions": "tsx scripts/check-action-pins.ts",
+    "check:actions": "node packages/repo-hygiene/dist/bin/repo-hygiene.js action-pins --check",
     "install:skills": "tsx scripts/install-skills.ts",
     "install:clis": "tsx scripts/install-clis.ts",
-    "ci": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run check:okf && pnpm run check:pins && pnpm run check:actions && pnpm run test"
+    "ci": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run build && pnpm run check:okf && pnpm run check:pins && pnpm run check:actions && pnpm run test"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
@@ -29,7 +29,6 @@
     "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-boundaries": "^7.2.0",
     "eslint-plugin-import": "^2.31.0",
-    "gray-matter": "^4.0.3",
     "prettier": "^3.9.6",
     "tsup": "^8.3.0",
     "tsx": "^4.23.13",

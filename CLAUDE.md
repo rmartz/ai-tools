@@ -67,8 +67,9 @@ library so PR Shepherd and the harness share one implementation.
   the comment current, but Dependabot is unreliable at bumping a **partial** version
   comment (`# v7`, `# v6.4`), so the full three-part semver is required. Local `./…`
   action refs are exempt (they move with the commit). Enforced by
-  `pnpm run check:actions` (`scripts/check-action-pins.ts` +
-  `.github/workflows/action-pins.yml`), the CI analog of the package.json pin check.
+  `pnpm run check:actions` (the `action-pins` check in `@rmartz/repo-hygiene`,
+  run via `ai-repo-hygiene action-pins --check` + `.github/workflows/action-pins.yml`),
+  the CI analog of the package.json pin check.
 - Prettier + ESLint run in CI; there is no separate manual pass. Several
   conventions here are **statically enforced by `eslint.config.mjs`**, not left to
   review: no `any` / `@ts-ignore` (an `@ts-expect-error` _with a description_ is the
@@ -126,8 +127,10 @@ library so PR Shepherd and the harness share one implementation.
 - Keep docs in sync with the code — outdated docs are worse than no docs.
 - One OKF page per package and non-trivial CLI under `docs/packages/`; skill
   pages live under `docs/skills/`. Update the page in the same PR as the code
-  change. `scripts/check-okf-frontmatter.ts` walks `docs/**` and enforces valid
-  frontmatter and a `resource` that points at a real file.
+  change. The `okf` check in `@rmartz/repo-hygiene` (run via
+  `pnpm run check:okf` → `ai-repo-hygiene okf --check`) walks `docs/**` and
+  enforces valid frontmatter and a `resource` that points at a real file; its
+  vocabulary and exemptions live in `.repo-hygiene.yml`.
 
 ## Releases
 
