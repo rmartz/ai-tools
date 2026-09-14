@@ -5,6 +5,8 @@ export * from './registry.js';
 export * from './runner.js';
 export * from './reporter.js';
 export * from './checks/conflict-markers.js';
+export * from './checks/okf.js';
+export * from './checks/action-pins.js';
 export * from './checks/md-pairing.js';
 export * from './checks/file-caps.js';
 export * from './checks/file-caps-config.js';
