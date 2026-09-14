@@ -1,17 +1,19 @@
-#!/usr/bin/env tsx
+import type { Check, Finding } from '../types.js';
+
 /**
- * GitHub Actions SHA-pin conformance — the CI analog of check-pins.ts. Enforces
- * that every external action referenced in `.github/` is pinned to a full
- * 40-char commit SHA with a version comment (`uses: owner/repo@<sha> # v7.0.0`),
- * never a mutable tag. A tag can be force-moved by a compromised upstream to run
- * malicious code with our token; a commit SHA is immutable. The version comment
- * is what lets Dependabot's `github-actions` ecosystem keep both the SHA and the
- * comment current. Local (`./…`) action refs are exempt — they move with the
- * repo commit and cannot be tag-attacked. Fails with the offending file/line.
+ * GitHub Actions SHA-pin conformance — ported from ai-tools'
+ * `scripts/check-action-pins.ts`. Every external action referenced under
+ * `.github/` must be pinned to a full 40-char commit SHA with a full-semver
+ * version comment (`uses: owner/repo@<sha> # v7.0.0`), never a mutable tag: a
+ * tag can be force-moved by a compromised upstream to run code with our token,
+ * while a commit SHA is immutable. Local (`./…`) refs move with the repo commit
+ * and are exempt. A security-flavored check.
+ *
+ * `parseUsesLine` / `checkActionRef` / `scanYaml` stay exported (and unit-tested)
+ * so PR Shepherd and other callers can reuse the pure logic.
  */
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+
+const NAME = 'action-pins';
 
 const SHA = /^[0-9a-fA-F]{40}$/;
 // The pin comment must be a FULL major.minor.patch semver (optionally `v`-prefixed,
@@ -59,7 +61,11 @@ export function checkActionRef(uses: string, comment?: string): string | null {
   return null;
 }
 
-export type PinError = { file: string; line: number; reason: string };
+export interface PinError {
+  file: string;
+  line: number;
+  reason: string;
+}
 
 /** Scan one YAML file's text for non-conforming `uses:` references. */
 export function scanYaml(file: string, text: string): PinError[] {
@@ -73,24 +79,21 @@ export function scanYaml(file: string, text: string): PinError[] {
   return errors;
 }
 
-function findYaml(dir: string): string[] {
-  return readdirSync(dir).flatMap((name) => {
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) return findYaml(p);
-    return /\.ya?ml$/.test(name) ? [p] : [];
-  });
-}
+const isGithubYaml = (path: string): boolean =>
+  path.startsWith('.github/') && /\.ya?ml$/.test(path);
 
-function main(): void {
-  const errors = findYaml('.github').flatMap((file) => scanYaml(file, readFileSync(file, 'utf8')));
-  if (errors.length > 0) {
-    console.error('GitHub Actions SHA-pin check failed:');
-    console.error(errors.map((e) => `  ${e.file}:${e.line}: ${e.reason}`).join('\n'));
-    process.exit(1);
-  }
-  console.log('GitHub Actions SHA pins: ok');
-}
-
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main();
-}
+export const actionPinsCheck: Check = {
+  name: NAME,
+  description: 'GitHub Actions pinned to a full commit SHA with a full-semver comment.',
+  async run(ctx) {
+    const findings: Finding[] = [];
+    for (const path of ctx.files.paths) {
+      if (!isGithubYaml(path)) continue;
+      const text = await ctx.files.read(path);
+      for (const { file, line, reason } of scanYaml(path, text)) {
+        findings.push({ check: NAME, path: file, line, message: reason, severity: 'error' });
+      }
+    }
+    return findings;
+  },
+};

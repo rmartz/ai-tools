@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { parseUsesLine, checkActionRef, scanYaml } from './check-action-pins.js';
+import type { FileSet } from '../../src/discovery.js';
+import {
+  parseUsesLine,
+  checkActionRef,
+  scanYaml,
+  actionPinsCheck,
+} from '../../src/checks/action-pins.js';
 
 const SHA = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0';
 
@@ -78,12 +84,38 @@ describe('scanYaml', () => {
       `      - uses: actions/setup-node@${SHA} # v6.4.0`,
     ].join('\n');
     const errors = scanYaml('ci.yml', yaml);
-    expect(errors).toHaveLength(1);
-    const [only] = errors;
-    expect(only).toEqual({
-      file: 'ci.yml',
-      line: 4,
-      reason: expect.stringMatching(/not SHA-pinned/),
+    expect(errors).toEqual([
+      { file: 'ci.yml', line: 4, reason: expect.stringMatching(/not SHA-pinned/) },
+    ]);
+  });
+});
+
+describe('actionPinsCheck.run', () => {
+  const filesOf = (entries: Record<string, string>): FileSet => ({
+    paths: Object.keys(entries),
+    read: (p) => entries[p] ?? '',
+  });
+  const ctx = (files: FileSet) => ({
+    mode: '--check' as const,
+    files,
+    settings: {},
+    env: {},
+  });
+
+  it('flags a bad pin under .github and ignores non-.github yaml', async () => {
+    const files = filesOf({
+      '.github/workflows/ci.yml': '      - uses: actions/checkout@v7 # v7.0.0\n',
+      'other/config.yml': '      - uses: actions/checkout@v7 # v7.0.0\n',
     });
+    const findings = await actionPinsCheck.run(ctx(files));
+    expect(findings).toEqual([
+      {
+        check: 'action-pins',
+        path: '.github/workflows/ci.yml',
+        line: 1,
+        message: expect.stringMatching(/not SHA-pinned/),
+        severity: 'error',
+      },
+    ]);
   });
 });

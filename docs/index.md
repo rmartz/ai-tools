@@ -3,7 +3,7 @@
 OKF (Open Knowledge Format) index for the general-purpose AI toolkit. One page
 per published package and per non-trivial CLI; agents retrieve these before a
 task. Every page except this index carries OKF frontmatter (`type`, `title`,
-`description`, `resource`, `tags`) — enforced by `scripts/check-okf-frontmatter.ts`.
+`description`, `resource`, `tags`) — enforced by `pnpm run check:okf` (`ai-repo-hygiene okf --check`).
 
 ## Packages
 

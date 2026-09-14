@@ -41,6 +41,16 @@ describe('createRegistry', () => {
     expect(builtinChecks().map((c) => c.name)).toContain('conflict-markers');
     expect(createRegistry().get('conflict-markers')).toBeDefined();
   });
+
+  it('includes okf in the built-in checks', () => {
+    expect(builtinChecks().map((c) => c.name)).toContain('okf');
+    expect(createRegistry().get('okf')).toBeDefined();
+  });
+
+  it('includes action-pins in the built-in checks', () => {
+    expect(builtinChecks().map((c) => c.name)).toContain('action-pins');
+    expect(createRegistry().get('action-pins')).toBeDefined();
+  });
 });
 
 describe('runHygiene', () => {

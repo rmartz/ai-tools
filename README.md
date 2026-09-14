@@ -33,7 +33,7 @@ pnpm run test:watch
 - **typecheck** — `tsc` across all packages
 - **lint** — ESLint incl. layer boundaries, `max-lines` (480 src / 720 test — the sole file-length cap), no import cycles
 - **format** — Prettier check
-- **OKF docs** — `scripts/check-okf-frontmatter.ts` (every `docs/` page has valid frontmatter + a real resource)
+- **OKF docs** — `pnpm run check:okf` / `ai-repo-hygiene okf --check` (every `docs/` page has valid frontmatter + a real resource)
 - **test** — vitest (globbed discovery; no manual test list to fall out of sync)
 
 ## Publishing & consuming (GitHub Packages, private)

@@ -1,7 +1,7 @@
 ---
 type: Library
 title: repo-hygiene
-description: Layer-1 repo-quality gates — a pluggable check framework (registry, config, severity, reporter) with the merge-conflict-marker checker as its reference check.
+description: Layer-1 repo-quality gates — a pluggable check framework (registry, config, severity, reporter) shipping conflict-markers, OKF-frontmatter, and GitHub-Action-pin checks.
 resource: packages/repo-hygiene/src/index.ts
 tags: [tooling, quality-gates, ci, merge]
 ---
@@ -17,8 +17,9 @@ The package exists to end the per-repo duplication of the same hygiene checks
 (OKF frontmatter, `CLAUDE.md`/`AGENTS.md` pairing, file-length caps, action-pin
 enforcement): one tested implementation here, thin callers everywhere else. This
 page documents the **framework** (the check contract, config, dispatch, output
-contract) and the **reference check** it ships with, `conflict-markers`. Further
-checks land on top of this foundation (epic #163).
+contract) and the checks it ships: `conflict-markers` (the reference check),
+`okf`, and `action-pins`. Further checks land on top of this foundation
+(epic #163).
 
 ## The check framework
 
@@ -145,6 +146,51 @@ For the rare case where a marker-like line must be committed intentionally:
 - set `ALLOW_CONFLICT_MARKERS=1`, which makes `--staged` pass. The bypass applies
   only in `--staged` mode — the CI backstop (`--check`) still catches markers.
 
+## Check: `okf`
+
+Open Knowledge Format frontmatter conformance for docs pages — ported from
+ai-tools' `scripts/check-okf-frontmatter.ts` (itself a port of dotfiles'
+`test_docs_okf_frontmatter.py`). Every in-scope docs page must carry a `type`
+from the repo's vocabulary plus a `title` and a `description`; a non-exempt type
+must name a `resource` that exists on disk.
+
+The vocabulary and exemptions differ per repo, so they come from
+`.repo-hygiene.yml` (defaults in parentheses match ai-tools' own docs):
+
+```yaml
+checks:
+  okf:
+    types: [Skill, Script, Library, Design] # allowed `type` values
+    roots: [docs] # directories scanned for `*.md`
+    exempt: [docs/index.md] # reserved pages skipped entirely
+    resourceExemptTypes: [Design] # types that need no `resource`
+```
+
+`validateDoc(path, text, cfg, cwd)` is the pure per-page validator; `okfCheck`
+filters the file set to in-scope pages and runs it. Findings are file-level
+(`error`, no line).
+
+## Check: `action-pins`
+
+GitHub Actions SHA-pin conformance — ported from ai-tools'
+`scripts/check-action-pins.ts`. Every external action referenced under `.github/`
+must be pinned to a full 40-char commit SHA with a full-semver version comment
+(`uses: owner/repo@<sha> # v7.0.0`); a mutable tag can be force-moved by a
+compromised upstream to run code with our token. Local (`./…`) refs are exempt,
+and a `docker://` image must be `@sha256:`-digest-pinned. A security-flavored,
+config-free check. The pure `parseUsesLine` / `checkActionRef` / `scanYaml`
+functions stay exported for reuse; `actionPinsCheck` filters the file set to
+`.github/**` YAML and maps each hit to a line-anchored `error` finding.
+
+## Dogfooding
+
+ai-tools runs both checks against itself through the published CLI: its
+`check:okf` and `check:actions` package scripts invoke
+`ai-repo-hygiene <check> --check`, replacing the former standalone
+`scripts/check-okf-frontmatter.ts` and `scripts/check-action-pins.ts` (now deleted). Because the scripts run the built CLI, the
+`okf` and `action-pins` CI jobs build the workspace first (as the `test` job
+does).
+
 ## CLIs
 
 - `ai-repo-hygiene [<check>...] [--staged|--check|--check-diff] [--config <path>]`
@@ -166,3 +212,8 @@ tested with fake checks (registry lookup, per-check and all-checks dispatch, exi
 codes, and the severity-override ramp in both directions); the config loader is
 covered for valid, empty, and malformed shapes; conflict-marker detection is
 covered as a pure function alongside the framework adapter and the env bypass.
+`okf` is covered through `validateDoc` (vocabulary, missing fields, the resource
+requirement and existence check, Design exemption) and `okfCheck`'s scope
+filtering; `action-pins` keeps the ported pure-function suite (`parseUsesLine` /
+`checkActionRef` / `scanYaml`) plus a check-level test that it flags only
+`.github/**` YAML.
