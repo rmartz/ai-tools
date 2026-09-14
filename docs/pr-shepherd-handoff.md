@@ -107,10 +107,15 @@ queue render and post the record.
 
 Implication for ai-tools skill craft (`review`, `create-issue`, dependabot
 judgments): the skill describes the **judgment** and expresses a verdict that maps
-onto that outcome enum, but it must stay **runner-agnostic about emission** —
-do **not** bake PR Shepherd's typed marker format or posting into the skill. When
-run directly by the harness, the skill posts via `@rmartz/github`
-(`postPrComment` / `submitReview`); under PR Shepherd, emission is the engine's.
+onto that outcome enum. Review-cycle craft skills (`review`, `dependabot-review`,
+`synthesize-review`) emit records via `ai-post-json-marker` — a **generic**
+`@rmartz/github` transport, not a PR-Shepherd-specific call. Under PR Shepherd the
+engine's own store implementation intercepts those marker calls, scrubs the skill's
+credentials, and posts with its own; the record _content_ is identical so the craft
+skills are consumed unchanged. Non-review-cycle skills (`create-issue`, etc.) that
+do not emit marker records still post via `@rmartz/github` primitives
+(`postPrComment` / `submitReview`) when run directly by the harness; under PR
+Shepherd, those calls are handled by the engine's credential-scrubbing layer.
 
 ### Review-cycle skills (the review split) — outcome + artifact contracts
 
@@ -132,18 +137,27 @@ The **routing verdict lives only in `synthesize-review`** — the arbiter that s
 every reviewer (Claude findings + Copilot + humans). `review` / `dependabot-review`
 never approve/reject.
 
-**Two payload shapes still to finalize with you** (marked placeholder in the
-skills):
+**The two payload shapes are now finalized** (ai-tools #176). Both are carried as
+**hidden PR-comment markers** — `<!-- <kind>: <base64-json> -->`, keyed by `prHead`
+— the interim form of the `ResumeStore` PR-comment-backed store. The generic
+envelope lives in `@rmartz/github` (`renderJsonMarker` / `parseLatestJsonMarker`,
+with `ai-post-json-marker` / `ai-read-json-marker` bins); the typed record shapes
+live in `@rmartz/pr-review` (`review-records.ts`):
 
-1. The **findings-record** format `review` / `dependabot-review` write and
-   `synthesize-review` reads.
-2. The **action-list** format `synthesize-review` hands `fix-review`.
+1. **`review-findings`** — `{ skill, prHead, diffScope, findings: [{category,
+severity, location, summary, suggestedText?}] }`. `review` / `dependabot-review`
+   write it (`ai-post-json-marker <pr> review-findings <file>`); `synthesize-review`
+   reads it (`ai-read-json-marker --match-pr-head <head> <pr> review-findings`).
+2. **`review-synthesis`** — `{ skill, prHead, verdict, reviewBody,
+threadDispositions, actionList, uat }`; the `actionList` (`requiredChanges` /
+   `issuesToFile` / `titleDescriptionEdits`) is the hand-off `fix-review` executes.
+3. **`fix-confirmation-record`** — `{ skill, prHead, outcome, body }`, written by
+   the ported `fix-review` (ai-tools #74, Stage 2).
 
-Both cross the review-cycle store boundary you own — the same **`ResumeStore`
-PR-comment-backed store** described under "Seams PR Shepherd must supply" is the
-natural carrier. Once the two shapes are agreed, the skills swap the placeholder
-for the real format; the outcome enum and the express-don't-post seam are already
-stable.
+The outcome enum and the express-don't-post seam remain stable. **Under PR Shepherd**
+the engine renders/posts these records with the skill's credentials scrubbed (its
+own store impl swaps in for the marker bins); the record _content_ is identical, so
+the craft skills are consumed unchanged.
 
 ### Reporting ↔ self-observability (#109) — coordinate the taxonomy
 

@@ -62,8 +62,9 @@ Feed the **diff-derived** bump to `assessDependabotRisk` (with `name`,
 
 ## Step 4 — Emit the findings
 
-Express the findings as declarative data (the single terminal action), in the
-**same schema `review` emits** so `synthesize-review` consumes them identically:
+Express the findings as one declarative **findings record** (the single terminal
+action), in the **same `review-findings` schema `review` emits** (with
+`skill: "dependabot-review"`) so `synthesize-review` consumes them identically:
 
 - `category` — `dependency-bump` (or `title-description` for the corrected title).
 - `severity` — `blocking` for a `review`/`high`/misstated bump; the record is
@@ -72,5 +73,8 @@ Express the findings as declarative data (the single terminal action), in the
 - `summary` — the risk and what to verify, in 1–3 sentences.
 - `suggestedText` — the corrected title when `titleMisstated`.
 
-Do not reach a verdict, resolve threads, or fix the PR. Then report the findings
-and the diff-derived from/to versions to the caller.
+**Emit it — do not post a verdict.** Write the record to a JSON file and hand it to
+the runner with `ai-post-json-marker <pr> review-findings <file>` (posts a hidden
+marker, changes no labels, posts no review event). Do not reach a verdict, resolve
+threads, or fix the PR. (Under PR Shepherd the engine posts the record with your
+credentials scrubbed; the content is identical.)
