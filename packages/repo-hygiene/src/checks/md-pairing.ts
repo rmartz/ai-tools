@@ -16,10 +16,11 @@ import type { Check, Finding } from '../types.js';
 
 const NAME = 'md-pairing';
 const SYMLINK_MODE = '120000';
+const REGULAR_MODES = new Set(['100644', '100755']);
 const PAIR = { 'CLAUDE.md': 'AGENTS.md', 'AGENTS.md': 'CLAUDE.md' } as const;
 
 type DirectiveName = keyof typeof PAIR;
-const isDirective = (name: string): name is DirectiveName => name in PAIR;
+const isDirective = (name: string): name is DirectiveName => Object.hasOwn(PAIR, name);
 
 const dirOf = (path: string): string => {
   const slash = path.lastIndexOf('/');
@@ -50,8 +51,12 @@ export function evaluatePairing(modes: Map<string, string>): Finding[] {
   };
   for (const [dir, present] of byDir) {
     for (const [name, mode] of present) {
-      if (mode === SYMLINK_MODE) {
-        push(joinDir(dir, name), `${name} is a symlink; directive files must be regular files`);
+      if (!REGULAR_MODES.has(mode)) {
+        const msg =
+          mode === SYMLINK_MODE
+            ? `${name} is a symlink; directive files must be regular files`
+            : `${name} is not a regular file (mode ${mode}); directive files must be regular files`;
+        push(joinDir(dir, name), msg);
       }
       const counterpart = PAIR[name];
       if (!present.has(counterpart)) {

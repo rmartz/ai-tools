@@ -98,7 +98,8 @@ export function worktreeContent(path: string, opts: ScanOptions = {}): string {
  * treats a symlinked directive file as a violation instead of reading through it.
  */
 export async function trackedFileModes(opts: ScanOptions = {}): Promise<Map<string, string>> {
-  const { stdout } = await runGit(['ls-files', '-s', '-z'], opts.cwd);
+  const { stdout, code } = await runGit(['ls-files', '-s', '-z'], opts.cwd);
+  if (code !== 0) throw new Error(`git ls-files -s failed with code ${code}`);
   const modes = new Map<string, string>();
   for (const record of stdout.split('\0')) {
     if (!record) continue;

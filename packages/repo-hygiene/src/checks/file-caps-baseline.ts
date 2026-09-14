@@ -40,12 +40,14 @@ export function loadBaseline(cwd: string): FileCapsBaseline | null {
   let text: string;
   try {
     text = readFileSync(join(cwd, BASELINE_FILENAME), 'utf8');
-  } catch {
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
     return null;
   }
   const raw = JSON.parse(text) as unknown;
-  if (!isPlainObject(raw) || !isPlainObject(raw[SECTION])) return {};
-  const out: FileCapsBaseline = {};
+  if (!isPlainObject(raw) || !isPlainObject(raw[SECTION]))
+    return Object.create(null) as FileCapsBaseline;
+  const out: FileCapsBaseline = Object.create(null) as FileCapsBaseline;
   for (const [path, ceilings] of Object.entries(raw[SECTION])) {
     if (!isPlainObject(ceilings)) continue;
     const entry: MetricBaseline = {};
@@ -75,7 +77,7 @@ const record = (into: FileCapsBaseline, path: string, metric: Metric, value: num
 
 /** Adoption snapshot: grandfather every currently-over-cap file at its size. */
 export function buildBaseline(overCaps: OverCap[]): FileCapsBaseline {
-  const baseline: FileCapsBaseline = {};
+  const baseline: FileCapsBaseline = Object.create(null) as FileCapsBaseline;
   for (const { path, metric, value } of overCaps) record(baseline, path, metric, value);
   return baseline;
 }
@@ -90,7 +92,7 @@ export function ratchetBaseline(overCaps: OverCap[], existing: FileCapsBaseline)
   const current = new Map<string, number>();
   for (const { path, metric, value } of overCaps) current.set(`${path}\0${metric}`, value);
 
-  const next: FileCapsBaseline = {};
+  const next: FileCapsBaseline = Object.create(null) as FileCapsBaseline;
   for (const [path, ceilings] of Object.entries(existing)) {
     for (const metric of Object.keys(ceilings) as Metric[]) {
       const recorded = ceilings[metric];

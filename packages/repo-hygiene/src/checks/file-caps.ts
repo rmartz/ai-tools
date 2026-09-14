@@ -162,7 +162,7 @@ export async function updateFileCapsBaseline(opts: {
 }): Promise<BaselineUpdate> {
   const cwd = opts.cwd ?? process.cwd();
   const entries = parseFileCapsConfig(opts.settings);
-  const overCaps = collectOverCaps(await measureAll(opts.mode, cwd), compile(entries));
+  const overCaps = collectOverCaps(await measureAll('--check', cwd), compile(entries));
   const existing = loadBaseline(cwd);
   const next = existing === null ? buildBaseline(overCaps) : ratchetBaseline(overCaps, existing);
   writeBaseline(cwd, next);

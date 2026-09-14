@@ -47,12 +47,13 @@ export function parseByteSize(value: unknown): number {
   if (typeof value !== 'string') {
     throw new Error(`file-caps: byte size must be a number or string, got ${typeof value}`);
   }
-  const m = /^\s*(\d+(?:\.\d+)?)\s*([a-zA-Z]*)\s*$/.exec(value);
+  const trimmed = value.trim();
+  const m = /^(\d+(?:\.\d+)?)\s*([a-zA-Z]*)$/.exec(trimmed);
   if (!m || m[1] === undefined) {
     throw new Error(`file-caps: invalid byte size ${JSON.stringify(value)}`);
   }
   const unit = (m[2] || 'b').toLowerCase();
-  const mult = UNIT_BYTES[unit];
+  const mult = Object.hasOwn(UNIT_BYTES, unit) ? UNIT_BYTES[unit] : undefined;
   if (mult === undefined) {
     throw new Error(
       `file-caps: unknown byte unit ${JSON.stringify(m[2])} in ${JSON.stringify(value)}`,
