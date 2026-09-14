@@ -1,0 +1,70 @@
+name: 'repo-hygiene'
+description: 'Run @rmartz/repo-hygiene checks via the published CLI, handling GitHub Packages auth.'
+
+# A thin convenience wrapper over the published `@rmartz/repo-hygiene` CLI — NOT
+# the primary consumption path (that is a devDependency + a package.json script
+# run by both husky and CI; see docs/packages/repo-hygiene.md). This Action earns
+# its place for greenfield / uniformity and for `npx` consumers that would rather
+# not add a devDependency. The one real piece of boilerplate it removes is
+# GitHub Packages auth: `@rmartz/repo-hygiene` publishes to npm.pkg.github.com, so
+# every consumer otherwise hand-rolls setup-node with a registry-url + scope and a
+# NODE_AUTH_TOKEN before `npx` can resolve the package.
+#
+# The calling workflow must grant `permissions: packages: read` so the default
+# job token can read the package.
+
+inputs:
+  version:
+    description: 'Exact @rmartz/repo-hygiene version to run. Pin it to the same version your package.json pins, so local and CI never skew.'
+    required: true
+  checks:
+    description: 'Space-separated check names to run (e.g. "okf action-pins"). Empty runs every registered check.'
+    required: false
+    default: ''
+  mode:
+    description: 'Scan mode: --check (all tracked files, the CI backstop; default), --staged, or --check-diff (files changed vs origin/main). Note: --check-diff requires a non-shallow checkout with origin/main fetched — add fetch-depth: 0 to your checkout step and run git fetch origin main before this Action, or it will scan no files and silently pass.'
+    required: false
+    default: '--check'
+  config:
+    description: 'Path to a .repo-hygiene.yml. Empty uses the repo-root default.'
+    required: false
+    default: ''
+  node-version:
+    description: 'Node.js version for setup-node.'
+    required: false
+    default: '24'
+  token:
+    description: 'Token with packages:read for GitHub Packages. Defaults to the job token.'
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        registry-url: 'https://npm.pkg.github.com'
+        scope: '@rmartz'
+    - shell: bash
+      # Inputs reach the script through the environment, never interpolated into
+      # the command line, so a check name or path can't break out into the shell.
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.token }}
+        RH_VERSION: ${{ inputs.version }}
+        RH_CHECKS: ${{ inputs.checks }}
+        RH_MODE: ${{ inputs.mode }}
+        RH_CONFIG: ${{ inputs.config }}
+      run: |
+        set -euo pipefail
+        args=()
+        # Check names are positional; split the space-separated list into words.
+        if [ -n "$RH_CHECKS" ]; then
+          # shellcheck disable=SC2206
+          args+=($RH_CHECKS)
+        fi
+        args+=("$RH_MODE")
+        if [ -n "$RH_CONFIG" ]; then
+          args+=(--config "$RH_CONFIG")
+        fi
+        npx --yes --package="@rmartz/repo-hygiene@$RH_VERSION" ai-repo-hygiene "${args[@]}"
