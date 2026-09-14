@@ -96,6 +96,33 @@ Exit codes make the two outcomes distinguishable:
   (`errorMergeSafetyDecision`), so a caller that trusts the verdict treats it as
   unsafe rather than green.
 
+## Consuming the verdict (coordinators & merge automation)
+
+`merge-safety` is **advisory by default** — it is a status check a repo may
+_optionally_ promote to a required gate (see below), not one automation should
+treat as blocking until it has. A merge coordinator (e.g. PR Shepherd /
+`pr-route.py`) integrating with a repo that posts this check should:
+
+- **Not treat a `merge-safety` failure as a blocking CI failure, and not escalate
+  on it.** Its `failure` verdict is not a code problem — it means "bring the branch
+  current," a routine action, not something a human must adjudicate. Exclude
+  `merge-safety` from any "all required checks green" gate unless the repo has
+  deliberately made it required.
+- **Recognize that the verdict mirrors the coordinator's own currency logic.** The
+  predicate is the externalized form of `_pr_needs_branch_update` (breaking on base
+  / PR-breaking / `ci` on base / non-doc file overlap). A coordinator that already
+  computes branch currency should treat `merge-safety` as a _reflection_ of that
+  decision for human visibility — not a second, independent gate to satisfy. Acting
+  on both double-counts the same signal.
+- **Read the verdict headlessly rather than scraping the check UI:**
+  `ai-merge-safety evaluate --pr <n> --json` returns the `MergeSafetyDecision`
+  (`needsUpdate` / `conclusion` / `reasons`) with no side effects. Exit 0 = a real
+  verdict; exit 1 = ungatherable (treat as unsafe). See the CLI section above.
+
+Only once a repo opts into gating (next section) should automation treat the check
+as merge-blocking — and even then, a coordinator that serializes merges remains the
+authority (see the TOCTOU limitation below).
+
 ## Required-check setup
 
 To make `merge-safety` a required status on the base branch:
