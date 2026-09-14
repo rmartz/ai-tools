@@ -1,4 +1,4 @@
-import { ghCall, currentRepo, type GhCallOptions } from './gh-call.js';
+import { ghCall, resolveRepoTarget, type GhCallOptions } from './gh-call.js';
 
 /**
  * Format the diff between two commits for review. Review *craft* — the
@@ -131,7 +131,11 @@ async function formatPerCommit(
   return parts.join('\n');
 }
 
-/** Compute the review diff between `baseSha` and `headSha`. `repo` defaults to the git remote. */
+/**
+ * Compute the review diff between `baseSha` and `headSha`. The target repo
+ * follows the uniform precedence of {@link resolveRepoTarget}: explicit `repo`
+ * (a `--repo`/positional arg) → `GH_REPO` → cwd `gh repo view`.
+ */
 export async function computePrDiff(
   baseSha: string,
   headSha: string,
@@ -139,7 +143,7 @@ export async function computePrDiff(
   opts: PrDiffOptions = {},
 ): Promise<string> {
   const warn = opts.warn ?? ((m: string) => console.error(m));
-  const resolved = repo ?? (await currentRepo(opts));
+  const resolved = await resolveRepoTarget({ ...opts, repo });
   if (!resolved) throw new Error('could not determine repo');
 
   const compare = await api<Compare>(`repos/${resolved}/compare/${baseSha}...${headSha}`, opts);

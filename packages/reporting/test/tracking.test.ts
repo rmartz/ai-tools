@@ -3,8 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const findOpenIssue = vi.fn();
 const createIssue = vi.fn();
 const addIssueComment = vi.fn();
-const currentRepo = vi.fn();
-vi.mock('@rmartz/github', () => ({ findOpenIssue, createIssue, addIssueComment, currentRepo }));
+const resolveRepoTarget = vi.fn();
+vi.mock('@rmartz/github', () => ({
+  findOpenIssue,
+  createIssue,
+  addIssueComment,
+  resolveRepoTarget,
+}));
 
 const boundedRun = vi.fn();
 vi.mock('@rmartz/agent-runtime', () => ({ boundedRun }));
@@ -16,7 +21,7 @@ beforeEach(() => {
   findOpenIssue.mockReset();
   createIssue.mockReset();
   addIssueComment.mockReset();
-  currentRepo.mockReset();
+  resolveRepoTarget.mockReset();
   boundedRun.mockReset();
   resetCoordinatorShaCache();
 });
@@ -71,7 +76,7 @@ describe('coordinatorGitSha', () => {
 
 describe('reportToTracking', () => {
   it('appends a comment when an open ledger exists (find-or-append)', async () => {
-    currentRepo.mockResolvedValue('rmartz/app');
+    resolveRepoTarget.mockResolvedValue('rmartz/app');
     boundedRun.mockResolvedValue({ stdout: 'sha1\n', stderr: '', code: 0, timedOut: false });
     findOpenIssue.mockResolvedValue('https://github.com/rmartz/ai-reports/issues/9');
     addIssueComment.mockResolvedValue('cmt-url');
@@ -91,7 +96,7 @@ describe('reportToTracking', () => {
   });
 
   it('creates the ledger with the tracking label on first occurrence', async () => {
-    currentRepo.mockResolvedValue('rmartz/app');
+    resolveRepoTarget.mockResolvedValue('rmartz/app');
     boundedRun.mockResolvedValue({ stdout: 'sha1\n', stderr: '', code: 0, timedOut: false });
     findOpenIssue.mockResolvedValue(null);
     createIssue.mockResolvedValue('https://github.com/rmartz/ai-reports/issues/10');
@@ -107,7 +112,7 @@ describe('reportToTracking', () => {
   });
 
   it('honors an overridden ledger repo and label', async () => {
-    currentRepo.mockResolvedValue(null);
+    resolveRepoTarget.mockResolvedValue(null);
     boundedRun.mockResolvedValue({ stdout: '', stderr: '', code: 1, timedOut: false });
     findOpenIssue.mockResolvedValue(null);
     createIssue.mockResolvedValue('u');
@@ -121,14 +126,27 @@ describe('reportToTracking', () => {
     expect(opts.labels).toEqual(['coordinator-self-report']);
   });
 
-  it('does not call currentRepo when sourceRepo is supplied', async () => {
+  it('forwards cwd to resolveRepoTarget when sourceRepo is omitted', async () => {
+    resolveRepoTarget.mockResolvedValue('rmartz/from-cwd');
+    boundedRun.mockResolvedValue({ stdout: '', stderr: '', code: 1, timedOut: false });
+    findOpenIssue.mockResolvedValue(null);
+    createIssue.mockResolvedValue('u');
+
+    await reportToTracking('t', 'b', { cwd: '/other/checkout' });
+
+    expect(resolveRepoTarget).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: '/other/checkout' }),
+    );
+  });
+
+  it('does not resolve the repo when sourceRepo is supplied', async () => {
     boundedRun.mockResolvedValue({ stdout: 'sha\n', stderr: '', code: 0, timedOut: false });
     findOpenIssue.mockResolvedValue(null);
     createIssue.mockResolvedValue('u');
 
     await reportToTracking('t', 'b', { sourceRepo: 'rmartz/given' });
 
-    expect(currentRepo).not.toHaveBeenCalled();
+    expect(resolveRepoTarget).not.toHaveBeenCalled();
     const [, opts] = createIssue.mock.calls[0];
     expect(opts.body).toContain('**Repository:** `rmartz/given`');
   });

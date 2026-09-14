@@ -174,6 +174,19 @@ describe('checkConflictMarkers', () => {
     }
   });
 
+  it('--check resolves relative paths from git against cwd', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'rh-chk-rel-'));
+    try {
+      writeFileSync(join(dir, 'rel.ts'), FULL_CONFLICT.join('\n'));
+      // ls-files returns repo-root-relative paths; cwd resolves them.
+      boundedRun.mockResolvedValueOnce(ok('rel.ts\0'));
+      const violations = await checkConflictMarkers('--check', { cwd: dir, env: {} });
+      expect(violations.map((v) => v.path)).toEqual(['rel.ts', 'rel.ts', 'rel.ts']);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('--check-diff returns clean when no files changed', async () => {
     boundedRun.mockResolvedValueOnce(ok(''));
     expect(await checkConflictMarkers('--check-diff', { env: {} })).toEqual([]);

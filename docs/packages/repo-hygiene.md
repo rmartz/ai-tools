@@ -152,8 +152,11 @@ For the rare case where a marker-like line must be committed intentionally:
   status); naming one or more runs just those (independent per-check statuses).
   Mode defaults to `--staged`. Exit `0` when clean or warn-only, `1` on any error
   finding (report on stderr), `2` on a usage error or unknown check.
-- `ai-check-conflict-markers [mode]` — the original single-check wrapper, kept for
-  its existing pre-commit-hook consumers; defaults to `--staged`.
+- `ai-check-conflict-markers [mode] [-C <dir>]` — the original single-check wrapper,
+  kept for its existing pre-commit-hook consumers; defaults to `--staged`.
+  `-C`/`--cwd <dir>` runs the git scan in that directory, so a caller that cannot
+  pin its cwd never needs `cd <dir> && ai-*`. Exit `0` when clean, `1` when markers
+  are found (report on stderr), `2` on an unknown argument.
 
 ## Testing
 
