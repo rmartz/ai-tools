@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@rmartz/agent-runtime": "workspace:*",
+    "gray-matter": "^4.0.3",
     "yaml": "^2.5.0"
   },
   "devDependencies": {

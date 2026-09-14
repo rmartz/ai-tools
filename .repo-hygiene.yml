@@ -1,0 +1,10 @@
+# @rmartz/repo-hygiene check configuration for this repo.
+# See docs/packages/repo-hygiene.md. Each section under `checks` is read by the
+# check of that name; `severity` (when set) overrides that check's findings.
+checks:
+  # OKF docs frontmatter vocabulary + exemptions (per-repo).
+  okf:
+    types: [Skill, Script, Library, Design]
+    roots: [docs]
+    exempt: [docs/index.md] # the reserved OKF root listing (§3.1)
+    resourceExemptTypes: [Design] # Design pages need no backing resource
