@@ -191,6 +191,39 @@ ai-tools runs both checks against itself through the published CLI: its
 `okf` and `action-pins` CI jobs build the workspace first (as the `test` job
 does).
 
+## Composite Action
+
+A thin GitHub Action wrapper over the published CLI, referenceable cross-repo as
+`rmartz/ai-tools/.github/actions/repo-hygiene@<sha>`. It is **not the default
+consumption path** — the primary path is a pinned `devDependency` + a
+`package.json` script run by both husky and CI (see the rollout in the epic). The
+Action earns its place only for greenfield / uniformity and for `npx` consumers
+that would rather not add a devDependency. The one real piece of boilerplate it
+removes is **GitHub Packages auth**: `@rmartz/repo-hygiene` publishes to
+`npm.pkg.github.com`, so every consumer otherwise hand-rolls `setup-node` with a
+`registry-url` + `scope` and a `NODE_AUTH_TOKEN` before `npx` can resolve it.
+
+```yaml
+jobs:
+  hygiene:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read # the default job token reads the package
+    steps:
+      - uses: actions/checkout@<sha> # v7.0.1
+      - uses: rmartz/ai-tools/.github/actions/repo-hygiene@<sha> # v0.x.y
+        with:
+          version: '0.3.0' # pin the SAME version your package.json pins
+          checks: okf action-pins # space-separated; empty runs every check
+          mode: --check # default; --staged / --check-diff also accepted
+```
+
+Inputs: `version` (required — the exact CLI version to run, kept aligned with the
+consumer's `package.json` pin so local and CI never skew), `checks`, `mode`,
+`config`, `node-version`, and `token` (defaults to the job token). The internal
+`setup-node` step is SHA-pinned, so the Action passes `action-pins` when consumed.
+
 ## CLIs
 
 - `ai-repo-hygiene [<check>...] [--staged|--check|--check-diff] [--config <path>]`
