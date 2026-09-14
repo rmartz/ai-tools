@@ -56,6 +56,13 @@ Splitting invalidation (cheap, O(1) calls per PR) from evaluation (the git-diff
 work, done per-PR in parallel) keeps the push path fast, which minimizes the
 window described below.
 
+The `evaluate` job **builds the tool from `main`, not the PR** — a gate must apply
+the trusted, merged logic (immune to whether the PR compiles, and never running
+PR-authored build scripts under its write-scoped token). The PR is consumed purely
+as git data: the job fetches `pull/<n>/head` so `merge-base`/diffs resolve even on
+the dispatched (`workflow_dispatch`) path, which checks out `main` and would
+otherwise lack the head.
+
 ## CLI
 
 ```
