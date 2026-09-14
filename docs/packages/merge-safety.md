@@ -42,6 +42,11 @@ git **conflict** is folded in as a separate axis, with its own label.
 Each run reconciles both: it adds the labels that apply and removes the ones that
 no longer do, so a PR that a rebase makes safe is cleared automatically.
 
+The check-run **title** carries the verdict at a glance — `No update required`,
+`Update required`, `Merge conflict` (which wins the title when a PR is both
+conflicting and stale), or `Could not evaluate`. The check-run **name** stays the
+stable `merge-safety` so branch protection can match it; only the title varies.
+
 ## The workflow (`.github/workflows/merge-safety.yml`)
 
 - **`pull_request`** (opened / synchronize / reopened) and **`workflow_dispatch`**

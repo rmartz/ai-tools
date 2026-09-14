@@ -145,10 +145,31 @@ describe('evaluateMergeSafety', () => {
   });
 });
 
+describe('evaluateMergeSafety title', () => {
+  it('reads "No update required" when safe', () => {
+    expect(evaluateMergeSafety(makeFacts({ isCurrent: false })).title).toBe('No update required');
+  });
+
+  it('reads "Update required" when stale with a trigger', () => {
+    expect(evaluateMergeSafety(makeFacts({ isCurrent: false, fileOverlap: true })).title).toBe(
+      'Update required',
+    );
+  });
+
+  it('reads "Merge conflict", which wins over a co-occurring update trigger', () => {
+    const d = evaluateMergeSafety(
+      makeFacts({ isCurrent: false, fileOverlap: true, hasConflict: true }),
+    );
+    expect(d.title).toBe('Merge conflict');
+    expect(d.needsUpdate).toBe(true); // still flagged in the labels/summary, just not the title
+  });
+});
+
 describe('errorMergeSafetyDecision', () => {
   it('is a fail-safe failure verdict carrying the message and proposing no labels', () => {
     const d = errorMergeSafetyDecision('git log failed for BASE..origin/main');
     expect(d.conclusion).toBe('failure');
+    expect(d.title).toBe('Could not evaluate');
     expect(d.needsUpdate).toBe(false); // genuinely unknown — safety rides on `failure`
     expect(d.hasConflict).toBe(false);
     expect(d.reasons).toEqual(['git log failed for BASE..origin/main']);

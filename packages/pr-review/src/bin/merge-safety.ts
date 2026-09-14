@@ -151,11 +151,12 @@ async function runEvaluate(repo: string, pr: number, args: Args): Promise<void> 
   } catch (err) {
     // Ungatherable → fail safe: never report a stale-safe verdict.
     const msg = err instanceof Error ? err.message : String(err);
-    if (args.json) return emitDecisionJson(errorMergeSafetyDecision(msg), true);
+    const failed = errorMergeSafetyDecision(msg);
+    if (args.json) return emitDecisionJson(failed, true);
     await postCheck(
       repo,
       meta.headSha,
-      { title: 'Merge safety', summary: `Could not evaluate merge safety: ${msg}` },
+      { title: failed.title, summary: failed.summary },
       'failure',
       args.cwd,
     );
@@ -175,7 +176,7 @@ async function runEvaluate(repo: string, pr: number, args: Args): Promise<void> 
   await postCheck(
     repo,
     meta.headSha,
-    { title: 'Merge safety', summary: `${decision.summary}\n\n${detail}` },
+    { title: decision.title, summary: `${decision.summary}\n\n${detail}` },
     decision.conclusion,
     args.cwd,
   );
@@ -215,7 +216,7 @@ async function runInvalidate(repo: string, args: Args): Promise<void> {
     await postCheck(
       repo,
       pr.headRefOid,
-      { title: 'Merge safety', summary: 'Re-evaluating against the updated base…' },
+      { title: 'Re-evaluating', summary: 'Re-evaluating against the updated base…' },
       null,
       args.cwd,
     );
