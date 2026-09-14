@@ -32,9 +32,35 @@ first needed, not here.
 Run `ai-ensure-project-config` (`@rmartz/bootstrap`). It applies the golden-state
 tooling ignores a healthy repo expects (`.prettierignore`, an ESLint ignore config,
 `.gitignore` baselines) so formatters and linters don't fight generated or vendored
-files. Also idempotent.
+files, **and** the golden whole-file workflows — currently the generic
+`dependabot-auto-merge.yml` (native auto-merge on green patch/minor Dependabot PRs;
+majors stay manual). Also idempotent: a drifted managed workflow is overwritten
+back to golden, and a user-authored workflow of the same name (no managed header)
+is left untouched (`skipped`).
 
-## Step 3 — Report
+## Step 3 — Confirm the auto-merge gate (hard block)
 
-Summarize what each step created vs. left unchanged, so a re-run on an
+A seeded `dependabot-auto-merge.yml` **must not** land in a repo where auto-merge
+would fire ungated: `gh pr merge --auto` with no required checks merges
+**immediately**, so an ungated file auto-merges every patch/minor Dependabot PR
+with zero gate. After Step 2 writes the workflow, run
+`ai-verify-automerge-gate -C <repo>` to confirm the branch-protection gate the
+workflow depends on:
+
+- **Default (read-only):** it exits **non-zero** if the gate checks aren't marked
+  required on the default branch, or if `allow_auto_merge` is off. A non-zero exit
+  is a **hard block** — do not open/land the bootstrap PR until the gate is
+  satisfied. This machine-checked confirmation replaces a prose reminder an agent
+  could skip.
+- **To configure the gate:** re-run with `--apply` (admin, state-changing —
+  surface it before running). It enables `allow_auto_merge` and sets the required
+  checks. Then re-confirm without `--apply`.
+
+Only the user's `gh` auth reliably carries the admin access this read needs, which
+is why the gate is confirmed here rather than inside the workflow at runtime.
+
+## Step 4 — Report
+
+Summarize what each step created vs. left unchanged (and any `skipped`
+user-authored workflow), plus the gate's confirmed/applied state, so a re-run on an
 already-bootstrapped repo reads as a clean no-op rather than churn.
