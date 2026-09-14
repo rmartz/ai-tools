@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs';
-import { boundedRun } from '@rmartz/agent-runtime';
+import { resolveFileSet, type ContentReader, type Mode, type ScanOptions } from './discovery.js';
 
 /**
  * Block commits that introduce merge-conflict markers.
@@ -9,6 +8,11 @@ import { boundedRun } from '@rmartz/agent-runtime';
  * checker is the commit-time guard (run as a git `pre-commit` hook) plus a CI
  * backstop. TS port of dotfiles' `check_conflict_markers.py`.
  *
+ * The file-set discovery it once owned now lives in `discovery.ts`, shared with
+ * the check framework (#164); this module keeps the pure detector plus the
+ * standalone `checkConflictMarkers` entrypoint the `ai-check-conflict-markers`
+ * CLI wraps. The framework adapter lives in `checks/conflict-markers.ts`.
+ *
  * Detection (full-triple, no doc special-casing): a file is flagged **only**
  * when it contains an unambiguous conflict **angle** marker — a line beginning
  * with seven `<` or seven `>` (`<<<<<<< HEAD`, `>>>>>>> branch`). These never
@@ -17,8 +21,6 @@ import { boundedRun } from '@rmartz/agent-runtime';
  * already has an angle marker — so a Markdown setext underline or `=======`
  * divider is never a false positive.
  */
-
-const GIT_TIMEOUT_MS = 30_000;
 
 // Angle markers are unambiguous and flagged anywhere. Seven characters exactly,
 // at line start, followed by whitespace or end-of-line.
@@ -61,66 +63,6 @@ export function findConflictMarkers(text: string): MarkerLine[] {
   return [...angles, ...mids].sort((a, b) => a.lineno - b.lineno);
 }
 
-/** How a path's content is resolved for scanning. */
-export type ContentReader = (path: string) => Promise<string> | string;
-
-export interface ScanOptions {
-  cwd?: string;
-}
-
-async function runGit(
-  args: string[],
-  cwd?: string,
-): Promise<{ stdout: string; code: number | null }> {
-  const r = await boundedRun('git', args, { timeoutMs: GIT_TIMEOUT_MS, cwd });
-  return { stdout: r.stdout, code: r.code };
-}
-
-function splitNul(stdout: string): string[] {
-  return stdout.split('\0').filter((p) => p);
-}
-
-/** Paths added/copied/modified/renamed in the index (NUL-delimited for safety). */
-export async function stagedFiles(opts: ScanOptions = {}): Promise<string[]> {
-  const { stdout } = await runGit(
-    ['diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z'],
-    opts.cwd,
-  );
-  return splitNul(stdout);
-}
-
-/** All git-tracked files (NUL-delimited). */
-export async function trackedFiles(opts: ScanOptions = {}): Promise<string[]> {
-  const { stdout } = await runGit(['ls-files', '-z'], opts.cwd);
-  return splitNul(stdout);
-}
-
-/** Files changed vs `origin/main` (three-dot); empty if the ref is absent. */
-export async function changedVsMain(opts: ScanOptions = {}): Promise<string[]> {
-  const { stdout, code } = await runGit(
-    ['diff', '--name-only', '--diff-filter=ACMR', '-z', 'origin/main...HEAD'],
-    opts.cwd,
-  );
-  if (code !== 0) return [];
-  return splitNul(stdout);
-}
-
-/** Staged blob content for `path`; empty string if binary or unreadable. */
-export async function stagedContent(path: string, opts: ScanOptions = {}): Promise<string> {
-  const { stdout, code } = await runGit(['show', `:${path}`], opts.cwd);
-  if (code !== 0) return '';
-  return stdout;
-}
-
-/** Worktree content for `path`; empty string if missing or undecodable. */
-export function worktreeContent(path: string): string {
-  try {
-    return readFileSync(path, 'utf8');
-  } catch {
-    return ''; // missing or binary — no text markers to find
-  }
-}
-
 /** Scan `paths`, reading each via `read`, and collect every marker violation. */
 export async function scan(paths: string[], read: ContentReader): Promise<Violation[]> {
   const violations: Violation[] = [];
@@ -131,22 +73,6 @@ export async function scan(paths: string[], read: ContentReader): Promise<Violat
     }
   }
   return violations;
-}
-
-export type Mode = '--staged' | '--check' | '--check-diff';
-
-/** Resolve the path list and per-path reader for a mode. */
-function readerFor(
-  mode: Mode,
-  opts: ScanOptions,
-): { paths: () => Promise<string[]>; read: ContentReader } {
-  if (mode === '--staged') {
-    return { paths: () => stagedFiles(opts), read: (p) => stagedContent(p, opts) };
-  }
-  if (mode === '--check') {
-    return { paths: () => trackedFiles(opts), read: worktreeContent };
-  }
-  return { paths: () => changedVsMain(opts), read: worktreeContent };
 }
 
 export interface CheckOptions extends ScanOptions {
@@ -165,8 +91,8 @@ export async function checkConflictMarkers(
 ): Promise<Violation[]> {
   const env = opts.env ?? process.env;
   if (mode === '--staged' && env.ALLOW_CONFLICT_MARKERS) return [];
-  const { paths, read } = readerFor(mode, opts);
-  return scan(await paths(), read);
+  const { paths, read } = await resolveFileSet(mode, opts);
+  return scan(paths, read);
 }
 
 /** Render the violation report exactly as the Python checker printed it. */

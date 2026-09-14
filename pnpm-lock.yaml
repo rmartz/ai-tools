@@ -126,6 +126,9 @@ importers:
       '@rmartz/agent-runtime':
         specifier: workspace:*
         version: link:../agent-runtime
+      yaml:
+        specifier: ^2.5.0
+        version: 2.9.0
     devDependencies:
       tsup:
         specifier: ^8.3.0

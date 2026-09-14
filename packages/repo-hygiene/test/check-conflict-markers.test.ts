@@ -9,17 +9,10 @@ vi.mock('@rmartz/agent-runtime', () => ({ boundedRun }));
 const ok = (stdout: string) => ({ stdout, stderr: '', code: 0, timedOut: false });
 const fail = (stderr = '') => ({ stdout: '', stderr, code: 1, timedOut: false });
 
-const {
-  findConflictMarkers,
-  scan,
-  checkConflictMarkers,
-  worktreeContent,
-  formatReport,
-  stagedFiles,
-  trackedFiles,
-  changedVsMain,
-  stagedContent,
-} = await import('../src/check-conflict-markers.js');
+const { findConflictMarkers, scan, checkConflictMarkers, formatReport } =
+  await import('../src/check-conflict-markers.js');
+const { worktreeContent, stagedFiles, trackedFiles, changedVsMain, stagedContent } =
+  await import('../src/discovery.js');
 
 const FULL_CONFLICT = [
   'line',
