@@ -1,7 +1,12 @@
 export { ensureLabels } from './ensure-labels.js';
 export type { EnsureLabelsOptions, EnsureLabelsResult, LabelOutcome } from './ensure-labels.js';
 
-export { crossCuttingLabels, metaLabels, defaultRoster } from './labels-roster.js';
+export {
+  crossCuttingLabels,
+  metaLabels,
+  mergeSafetyLabels,
+  defaultRoster,
+} from './labels-roster.js';
 export type { LabelSpec } from './labels-roster.js';
 
 export { ensureProjectConfig } from './ensure-project-config.js';

@@ -86,5 +86,29 @@ export const metaLabels: readonly LabelSpec[] = [
   },
 ];
 
+/**
+ * Labels the `merge-safety` check reconciles on a PR. These pair with
+ * `@rmartz/pr-review`'s `MERGE_SAFETY_LABELS` — restated here by name because
+ * bootstrap is layer-1 and cannot import the layer-2 pr-review package. Seeded
+ * wherever the `merge-safety` golden workflow runs, so the check's `--add-label`
+ * has a label to apply.
+ */
+export const mergeSafetyLabels: readonly LabelSpec[] = [
+  {
+    name: 'update required',
+    color: 'D93F0B',
+    description: 'Must be brought current with its base before merge (merge-safety check).',
+  },
+  {
+    name: 'merge conflict',
+    color: 'B60205',
+    description: 'Conflicts with its base and cannot be merged as-is (merge-safety check).',
+  },
+];
+
 /** The full default roster `ensureLabels` reconciles when no extras are passed. */
-export const defaultRoster: readonly LabelSpec[] = [...crossCuttingLabels, ...metaLabels];
+export const defaultRoster: readonly LabelSpec[] = [
+  ...crossCuttingLabels,
+  ...metaLabels,
+  ...mergeSafetyLabels,
+];

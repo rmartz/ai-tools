@@ -26,13 +26,15 @@ gate/verdict labels — the roster here is the cross-cutting + meta set only.
   fails (no live state to diff); per-label `gh` failures are collected into
   `result.failures` and reported per-label in `result.outcomes`, mirroring the
   Python's best-effort posture.
-- `defaultRoster` = `crossCuttingLabels` + `metaLabels`. **Reframe from
-  dotfiles' `labels.yml`:** only the cross-cutting domain labels carry over,
-  plus `tracking` and `discussion` (the meta set). The dotfiles `workflow` set
-  (PR-Shepherd gate/verdict labels) and per-app `projects` families are
-  deliberately excluded — this layer must not know PR Shepherd's labels, and
-  project families live with their projects. Colors are kept verbatim as 6-hex
-  without a leading `#` (REST contract).
+- `defaultRoster` = `crossCuttingLabels` + `metaLabels` + `mergeSafetyLabels`.
+  **Reframe from dotfiles' `labels.yml`:** only the cross-cutting domain labels
+  carry over, plus `tracking` and `discussion` (the meta set) and the
+  `merge-safety` check's own `update required` / `merge conflict` labels (seeded
+  wherever its golden workflow runs). The dotfiles `workflow` set (PR-Shepherd
+  gate/verdict labels) and per-app `projects` families are deliberately excluded —
+  this layer must not know PR Shepherd's labels, and project families live with
+  their projects. Colors are kept verbatim as 6-hex without a leading `#` (REST
+  contract).
 
 ### Project config (`ensure-project-config.ts`, `golden-config.ts`)
 
@@ -67,13 +69,29 @@ a block spliced into user content.
   a hand-written workflow of the same name is never clobbered.
   `ensureProjectConfig` composes this after the ignore blocks, returning one
   combined outcome list.
-- `goldenWorkflowFiles` — seeded with `dependabot-auto-merge.yml`: on a green
-  `semver-patch` / `semver-minor` Dependabot PR it enables GitHub-native
-  auto-merge (majors stay manual). `dependabot/fetch-metadata` is pinned to a full
-  commit SHA + `major.minor.patch` comment per the Actions-pinning convention;
-  Dependabot's `github-actions` ecosystem keeps the SHA fresh. Each entry declares
-  the `gateChecks` its native auto-merge depends on (here `merge-safety`);
-  `goldenGateChecks` is their union — the cross-repo **floor** of the gate.
+- `goldenWorkflowFiles` — seeded with two workflows:
+  - `dependabot-auto-merge.yml`: on a green `semver-patch` / `semver-minor`
+    Dependabot PR it enables GitHub-native auto-merge (majors stay manual).
+    `dependabot/fetch-metadata` is pinned to a full commit SHA + `major.minor.patch`
+    comment per the Actions-pinning convention; Dependabot's `github-actions`
+    ecosystem keeps the SHA fresh. It declares the `gateChecks` its native
+    auto-merge depends on (here `merge-safety`).
+  - `merge-safety.yml`: posts the advisory `merge-safety` check (the coordinator's
+    "must this PR be brought current before merge?" verdict). This is the
+    **consumer shape** — it `npm install -g`s the published `@rmartz/pr-review` CLI
+    (a **public** GitHub Packages package, read with the repo's own `GITHUB_TOKEN`
+    — no grant or PAT) and runs `ai-merge-safety`, rather than building from source
+    the way ai-tools' own in-repo copy does. Generic across repos: the base branch
+    comes from the PR (falling back to the repo default) on the evaluate path;
+    `push` fires on `main`. Seeding it makes the check **run**; making it a
+    **required gate** is the separate per-repo curation step (it is `gateChecks: []`
+    — it _provides_ the check the auto-merge file depends on, it doesn't consume
+    one). Its `update required` / `merge conflict` labels are seeded by the label
+    roster above.
+
+  `goldenGateChecks` is the union of every entry's `gateChecks` — the cross-repo
+  **floor** of the gate.
+
 - **`goldenGateChecks` (`merge-safety`) is a floor, not a sufficient gate.**
   Native auto-merge waits only on _required_ checks and ignores non-required ones,
   so requiring `merge-safety` alone still lets a bump that breaks a _non-required_

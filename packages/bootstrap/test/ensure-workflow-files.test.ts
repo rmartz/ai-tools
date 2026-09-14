@@ -102,3 +102,36 @@ describe('goldenWorkflowFiles — the seeded Dependabot auto-merge workflow', ()
     expect(dependabot?.gateChecks).toContain('merge-safety');
   });
 });
+
+// #188 — the seeded merge-safety check workflow (consumer shape: installs the
+// published CLI, provides the check rather than depending on one).
+describe('goldenWorkflowFiles — the seeded merge-safety workflow', () => {
+  const mergeSafety = goldenWorkflowFiles.find(
+    (w) => w.filename === '.github/workflows/merge-safety.yml',
+  );
+
+  it('is present in the golden set', () => {
+    expect(mergeSafety).toBeDefined();
+  });
+
+  it('installs the published @rmartz/pr-review CLI rather than building from source', () => {
+    const content = mergeSafety?.content ?? '';
+    expect(content).toContain('npm install -g "@rmartz/pr-review@');
+    expect(content).toContain('ai-merge-safety evaluate');
+    expect(content).toContain('ai-merge-safety invalidate');
+    expect(content).not.toContain('pnpm build');
+  });
+
+  it('pins actions/checkout to a full 40-char SHA with a major.minor.patch comment', () => {
+    expect(mergeSafety?.content).toMatch(/actions\/checkout@[0-9a-f]{40} # v\d+\.\d+\.\d+/);
+  });
+
+  it('reads the base branch from the PR (falling back to the repo default) for portability', () => {
+    expect(mergeSafety?.content).toContain('github.event.pull_request.base.ref');
+    expect(mergeSafety?.content).toContain('github.event.repository.default_branch');
+  });
+
+  it('provides the check and so declares no gateChecks of its own', () => {
+    expect(mergeSafety?.gateChecks).toEqual([]);
+  });
+});

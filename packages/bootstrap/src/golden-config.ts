@@ -118,18 +118,110 @@ jobs:
           GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 `;
 
+// Consumer-shape `merge-safety` workflow: it INSTALLS the published
+// `@rmartz/pr-review` CLI (a public GitHub Packages package) and posts the
+// `merge-safety` check-run — it does not build from source the way ai-tools' own
+// in-repo workflow does, because a consumer repo has no monorepo checkout. It is
+// generic across repos: the base branch is taken from the PR (falling back to the
+// repo's default branch) on the evaluate path, and `push` fires on `main` (the
+// default-branch case — a non-`main` repo adjusts that one literal). Advisory by
+// default: seeding it makes the check *run*; making it a required gate is a
+// separate per-repo curation step. `actions/checkout` is pinned by full SHA +
+// `major.minor.patch` comment per the Actions-pinning convention; the CLI version
+// is pinned here and re-synced by re-seeding (Dependabot does not bump workflow
+// env), never `@latest`.
+const MERGE_SAFETY = `name: merge-safety
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: PR number to evaluate
+        required: true
+
+permissions:
+  checks: write
+  pull-requests: write
+  contents: read
+  actions: write
+  packages: read
+
+concurrency:
+  group: merge-safety-\${{ github.event_name == 'push' && 'invalidate' || github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: false
+
+env:
+  MERGE_SAFETY_VERSION: 0.4.0
+
+jobs:
+  evaluate:
+    name: Evaluate one PR
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: \${{ github.token }}
+      PR_NUMBER: \${{ github.event.pull_request.number || inputs.pr }}
+      BASE_REF: \${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: \${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
+          fetch-depth: 0 # merge-base + diffs need full history
+      - name: Install ai-merge-safety
+        env:
+          NODE_AUTH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '@rmartz:registry=https://npm.pkg.github.com\\n//npm.pkg.github.com/:_authToken=%s\\n' "\${NODE_AUTH_TOKEN}" > ~/.npmrc
+          npm install -g "@rmartz/pr-review@\${MERGE_SAFETY_VERSION}"
+      # Fetch the PR head as git data so merge-base/diffs resolve — the dispatched
+      # (workflow_dispatch) path checks out the base and would otherwise lack it.
+      - run: git fetch --quiet origin "\${BASE_REF}" "pull/\${PR_NUMBER}/head"
+      - run: ai-merge-safety evaluate --pr "\${PR_NUMBER}" --repo "\${GITHUB_REPOSITORY}" --base "origin/\${BASE_REF}"
+
+  invalidate:
+    name: Invalidate open PRs (base moved)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: \${{ github.token }}
+    steps:
+      - name: Install ai-merge-safety
+        env:
+          NODE_AUTH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '@rmartz:registry=https://npm.pkg.github.com\\n//npm.pkg.github.com/:_authToken=%s\\n' "\${NODE_AUTH_TOKEN}" > ~/.npmrc
+          npm install -g "@rmartz/pr-review@\${MERGE_SAFETY_VERSION}"
+      - run: ai-merge-safety invalidate --repo "\${GITHUB_REPOSITORY}"
+`;
+
 /**
- * Golden whole-file workflows distributed to every repo. Currently just the
- * Dependabot native-auto-merge workflow, which depends on the `merge-safety`
- * required check being marked required — the gate the auto-merge verifier
- * confirms before the file may be seeded (an ungated `gh pr merge --auto` merges
- * *immediately*, so the file must never land without the gate).
+ * Golden whole-file workflows distributed to every repo:
+ *
+ * - `dependabot-auto-merge.yml` — GitHub-native auto-merge for green patch/minor
+ *   Dependabot PRs. Depends on `merge-safety` being a *required* check — the gate
+ *   the auto-merge verifier confirms before the file may be seeded (an ungated
+ *   `gh pr merge --auto` merges *immediately*, so it must never land without the
+ *   gate).
+ * - `merge-safety.yml` — posts the advisory `merge-safety` check (consumer shape,
+ *   installs `@rmartz/pr-review`). No `gateChecks` of its own: it *provides* the
+ *   check the auto-merge file depends on rather than consuming one.
  */
 export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
   {
     filename: '.github/workflows/dependabot-auto-merge.yml',
     content: DEPENDABOT_AUTO_MERGE,
     gateChecks: ['merge-safety'],
+  },
+  {
+    filename: '.github/workflows/merge-safety.yml',
+    content: MERGE_SAFETY,
+    gateChecks: [],
   },
 ];
 
