@@ -71,4 +71,25 @@ describe('gatherMergeSafetyFacts', () => {
     const git = fakeGit({ 'rev-parse origin/main': 'TIP' });
     await expect(gatherMergeSafetyFacts(meta, { git })).rejects.toThrow(/merge-base/);
   });
+
+  it('throws when git log returns null — never silently produces false success', async () => {
+    const git = fakeGit({
+      'merge-base HEAD1 origin/main': 'BASE',
+      'rev-parse origin/main': 'TIP',
+      // log key absent → null
+      'diff --name-only BASE origin/main': 'src/a.ts',
+      'diff --name-only BASE HEAD1': 'src/b.ts',
+    });
+    await expect(gatherMergeSafetyFacts(meta, { git })).rejects.toThrow(/git log failed/);
+  });
+
+  it('throws when git diff returns null — never silently produces false success', async () => {
+    const git = fakeGit({
+      'merge-base HEAD1 origin/main': 'BASE',
+      'rev-parse origin/main': 'TIP',
+      'log -z --format=%B BASE..origin/main': 'feat!: breaking',
+      // diff keys absent → null
+    });
+    await expect(gatherMergeSafetyFacts(meta, { git })).rejects.toThrow(/git diff failed/);
+  });
 });

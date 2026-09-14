@@ -13,7 +13,7 @@ name: merge-safety
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
   push:
     branches: [main]
   workflow_dispatch:

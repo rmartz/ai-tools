@@ -70,14 +70,20 @@ export async function gatherMergeSafetyFacts(
   const isCurrent = mergeBase === baseTip;
 
   // NUL-delimit commit bodies so multi-line messages split cleanly.
-  const logOut = (await git(['log', '-z', '--format=%B', `${mergeBase}..${baseRef}`])) ?? '';
+  const logOut = await git(['log', '-z', '--format=%B', `${mergeBase}..${baseRef}`]);
+  if (logOut === null) throw new Error(`git log failed for ${mergeBase}..${baseRef}`);
   const messages = logOut
     .split('\0')
     .map((m) => m.trim())
     .filter(Boolean);
 
-  const baseFiles = splitLines(await git(['diff', '--name-only', mergeBase, baseRef]));
-  const prFiles = splitLines(await git(['diff', '--name-only', mergeBase, meta.headSha]));
+  const baseFilesOut = await git(['diff', '--name-only', mergeBase, baseRef]);
+  if (baseFilesOut === null) throw new Error(`git diff failed for ${mergeBase}..${baseRef}`);
+  const baseFiles = splitLines(baseFilesOut);
+
+  const prFilesOut = await git(['diff', '--name-only', mergeBase, meta.headSha]);
+  if (prFilesOut === null) throw new Error(`git diff failed for ${mergeBase}..${meta.headSha}`);
+  const prFiles = splitLines(prFilesOut);
 
   const labels = meta.labels.map((l) => l.toLowerCase());
 

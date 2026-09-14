@@ -66,6 +66,21 @@ ai-merge-safety invalidate [--exclude <n>] [--repo <owner/repo>] [--cwd <path>]
 `evaluate` fails **safe**: if facts can't be gathered (bad merge-base, etc.) it
 posts `failure` rather than leave a stale green that could auto-merge.
 
+## Required-check setup
+
+To make `merge-safety` a required status on the base branch:
+
+1. **Trigger the check at least once** — GitHub can only select a status check for
+   a branch-protection rule after it has been posted at least once on a commit
+   targeting that branch. Open (or re-synchronize) a PR against the protected
+   branch to produce the first `merge-safety` run.
+2. **Add the required status** — go to **Settings → Branches → Branch protection
+   rules** for the target branch, enable **Require status checks to pass before
+   merging**, and search for / select **`merge-safety`** by that exact name.
+3. **Verify** — the next PR opened against the branch should show a `merge-safety`
+   check entry in the Checks panel. If it appears as "pending", the evaluate job is
+   still running; if it shows "Required" next to it, the protection rule is active.
+
 ## Known limitation — the TOCTOU window (why this is a POC)
 
 GitHub has **no synchronous pre-merge admission hook**, so a required check is

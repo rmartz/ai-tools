@@ -170,6 +170,8 @@ async function runInvalidate(repo: string, args: Args): Promise<void> {
       'open',
       '--base',
       'main',
+      '--limit',
+      '1000',
       '--json',
       'number,headRefOid',
     ],
