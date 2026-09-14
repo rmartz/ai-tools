@@ -10,7 +10,8 @@
   },
   "bin": {
     "ai-ensure-labels": "./dist/bin/ensure-labels.js",
-    "ai-ensure-project-config": "./dist/bin/ensure-project-config.js"
+    "ai-ensure-project-config": "./dist/bin/ensure-project-config.js",
+    "ai-verify-automerge-gate": "./dist/bin/verify-automerge-gate.js"
   },
   "files": [
     "dist"
