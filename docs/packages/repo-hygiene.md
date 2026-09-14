@@ -166,9 +166,18 @@ checks:
     resourceExemptTypes: [Design] # types that need no `resource`
 ```
 
-`validateDoc(path, text, cfg, cwd)` is the pure per-page validator; `okfCheck`
-filters the file set to in-scope pages and runs it. Findings are file-level
-(`error`, no line).
+`validateDoc(...)` is the pure per-page validator; `okfCheck` filters the file
+set to in-scope pages and runs it. Findings are file-level (`error`, no line).
+
+Beyond the core fields it also validates the **OKF v0.2 optional field
+families** when present (via `validateOptionalFields`), tolerating unknown keys
+per the spec: `status` (`draft`/`stable`/`deprecated`), `tags` (list of
+strings), ISO-8601-with-offset timestamps (`stale_after`, `generated.at`,
+`verified[].at`, `sources[].last_modified`, `usage_window.from`/`.to`),
+actor-format fields (`generated.by`, `verified[].by`, `sources[].author` — one of
+`<producer>/<version>`, `human:<id>`, `process:<id>`), the `generated` /
+`verified` / `sources` shapes, and `executor` / `attester` each needing a
+`resource`.
 
 ## Check: `action-pins`
 
@@ -312,7 +321,10 @@ covered for valid, empty, and malformed shapes; conflict-marker detection is
 covered as a pure function alongside the framework adapter and the env bypass.
 `okf` is covered through `validateDoc` (vocabulary, missing fields, the resource
 requirement and existence check, Design exemption) and `okfCheck`'s scope
-filtering; `action-pins` keeps the ported pure-function suite (`parseUsesLine` /
+filtering, plus `validateOptionalFields` (each OKF v0.2 optional family: status
+vocabulary, tags, timestamp-offset, actor format, the generated/verified/sources
+shapes, executor/attester resource, usage_window, and unknown-key tolerance);
+`action-pins` keeps the ported pure-function suite (`parseUsesLine` /
 `checkActionRef` / `scanYaml`) plus a check-level test that it flags only
 `.github/**` YAML. `md-pairing` is covered through `evaluatePairing` (missing
 pair, symlink violation, per-directory independence); `file-caps` covers the

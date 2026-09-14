@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import matter from 'gray-matter';
 import type { Check, CheckConfig, Finding } from '../types.js';
 import { trackedFiles } from '../discovery.js';
+import { validateOptionalFields } from './okf-fields.js';
 
 /**
  * Open Knowledge Format frontmatter conformance for docs pages — ported from
@@ -88,6 +89,11 @@ export function validateDoc(
       push(`resource not found: ${resource}`);
     }
   }
+
+  // OKF v0.2 optional lifecycle / trust / provenance field families (validated
+  // when present; unknown keys tolerated per the spec).
+  for (const message of validateOptionalFields(data)) push(message);
+
   return findings;
 }
 
