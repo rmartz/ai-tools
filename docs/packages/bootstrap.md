@@ -73,7 +73,16 @@ a block spliced into user content.
   commit SHA + `major.minor.patch` comment per the Actions-pinning convention;
   Dependabot's `github-actions` ecosystem keeps the SHA fresh. Each entry declares
   the `gateChecks` its native auto-merge depends on (here `merge-safety`);
-  `goldenGateChecks` is their union, the default gate set the verifier confirms.
+  `goldenGateChecks` is their union — the cross-repo **floor** of the gate.
+- **`goldenGateChecks` (`merge-safety`) is a floor, not a sufficient gate.**
+  Native auto-merge waits only on _required_ checks and ignores non-required ones,
+  so requiring `merge-safety` alone still lets a bump that breaks a _non-required_
+  Test/Build auto-merge. A safe gate additionally requires the repo's substantive
+  CI checks (typecheck / lint / format / build / test / PR-title, by that repo's
+  own context names) — repo-specific, so supplied per repo via the verifier's
+  `--check` flags rather than hardcoded. Choosing which of a repo's checks are
+  **required vs advisory** is a per-repo curation decision; a declarative config
+  for it is tracked as a follow-up.
 
 **Why copy-distribution and not a reusable workflow / `.github` special repo:** a
 `uses: rmartz/…@vN` reusable workflow still needs a `pull_request_target` trigger

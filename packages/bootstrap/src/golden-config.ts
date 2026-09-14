@@ -134,10 +134,17 @@ export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
 ];
 
 /**
- * The default gate-check set the auto-merge verifier confirms: the union of every
- * golden workflow's `gateChecks`. A repo that seeds `dependabot-auto-merge.yml`
- * but does not mark these checks required is in the ungated-auto-merge state the
- * verifier exists to prevent.
+ * The **cross-repo floor** of the auto-merge gate: the union of every golden
+ * workflow's `gateChecks` (currently just `merge-safety`), the one member present
+ * in any repo that runs the golden workflows.
+ *
+ * This is a floor, **not** a sufficient gate. GitHub-native auto-merge waits only
+ * on *required* checks and ignores non-required ones, so requiring `merge-safety`
+ * alone would still let a bump that breaks a *non-required* Test/Build auto-merge.
+ * A safe gate additionally requires the repo's substantive CI checks (typecheck /
+ * lint / format / build / test / PR-title, by whatever names that repo uses) —
+ * which are repo-specific and so are supplied per repo via the verifier's
+ * `--check` flags, not hardcoded here.
  */
 export const goldenGateChecks: readonly string[] = [
   ...new Set(goldenWorkflowFiles.flatMap((w) => w.gateChecks)),
