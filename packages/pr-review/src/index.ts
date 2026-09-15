@@ -50,6 +50,7 @@ export {
   isBreakingCommitMessage,
   isCiCommitMessage,
   isBreakingTitle,
+  isEvaluablePrState,
   hasFileOverlap,
   evaluateMergeSafety,
   errorMergeSafetyDecision,

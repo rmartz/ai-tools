@@ -10,6 +10,7 @@ import { ghCall, resolveRepoTarget, addLabels, removeLabel } from '@rmartz/githu
 import {
   evaluateMergeSafety,
   errorMergeSafetyDecision,
+  isEvaluablePrState,
   type MergeSafetyDecision,
 } from '../merge-safety.js';
 import { gatherMergeSafetyFacts, makeGitRunner, type PrMergeMeta } from '../merge-safety-facts.js';
@@ -98,11 +99,12 @@ interface PrView {
   title: string;
   labels: { name: string }[];
   mergeable: string;
+  state: string;
 }
 
 /** Re-read a PR until `mergeable` settles off UNKNOWN (GitHub computes it lazily). */
 async function fetchPrView(repo: string, pr: number, cwd?: string): Promise<PrView | null> {
-  const fields = 'number,headRefOid,title,labels,mergeable';
+  const fields = 'number,headRefOid,title,labels,mergeable,state';
   for (let attempt = 0; attempt < 3; attempt++) {
     const view = await ghJson<PrView>(
       ['gh', 'pr', 'view', String(pr), '--repo', repo, '--json', fields],
@@ -133,6 +135,14 @@ async function runEvaluate(repo: string, pr: number, args: Args): Promise<void> 
     const msg = `could not read PR #${pr}`;
     if (args.json) return emitDecisionJson(errorMergeSafetyDecision(msg), true);
     throw new Error(msg);
+  }
+  // A closed or merged PR can no longer merge, so it earns no verdict: skip the
+  // check-run and label reconciliation entirely. This guards against a label
+  // event firing evaluate on an already-settled PR (e.g. a verdict label applied
+  // moments after merge) and re-stamping it with a merge-safety label.
+  if (!isEvaluablePrState(view.state)) {
+    console.log(`#${pr}: ${view.state.toLowerCase()} — skipping merge-safety evaluate`);
+    return;
   }
   const meta: PrMergeMeta = {
     headSha: view.headRefOid,

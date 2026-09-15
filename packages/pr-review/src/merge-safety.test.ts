@@ -4,6 +4,7 @@ import {
   isBreakingCommitMessage,
   isCiCommitMessage,
   isBreakingTitle,
+  isEvaluablePrState,
   hasFileOverlap,
   evaluateMergeSafety,
   errorMergeSafetyDecision,
@@ -56,6 +57,17 @@ describe('isBreakingTitle', () => {
   it('mirrors the subject-marker rule on a PR title', () => {
     expect(isBreakingTitle('feat(worktree)!: change default base')).toBe(true);
     expect(isBreakingTitle('chore: bump deps')).toBe(false);
+  });
+});
+
+describe('isEvaluablePrState', () => {
+  it('evaluates an OPEN PR', () => {
+    expect(isEvaluablePrState('OPEN')).toBe(true);
+  });
+
+  it('skips a CLOSED or MERGED PR — no verdict belongs on a settled PR', () => {
+    expect(isEvaluablePrState('CLOSED')).toBe(false);
+    expect(isEvaluablePrState('MERGED')).toBe(false);
   });
 });
 

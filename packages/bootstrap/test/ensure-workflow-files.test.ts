@@ -131,6 +131,16 @@ describe('goldenWorkflowFiles — the seeded merge-safety workflow', () => {
     expect(mergeSafety?.content).toContain('github.event.repository.default_branch');
   });
 
+  it('narrows label events to the verdict-relevant `breaking change` label', () => {
+    // #229 — a labeled/unlabeled event only changes the verdict for `breaking
+    // change`; every other label (approved, no UAT needed, domain labels) must
+    // not spin up an evaluate run.
+    const content = mergeSafety?.content ?? '';
+    expect(content).toContain("github.event.action != 'labeled'");
+    expect(content).toContain("github.event.action != 'unlabeled'");
+    expect(content).toContain("github.event.label.name == 'breaking change'");
+  });
+
   it('provides the check and so declares no gateChecks of its own', () => {
     expect(mergeSafety?.gateChecks).toEqual([]);
   });
