@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/rmartz/ai-tools/compare/pr-review-v0.4.0...pr-review-v0.4.1) (2026-09-15)
+
+
+### Bug Fixes
+
+* **deps:** use caret ranges for internal [@rmartz](https://github.com/rmartz) dependencies ([#221](https://github.com/rmartz/ai-tools/issues/221)) ([15d5da6](https://github.com/rmartz/ai-tools/commit/15d5da650020ee499b18054ecceb56aed94bfd99))
+
 ## [0.4.0](https://github.com/rmartz/ai-tools/compare/pr-review-v0.3.0...pr-review-v0.4.0) (2026-09-14)
 
 

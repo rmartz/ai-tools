@@ -1,6 +1,6 @@
 {
   "name": "@rmartz/pr-review",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "exports": {
     ".": {
@@ -27,8 +27,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@rmartz/agent-runtime": "workspace:*",
-    "@rmartz/github": "workspace:*"
+    "@rmartz/agent-runtime": "workspace:^",
+    "@rmartz/github": "workspace:^"
   },
   "devDependencies": {
     "tsup": "^8.3.0",
