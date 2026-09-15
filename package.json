@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check:okf": "node packages/repo-hygiene/dist/bin/repo-hygiene.js okf --check",
-    "check:pins": "tsx scripts/check-pins.ts",
+    "check:pins": "node packages/repo-hygiene/dist/bin/repo-hygiene.js package-pins --check",
     "check:actions": "node packages/repo-hygiene/dist/bin/repo-hygiene.js action-pins --check",
     "install:skills": "tsx scripts/install-skills.ts",
     "install:clis": "tsx scripts/install-clis.ts",
