@@ -73,6 +73,11 @@ describe('parseSlugFromRemoteUrl', () => {
     );
   });
 
+  it('accepts an already-bare owner/repo (a pre-resolved slug, no host/protocol)', () => {
+    expect(parseSlugFromRemoteUrl('rmartz/ai-tools')).toBe('rmartz/ai-tools');
+    expect(parseSlugFromRemoteUrl('rmartz/ai-tools.git')).toBe('rmartz/ai-tools');
+  });
+
   it('returns null for an unparseable url', () => {
     expect(parseSlugFromRemoteUrl('')).toBeNull();
     expect(parseSlugFromRemoteUrl('not-a-remote')).toBeNull();

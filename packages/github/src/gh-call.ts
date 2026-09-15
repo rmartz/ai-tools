@@ -76,11 +76,16 @@ export async function ghCall(
 
 /** Parse an `owner/repo` slug from a GitHub remote URL (ssh, https, or `git://`), or `null`. */
 export function parseSlugFromRemoteUrl(url: string): string | null {
+  const trimmed = url.trim();
   // Take the last two path segments before an optional `.git` / trailing slash,
   // after either the ssh `:` or an https/`git://` `/`. Handles
   // git@github.com:owner/repo.git, https://github.com/owner/repo(.git), ssh://….
-  const match = url.trim().match(/[/:]([^/:]+)\/([^/]+?)(?:\.git)?\/?$/);
-  return match ? `${match[1]}/${match[2]}` : null;
+  const match = trimmed.match(/[/:]([^/:]+)\/([^/]+?)(?:\.git)?\/?$/);
+  if (match) return `${match[1]}/${match[2]}`;
+  // Fall back to an already-bare `owner/repo` (a pre-resolved slug with no host or
+  // protocol) so the parser is robust to being handed a slug rather than a URL.
+  const bare = trimmed.match(/^([^/:\s]+)\/([^/:\s]+?)(?:\.git)?$/);
+  return bare ? `${bare[1]}/${bare[2]}` : null;
 }
 
 /**
