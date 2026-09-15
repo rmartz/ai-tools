@@ -32,11 +32,14 @@ first needed, not here.
 Run `ai-ensure-project-config` (`@rmartz/bootstrap`). It applies the golden-state
 tooling ignores a healthy repo expects (`.prettierignore`, an ESLint ignore config,
 `.gitignore` baselines) so formatters and linters don't fight generated or vendored
-files, **and** the golden whole-file workflows — currently the generic
-`dependabot-auto-merge.yml` (native auto-merge on green patch/minor Dependabot PRs;
-majors stay manual). Also idempotent: a drifted managed workflow is overwritten
-back to golden, and a user-authored workflow of the same name (no managed header)
-is left untouched (`skipped`).
+files, **and** the golden whole files — the workflows `dependabot-auto-merge.yml`
+(native auto-merge on green patch/minor Dependabot PRs; majors stay manual),
+`merge-safety.yml`, `repo-hygiene.yml`, and `commit-convention.yml` (the post-merge
+tripwire that fails when a non-conventional subject reaches `main`), plus the
+seeded `.github/dependabot.yml`. Also idempotent: a drifted managed workflow is
+overwritten back to golden, a `seed` file is written only if absent, and a
+user-authored workflow of the same name (no managed header) is left untouched
+(`skipped`).
 
 ## Step 3 — Confirm the auto-merge gate (hard block)
 
@@ -59,8 +62,29 @@ workflow depends on:
 Only the user's `gh` auth reliably carries the admin access this read needs, which
 is why the gate is confirmed here rather than inside the workflow at runtime.
 
-## Step 4 — Report
+## Step 4 — Confirm the squash-merge convention (hard block)
+
+Run `ai-verify-squash-setting -C <repo>` to confirm the repo squashes with the
+**PR title**, not the branch commit message:
+
+- **Default (read-only):** it exits **non-zero** unless
+  `squash_merge_commit_title=PR_TITLE` and `squash_merge_commit_message=PR_BODY`. A
+  non-zero exit is a **hard block** — with any other default, a squash merge uses
+  the branch commit message (plain, per the "no Conventional Commits within a
+  feature branch" rule) instead of the conventional PR title, and release-please
+  **silently skips** the release (the failure that dropped #214–#217).
+- **To configure it:** re-run with `--apply` (admin, state-changing — surface it
+  before running), then re-confirm without `--apply`.
+
+This is the **pre-set** half of the release-integrity fix; the seeded
+`commit-convention.yml` tripwire (written in Step 2) is the **post-merge** alarm
+for the same failure, catching squash-setting drift or a direct push after the
+fact. `pr-title-lint` validates the title pre-merge but can't see whether it
+reached `main` — these two close that gap.
+
+## Step 5 — Report
 
 Summarize what each step created vs. left unchanged (and any `skipped`
-user-authored workflow), plus the gate's confirmed/applied state, so a re-run on an
-already-bootstrapped repo reads as a clean no-op rather than churn.
+user-authored workflow), plus the auto-merge gate's and squash-setting's
+confirmed/applied state, so a re-run on an already-bootstrapped repo reads as a
+clean no-op rather than churn.
