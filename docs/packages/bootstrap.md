@@ -143,16 +143,26 @@ optionally applies) the branch-protection gate the seeded auto-merge workflow
 depends on.
 
 - **Confirm (default, read-only):** read the default branch's
-  `required_status_checks` and the repo's `allow_auto_merge`; `satisfied` is true
-  only when auto-merge is on **and** every gate check is marked required. A branch
-  with no protection reads as "no required checks" — the **fail-closed** direction,
-  so an unprotected branch reports the gate missing rather than silently passing.
-- **`--apply` (opt-in, state-changing):** enable `allow_auto_merge` if off, and PUT
+  `required_status_checks`, the repo's `allow_auto_merge`, and the repo's
+  **squash-merge commit setting**; `satisfied` is true only when auto-merge is on,
+  every gate check is marked required, **and** the squash commit is set to PR title
+  - body (`squash_merge_commit_title=PR_TITLE`, `squash_merge_commit_message=PR_BODY`).
+    A branch with no protection reads as "no required checks" — the **fail-closed**
+    direction, so an unprotected branch reports the gate missing rather than silently
+    passing.
+- **`--apply` (opt-in, state-changing):** enable `allow_auto_merge` if off, PUT
   a minimal branch protection requiring the **union** of the currently-required and
-  gate contexts (`strict`). PUT replaces the whole protection object, so this
-  configures a strict required-checks gate, **not** a review policy
-  (`required_pull_request_reviews` / `restrictions` are set null). Admin-level
-  mutation, so it never runs unless explicitly requested; a failed write throws.
+  gate contexts (`strict`), and PATCH the squash-merge commit to PR title + body.
+  PUT replaces the whole protection object, so this configures a strict
+  required-checks gate, **not** a review policy (`required_pull_request_reviews` /
+  `restrictions` are set null). Admin-level mutation, so it never runs unless
+  explicitly requested; a failed write throws.
+
+**Why the squash setting is part of this gate:** under auto-merge a merged PR must
+land a **conventional commit subject** (its PR title) or release-please silently
+skips the release — so an auto-merge repo with the squash commit set to anything
+but PR title + body quietly breaks its own releases. Confirming it here couples it
+to the same hard gate.
 
 **Why the gate can't live in the workflow (token caveat):** reading whether checks
 are _required_ needs **admin-level** access the workflow's default `GITHUB_TOKEN`
