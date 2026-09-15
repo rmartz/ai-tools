@@ -37,9 +37,24 @@ describe('ensureProjectConfig', () => {
     const text = read('.gitignore');
     expect(text).toContain(BLOCK_BEGIN);
     expect(text).toContain(BLOCK_END);
-    expect(text).toContain('.git-worktrees/');
     expect(text).toContain('node_modules/');
     expect(text).toContain('dist/');
+  });
+
+  it('does not seed `.git-worktrees/` — that is a per-developer global-excludes concern', () => {
+    ensureProjectConfig(dir);
+    expect(read('.gitignore')).not.toContain('.git-worktrees/');
+    expect(read('.prettierignore')).not.toContain('.git-worktrees/');
+    expect(read('.eslintignore')).not.toContain('.git-worktrees/');
+  });
+
+  it('strips a stale `.git-worktrees/` line from the managed block on the next run', () => {
+    const stale = `${BLOCK_BEGIN}\nnode_modules/\n.git-worktrees/\n${BLOCK_END}\n`;
+    writeFileSync(join(dir, '.gitignore'), stale);
+    const res = ensureProjectConfig(dir);
+    const outcome = res.outcomes.find((o) => o.filename === '.gitignore');
+    expect(outcome?.action).toBe('updated');
+    expect(read('.gitignore')).not.toContain('.git-worktrees/');
   });
 
   it('is idempotent — a second run reports unchanged and does not duplicate the block', () => {
