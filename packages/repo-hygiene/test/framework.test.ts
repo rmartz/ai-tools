@@ -51,6 +51,11 @@ describe('createRegistry', () => {
     expect(builtinChecks().map((c) => c.name)).toContain('action-pins');
     expect(createRegistry().get('action-pins')).toBeDefined();
   });
+
+  it('includes package-pins in the built-in checks', () => {
+    expect(builtinChecks().map((c) => c.name)).toContain('package-pins');
+    expect(createRegistry().get('package-pins')).toBeDefined();
+  });
 });
 
 describe('runHygiene', () => {

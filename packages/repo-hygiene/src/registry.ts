@@ -3,6 +3,7 @@ import { conflictMarkersCheck } from './checks/conflict-markers.js';
 import { okfCheck } from './checks/okf.js';
 import { okfIndexCheck } from './checks/okf-index.js';
 import { actionPinsCheck } from './checks/action-pins.js';
+import { packagePinsCheck } from './checks/package-pins.js';
 import { mdPairingCheck } from './checks/md-pairing.js';
 import { fileCapsCheck } from './checks/file-caps.js';
 
@@ -19,6 +20,7 @@ export function builtinChecks(): Check[] {
     okfCheck,
     okfIndexCheck,
     actionPinsCheck,
+    packagePinsCheck,
     mdPairingCheck,
     fileCapsCheck,
   ];
