@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.6.0...repo-hygiene-v0.7.0) (2026-09-15)
+
+
+### Features
+
+* **repo-hygiene:** port the package.json version-pin check into @rmartz/repo-hygiene ([#224](https://github.com/rmartz/ai-tools/issues/224)) ([a66c8e6](https://github.com/rmartz/ai-tools/commit/a66c8e66ed90d028156a6b9de36925fc834ffb0d))
+
 ## [0.6.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.5.0...repo-hygiene-v0.6.0) (2026-09-15)
 
 
