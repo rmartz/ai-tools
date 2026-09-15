@@ -59,6 +59,19 @@ export function isBreakingTitle(title: string): boolean {
   return BREAKING_SUBJECT_RE.test(title.trim());
 }
 
+/**
+ * True when a PR's state (`gh pr view --json state`: `OPEN` / `CLOSED` /
+ * `MERGED`) warrants a merge-safety verdict. Only an OPEN PR can still merge, so
+ * only an OPEN PR gets its check-run and labels reconciled; a closed or merged PR
+ * is a deliberate skip — not the `errorMergeSafetyDecision` fail-safe, which is
+ * for an OPEN PR whose facts could not be gathered. Guards against a post-merge
+ * label event (e.g. a verdict label applied moments after merge) re-stamping a
+ * settled PR.
+ */
+export function isEvaluablePrState(state: string): boolean {
+  return state === 'OPEN';
+}
+
 /** True when the PR's changed files intersect the base's changed files. */
 export function hasFileOverlap(prFiles: readonly string[], baseFiles: readonly string[]): boolean {
   if (!prFiles.length || !baseFiles.length) return false;

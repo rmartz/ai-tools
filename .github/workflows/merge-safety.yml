@@ -35,7 +35,14 @@ concurrency:
 jobs:
   evaluate:
     name: Evaluate one PR
-    if: github.event_name != 'push'
+    # Only `breaking change` among labels affects the verdict (it flips
+    # prIsBreaking), so a labeled/unlabeled event for any other label must not
+    # spin up an evaluate run. Non-label events (opened/synchronize/reopened/
+    # edited/workflow_dispatch) always run; push is handled by `invalidate`. (#229)
+    if: >-
+      github.event_name != 'push' &&
+      (github.event.action != 'labeled' && github.event.action != 'unlabeled'
+       || github.event.label.name == 'breaking change')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
