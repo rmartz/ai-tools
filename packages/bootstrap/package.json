@@ -1,6 +1,6 @@
 {
   "name": "@rmartz/bootstrap",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "exports": {
     ".": {
@@ -29,8 +29,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@rmartz/agent-runtime": "workspace:*",
-    "@rmartz/github": "workspace:*"
+    "@rmartz/agent-runtime": "workspace:^",
+    "@rmartz/github": "workspace:^"
   },
   "devDependencies": {
     "tsup": "^8.3.0",

@@ -60,10 +60,10 @@ importers:
   packages/bootstrap:
     dependencies:
       '@rmartz/agent-runtime':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../agent-runtime
       '@rmartz/github':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../github
     devDependencies:
       tsup:
@@ -76,7 +76,7 @@ importers:
   packages/github:
     dependencies:
       '@rmartz/agent-runtime':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../agent-runtime
     devDependencies:
       tsup:
@@ -89,10 +89,10 @@ importers:
   packages/issues:
     dependencies:
       '@rmartz/agent-runtime':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../agent-runtime
       '@rmartz/github':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../github
     devDependencies:
       tsup:
@@ -105,10 +105,10 @@ importers:
   packages/pr-review:
     dependencies:
       '@rmartz/agent-runtime':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../agent-runtime
       '@rmartz/github':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../github
     devDependencies:
       tsup:
@@ -121,7 +121,7 @@ importers:
   packages/repo-hygiene:
     dependencies:
       '@rmartz/agent-runtime':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../agent-runtime
       gray-matter:
         specifier: ^4.0.3
@@ -146,10 +146,10 @@ importers:
   packages/reporting:
     dependencies:
       '@rmartz/agent-runtime':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../agent-runtime
       '@rmartz/github':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../github
     devDependencies:
       tsup:
@@ -162,10 +162,10 @@ importers:
   packages/verify:
     dependencies:
       '@rmartz/agent-runtime':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../agent-runtime
       '@rmartz/github':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../github
       yaml:
         specifier: ^2.5.0
@@ -181,10 +181,10 @@ importers:
   packages/worktree:
     dependencies:
       '@rmartz/agent-runtime':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../agent-runtime
       '@rmartz/github':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../github
     devDependencies:
       tsup:

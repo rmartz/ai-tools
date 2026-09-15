@@ -1,6 +1,6 @@
 {
   "name": "@rmartz/repo-hygiene",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "exports": {
     ".": {
@@ -28,7 +28,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@rmartz/agent-runtime": "workspace:*",
+    "@rmartz/agent-runtime": "workspace:^",
     "gray-matter": "^4.0.3",
     "picomatch": "^4.0.7",
     "yaml": "^2.5.0"
