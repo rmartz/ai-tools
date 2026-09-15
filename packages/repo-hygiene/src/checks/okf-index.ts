@@ -1,6 +1,7 @@
 import matter from 'gray-matter';
 import { trackedFiles, worktreeContent } from '../discovery.js';
 import type { Check, CheckConfig, Finding } from '../types.js';
+import { resolveRel, scanLinks } from './md-links.js';
 
 /**
  * OKF index-tree navigability — the docs-bundle invariant that `okf`
@@ -55,26 +56,15 @@ function resolveConfig(settings: CheckConfig): OkfIndexConfig {
   return { roots: stringList(settings, 'roots', ['docs']), indexName };
 }
 
-/** Normalize `href` (relative to `fromDir`) to a repo-relative path, resolving ./ and ../. */
-function resolveRel(fromDir: string, href: string): string {
-  const out: string[] = [];
-  for (const seg of (fromDir === '' ? [] : fromDir.split('/')).concat(href.split('/'))) {
-    if (seg === '' || seg === '.') continue;
-    if (seg === '..') out.pop();
-    else out.push(seg);
-  }
-  return out.join('/');
-}
-
 /** Repo-relative paths of the local `.md` files an index page links to. */
 function linkedMdTargets(indexPath: string, content: string): Set<string> {
   const fromDir = dirOf(indexPath);
   const targets = new Set<string>();
-  for (const m of content.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
-    const href = (m[1] ?? '').trim().split('#')[0];
+  for (const { href } of scanLinks(content)) {
+    const bare = (href.split('#')[0] ?? '').trim();
     // Only local .md targets; skip external (`scheme:`), pure-anchor, and non-md.
-    if (!href || /^[a-z]+:/i.test(href) || !href.endsWith('.md')) continue;
-    targets.add(resolveRel(fromDir, href));
+    if (!bare || /^[a-z]+:/i.test(bare) || !bare.endsWith('.md')) continue;
+    targets.add(resolveRel(fromDir, bare));
   }
   return targets;
 }

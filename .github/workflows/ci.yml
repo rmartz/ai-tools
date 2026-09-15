@@ -69,3 +69,15 @@ jobs:
       # test job does) to populate dist/.
       - run: pnpm run build
       - run: pnpm run check:okf
+
+  docs-links:
+    name: Docs link integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      # check:docs-links runs the built @rmartz/repo-hygiene CLI, so build first
+      # (as the okf job does) to populate dist/.
+      - run: pnpm run build
+      - run: pnpm run check:docs-links

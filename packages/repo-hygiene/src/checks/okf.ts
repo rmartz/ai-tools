@@ -1,8 +1,6 @@
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
 import matter from 'gray-matter';
 import type { Check, CheckConfig, Finding } from '../types.js';
-import { trackedFiles } from '../discovery.js';
+import { repoPathExists } from '../discovery.js';
 import { validateOptionalFields } from './okf-fields.js';
 
 /**
@@ -102,15 +100,10 @@ export const okfCheck: Check = {
   description: 'Open Knowledge Format frontmatter conformance for docs pages.',
   async run(ctx) {
     const cfg = resolveConfig(ctx.settings);
-    const cwd = ctx.cwd ?? process.cwd();
-    // In --staged mode ctx.files.read reads the git index; probe the index for
-    // existence too — existsSync reads the worktree and disagrees when a
-    // resource is staged-for-deletion but still present on disk.
-    const indexPaths = ctx.mode === '--staged' ? new Set(await trackedFiles({ cwd })) : null;
-    const resourceExists =
-      indexPaths !== null
-        ? (r: string) => indexPaths.has(r)
-        : (r: string) => existsSync(resolve(cwd, r));
+    // In --staged mode ctx.files.read reads the git index; repoPathExists probes
+    // the index for existence too, so a resource staged-for-deletion but still on
+    // disk reads as absent (matching what the check scans).
+    const resourceExists = await repoPathExists(ctx.mode, { cwd: ctx.cwd });
     const findings: Finding[] = [];
     for (const path of ctx.files.paths) {
       if (!inScope(path, cfg)) continue;
