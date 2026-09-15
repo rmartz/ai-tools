@@ -30,6 +30,12 @@ export type {
   VerifyAutomergeGateResult,
 } from './verify-automerge-gate.js';
 
+export { verifySquashMergeSetting } from './verify-squash-merge-setting.js';
+export type {
+  VerifySquashMergeSettingOptions,
+  VerifySquashMergeSettingResult,
+} from './verify-squash-merge-setting.js';
+
 export {
   goldenIgnoreFiles,
   goldenWorkflowFiles,

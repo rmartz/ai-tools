@@ -22,6 +22,11 @@ The `bootstrap` skill readies a repository for the PR workflow by composing
   exit is a **hard block**: a seeded auto-merge file in a repo with no required
   checks would merge every patch/minor Dependabot PR _immediately_, so the gate
   must be confirmed before the bootstrap PR lands.
+- **`ai-verify-squash-setting`** — confirm (or `--apply`) the squash-merge default
+  (`PR_TITLE` + `PR_BODY`) so a merge carries the conventional PR title onto `main`.
+  A non-zero exit is a **hard block**: with any other default, release-please
+  silently skips the release. The seeded `commit-convention.yml` tripwire is the
+  post-merge alarm for the same failure.
 
 The first two are safe to re-run — existing state is reconciled in place, so a
 re-run on an already-bootstrapped repo is a clean no-op. The skill seeds the repo's

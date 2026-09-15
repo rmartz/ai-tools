@@ -6,6 +6,7 @@ export default defineConfig({
     'src/bin/ensure-labels.ts',
     'src/bin/ensure-project-config.ts',
     'src/bin/verify-automerge-gate.ts',
+    'src/bin/verify-squash-setting.ts',
   ],
   format: ['esm'],
   dts: true,
