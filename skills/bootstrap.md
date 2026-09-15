@@ -40,6 +40,8 @@ files, **and** the golden whole-file set:
   (consumer shape: installs the published `@rmartz/pr-review` CLI).
 - `.github/workflows/repo-hygiene.yml` — the universal `action-pins` check (via the
   published `@rmartz/repo-hygiene` CLI).
+- `.github/workflows/commit-convention.yml` — the post-merge tripwire that fails
+  when a non-conventional subject reaches `main`.
 - `.github/dependabot.yml` — a starting Dependabot config (**seed** policy:
   write-if-absent, then repo-owned).
 
@@ -74,8 +76,29 @@ breaks its own releases.
 Only the user's `gh` auth reliably carries the admin access this read needs, which
 is why the gate is confirmed here rather than inside the workflow at runtime.
 
-## Step 4 — Report
+## Step 4 — Confirm the squash-merge convention (hard block)
+
+Run `ai-verify-squash-setting -C <repo>` to confirm the repo squashes with the
+**PR title**, not the branch commit message:
+
+- **Default (read-only):** it exits **non-zero** unless
+  `squash_merge_commit_title=PR_TITLE` and `squash_merge_commit_message=PR_BODY`. A
+  non-zero exit is a **hard block** — with any other default, a squash merge uses
+  the branch commit message (plain, per the "no Conventional Commits within a
+  feature branch" rule) instead of the conventional PR title, and release-please
+  **silently skips** the release (the failure that dropped #214–#217).
+- **To configure it:** re-run with `--apply` (admin, state-changing — surface it
+  before running), then re-confirm without `--apply`.
+
+This is the **pre-set** half of the release-integrity fix; the seeded
+`commit-convention.yml` tripwire (written in Step 2) is the **post-merge** alarm
+for the same failure, catching squash-setting drift or a direct push after the
+fact. `pr-title-lint` validates the title pre-merge but can't see whether it
+reached `main` — these two close that gap.
+
+## Step 5 — Report
 
 Summarize what each step created vs. left unchanged (and any `skipped`
-user-authored workflow), plus the gate's confirmed/applied state, so a re-run on an
-already-bootstrapped repo reads as a clean no-op rather than churn.
+user-authored workflow), plus the auto-merge gate's and squash-setting's
+confirmed/applied state, so a re-run on an already-bootstrapped repo reads as a
+clean no-op rather than churn.
