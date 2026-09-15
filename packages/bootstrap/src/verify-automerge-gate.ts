@@ -13,6 +13,12 @@ import { goldenGateChecks } from './golden-config.js';
  * admin-level access the workflow's `GITHUB_TOKEN` generally lacks; the user's
  * `gh` auth does have it. So the confirmation lives in this bootstrap/agent step,
  * where a missing gate fails loudly, rather than in the workflow at runtime.
+ *
+ * It also confirms the repo's **squash-merge commit setting** (PR title + body):
+ * under auto-merge an auto-merged PR must land a conventional commit subject (its
+ * PR title) or release-please silently skips it. That coupling makes the squash
+ * setting part of the same gate — a repo enabling auto-merge without it would
+ * quietly break its releases on every auto-merged PR.
  */
 
 export interface VerifyAutomergeGateOptions extends RepoTargetOptions {
@@ -33,7 +39,15 @@ export interface VerifyAutomergeGateResult {
   gateChecks: string[];
   /** Gate checks not currently required — non-empty means the gate is incomplete. */
   missingChecks: string[];
-  /** `allowAutoMerge` on AND no missing gate checks. */
+  /**
+   * Whether the repo's squash-merge commit is configured to take the **PR title +
+   * body** (`squash_merge_commit_title=PR_TITLE`, `squash_merge_commit_message=PR_BODY`).
+   * Under auto-merge this is load-bearing: an auto-merged PR must land a
+   * conventional commit subject (from the PR title) or release-please silently
+   * skips it — the exact miss that stranded a github release.
+   */
+  squashCommitCorrect: boolean;
+  /** `allowAutoMerge` on AND no missing gate checks AND the squash commit setting correct. */
   satisfied: boolean;
   /** Whether `--apply` mutated repo/branch state during this run. */
   applied: boolean;
@@ -85,6 +99,58 @@ async function readAllowAutoMerge(repo: string, opts: RepoTargetOptions): Promis
     opts,
   );
   return out?.trim() === 'true';
+}
+
+/**
+ * The squash-merge commit config a release-please repo needs so a merged PR's
+ * subject is its (conventional) PR title, with the description as the body.
+ */
+const DESIRED_SQUASH_TITLE = 'PR_TITLE';
+const DESIRED_SQUASH_MESSAGE = 'PR_BODY';
+
+interface RepoSquashSettings {
+  squash_merge_commit_title?: string;
+  squash_merge_commit_message?: string;
+}
+
+/** True when the repo's squash-merge commit is set to PR title + PR body. */
+async function readSquashCommitCorrect(repo: string, opts: RepoTargetOptions): Promise<boolean> {
+  const res = await readJson<RepoSquashSettings>(
+    [
+      'gh',
+      'api',
+      `repos/${repo}`,
+      '--jq',
+      '{squash_merge_commit_title, squash_merge_commit_message}',
+    ],
+    opts,
+  );
+  return (
+    res?.squash_merge_commit_title === DESIRED_SQUASH_TITLE &&
+    res?.squash_merge_commit_message === DESIRED_SQUASH_MESSAGE
+  );
+}
+
+/** Set the squash-merge commit to PR title + body. Throws on write failure. */
+async function applySquashCommitSetting(repo: string, opts: RepoTargetOptions): Promise<void> {
+  const out = await ghCall(
+    {
+      argv: [
+        'gh',
+        'api',
+        '--method',
+        'PATCH',
+        `repos/${repo}`,
+        '-f',
+        `squash_merge_commit_title=${DESIRED_SQUASH_TITLE}`,
+        '-f',
+        `squash_merge_commit_message=${DESIRED_SQUASH_MESSAGE}`,
+      ],
+    },
+    null,
+    opts,
+  );
+  if (out === null) throw new Error(`failed to set the squash-merge commit setting on ${repo}`);
 }
 
 /**
@@ -171,15 +237,23 @@ export async function verifyAutomergeGate(
   let allowAutoMerge = await readAllowAutoMerge(repo, opts);
   let requiredChecks = await readRequiredChecks(repo, branch, opts);
   let missingChecks = gateChecks.filter((c) => !requiredChecks.includes(c));
+  let squashCommitCorrect = await readSquashCommitCorrect(repo, opts);
 
   let applied = false;
-  if (opts.apply && (missingChecks.length > 0 || !allowAutoMerge)) {
-    const desiredContexts = [...new Set([...requiredChecks, ...gateChecks])];
-    await applyGate(repo, branch, desiredContexts, !allowAutoMerge, opts);
+  const gateIncomplete = missingChecks.length > 0 || !allowAutoMerge;
+  if (opts.apply && (gateIncomplete || !squashCommitCorrect)) {
+    if (gateIncomplete) {
+      const desiredContexts = [...new Set([...requiredChecks, ...gateChecks])];
+      await applyGate(repo, branch, desiredContexts, !allowAutoMerge, opts);
+      allowAutoMerge = true;
+      requiredChecks = desiredContexts;
+      missingChecks = [];
+    }
+    if (!squashCommitCorrect) {
+      await applySquashCommitSetting(repo, opts);
+      squashCommitCorrect = true;
+    }
     applied = true;
-    allowAutoMerge = true;
-    requiredChecks = desiredContexts;
-    missingChecks = [];
   }
 
   return {
@@ -189,7 +263,8 @@ export async function verifyAutomergeGate(
     requiredChecks,
     gateChecks,
     missingChecks,
-    satisfied: allowAutoMerge && missingChecks.length === 0,
+    squashCommitCorrect,
+    satisfied: allowAutoMerge && missingChecks.length === 0 && squashCommitCorrect,
     applied,
   };
 }

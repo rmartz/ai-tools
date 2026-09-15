@@ -51,8 +51,13 @@ async function main(): Promise<void> {
   console.log(`allow_auto_merge: ${result.allowAutoMerge ? 'on' : 'off'}`);
   console.log(`Gate checks:     ${result.gateChecks.join(', ') || '(none)'}`);
   console.log(`Required checks: ${result.requiredChecks.join(', ') || '(none)'}`);
+  console.log(
+    `Squash commit:   ${result.squashCommitCorrect ? 'PR title + body' : 'NOT PR title + body'}`,
+  );
   if (result.applied)
-    console.log('\nApplied: enabled auto-merge and set the required gate checks.');
+    console.log(
+      '\nApplied: enabled auto-merge, set the required gate checks, and fixed the squash setting.',
+    );
 
   if (result.satisfied) {
     console.log('\n✓ Auto-merge gate satisfied.');
@@ -62,6 +67,11 @@ async function main(): Promise<void> {
   if (!result.allowAutoMerge) console.error('  - allow_auto_merge is off on the repo.');
   if (result.missingChecks.length) {
     console.error(`  - required checks missing: ${result.missingChecks.join(', ')}.`);
+  }
+  if (!result.squashCommitCorrect) {
+    console.error(
+      '  - squash-merge commit is not set to PR title + body (release-please needs it).',
+    );
   }
   console.error('\nRe-run with --apply to configure the gate (admin, state-changing).');
   process.exit(1);
