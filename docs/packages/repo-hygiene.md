@@ -1,7 +1,7 @@
 ---
 type: Library
 title: repo-hygiene
-description: Layer-1 repo-quality gates — a pluggable check framework (registry, config, severity, reporter) shipping conflict-markers, OKF-frontmatter, OKF-index, action-pin, md-pairing, and file-caps checks.
+description: Layer-1 repo-quality gates — a pluggable check framework (registry, config, severity, reporter) shipping conflict-markers, OKF-frontmatter, OKF-index, action-pin, package-pin, md-pairing, and file-caps checks.
 resource: packages/repo-hygiene/src/index.ts
 tags: [tooling, quality-gates, ci, merge]
 ---
@@ -18,8 +18,8 @@ The package exists to end the per-repo duplication of the same hygiene checks
 enforcement): one tested implementation here, thin callers everywhere else. This
 page documents the **framework** (the check contract, config, dispatch, output
 contract) and the checks it ships: `conflict-markers` (the reference check),
-`okf`, `okf-index`, `action-pins`, `md-pairing`, and `file-caps`. Further checks
-land on top of this foundation (epic #163).
+`okf`, `okf-index`, `action-pins`, `package-pins`, `md-pairing`, and `file-caps`.
+Further checks land on top of this foundation (epic #163).
 
 ## The check framework
 
@@ -202,6 +202,25 @@ config-free check. The pure `parseUsesLine` / `checkActionRef` / `scanYaml`
 functions stay exported for reuse; `actionPinsCheck` filters the file set to
 `.github/**` YAML and maps each hit to a line-anchored `error` finding.
 
+## Check: `package-pins`
+
+The npm analog of `action-pins` — the second half of dependency-pin enforcement.
+Ported from ai-tools' root `scripts/check-pins.ts` (built for #63). Every registry
+dependency in every `package.json` (root + `packages/*`) must be pinned to a full
+`[major].[minor].[patch]` base, keeping the `^`/`~` range operator (`^3.8.3`,
+`~1.2.0`). An abbreviated pin like `^3` or `^3.8` lets Dependabot upgrade the
+dependency through a `pnpm-lock.yaml`-only change with no `package.json` diff,
+hiding the bump from review (the canonical failure: a minor `prettier` bump that
+silently reformats the tree and only surfaces as a red CI run). npm has no git
+SHA, so "full base pin" is the npm equivalent of `action-pins`' 40-char commit
+SHA. A config-free check, like `action-pins`. Non-registry specifiers
+(`workspace:*`, `catalog:`, `npm:`, `link:`, `file:`, git/URL, `owner/repo`) carry
+a protocol or path and are exempt. The pure `isRegistryRange` / `checkPinRange` /
+`scanManifest` functions stay exported for reuse; `packagePinsCheck` filters the
+file set to `package.json` manifests, scans `dependencies` and `devDependencies`,
+and maps each violation (and any JSON parse failure) to a file-level `error`
+finding.
+
 ## Check: `md-pairing`
 
 `CLAUDE.md` / `AGENTS.md` must travel together: a directory that carries one must
@@ -276,12 +295,13 @@ crosses the line cap.
 
 ## Dogfooding
 
-ai-tools runs `okf` and `action-pins` against itself through the published CLI:
-its `check:okf` and `check:actions` package scripts invoke
-`ai-repo-hygiene <check> --check`, replacing the former standalone
-`scripts/check-okf-frontmatter.ts` and `scripts/check-action-pins.ts` (now
-deleted). Because the scripts run the built CLI, the `okf` and `action-pins` CI
-jobs build the workspace first (as the `test` job does).
+ai-tools runs `okf`, `action-pins`, and `package-pins` against itself through the
+published CLI: its `check:okf`, `check:actions`, and `check:pins` package scripts
+invoke `ai-repo-hygiene <check> --check`, replacing the former standalone
+`scripts/check-okf-frontmatter.ts`, `scripts/check-action-pins.ts`, and
+`scripts/check-pins.ts` (now deleted). Because the scripts run the built CLI, the
+`okf`, `action-pins`, and `pins` CI jobs build the workspace first (as the `test`
+job does).
 
 ## Composite Action
 
@@ -349,7 +369,11 @@ covered as a pure function alongside the framework adapter and the env bypass.
 requirement and existence check, Design exemption) and `okfCheck`'s scope
 filtering; `action-pins` keeps the ported pure-function suite (`parseUsesLine` /
 `checkActionRef` / `scanYaml`) plus a check-level test that it flags only
-`.github/**` YAML. `md-pairing` is covered through `evaluatePairing` (missing
+`.github/**` YAML. `package-pins` mirrors it: `isRegistryRange` / `checkPinRange`
+(full-base vs. abbreviated/non-pin ranges, prerelease/build suffixes, non-registry
+exemptions) / `scanManifest` (offending `field.dep`, `devDependencies` coverage,
+parse-failure finding) plus a check-level test that it flags only `package.json`
+manifests. `md-pairing` is covered through `evaluatePairing` (missing
 pair, symlink violation, per-directory independence, and the config-gated
 bare-wrapper rule — bare import accepted with blank lines ignored, extra content
 rejected, off when unconfigured, never applied to `AGENTS.md`); `file-caps`
