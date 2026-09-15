@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.5.0...repo-hygiene-v0.6.0) (2026-09-15)
+
+
+### Features
+
+* **repo-hygiene:** validate OKF v0.2 optional field families in okf ([#206](https://github.com/rmartz/ai-tools/issues/206)) ([4544c8a](https://github.com/rmartz/ai-tools/commit/4544c8a9d6342fe8e14e5f5e51cf22368e77cb62))
+
+
+### Bug Fixes
+
+* **deps:** use caret ranges for internal [@rmartz](https://github.com/rmartz) dependencies ([#221](https://github.com/rmartz/ai-tools/issues/221)) ([15d5da6](https://github.com/rmartz/ai-tools/commit/15d5da650020ee499b18054ecceb56aed94bfd99))
+
 ## [0.5.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.4.0...repo-hygiene-v0.5.0) (2026-09-14)
 
 
