@@ -48,9 +48,13 @@ gate/verdict labels — the roster here is the cross-cutting + meta set only.
   entry and spliced an `eslint.config.js` ignores array via a comment-aware
   parser. Here the stack is pnpm + TS, so the golden ignores cover the TS
   build/test artifacts (`node_modules`, `dist`, `.turbo`, `*.tsbuildinfo`,
-  `coverage`) plus `.git-worktrees/`, written to `.prettierignore`,
-  `.eslintignore`, and `.gitignore`. The marker-block approach replaces the
-  Python's fragile flat-config array splice entirely.
+  `coverage`), written to `.prettierignore`, `.eslintignore`, and `.gitignore`.
+  `.git-worktrees/` is **deliberately not seeded** — the worktree layout is a
+  per-developer process choice, so it belongs in the developer's global
+  `core.excludesFile`, never in each repo's tree. Because the managed block is
+  regenerated from these entries on every run, a repo that a prior version seeded
+  has the stale `.git-worktrees/` line stripped on the next run. The marker-block
+  approach replaces the Python's fragile flat-config array splice entirely.
 
 ### Whole workflow files (`ensure-workflow-files.ts`, `golden-config.ts`)
 

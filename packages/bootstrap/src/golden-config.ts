@@ -13,7 +13,9 @@
  *   which appended a single `.git-worktrees` line plus an `eslint.config.js`
  *   array-splice; here the stack is pnpm + TS, so the ignores cover the TS
  *   build/test artifacts (`dist`, `.turbo`, `*.tsbuildinfo`, `coverage`) and
- *   `node_modules`, alongside the worktree dir.
+ *   `node_modules`. The `.git-worktrees/` dir is deliberately *not* seeded: the
+ *   worktree layout is a per-developer process choice, so it belongs in the
+ *   developer's global `core.excludesFile`, never in each repo's tree.
  * - **Whole workflow files** (`.github/workflows/*.yml`) — a whole managed file,
  *   not a block spliced into user content. A GitHub Actions workflow that is
  *   identical across every repo (zero project-specific logic) is a
@@ -34,23 +36,26 @@ export interface GoldenIgnoreFile {
   entries: string[];
 }
 
-const WORKTREES = '.git-worktrees/';
-
 /** Build artifacts and vendored deps a TS monorepo should never format/lint/commit. */
 const TS_ARTIFACTS = ['node_modules/', 'dist/', '.turbo/', '*.tsbuildinfo', 'coverage/'];
 
 /**
  * The golden ignore files for a pnpm/TS monorepo:
  *
- * - `.prettierignore` — skip build output, vendored deps, and worktrees.
+ * - `.prettierignore` — skip build output and vendored deps.
  * - `.eslintignore` — same; honored by flat config via `--ignore-path` and the
  *   universal fallback when an `eslint.config.*` ignores array can't be edited safely.
- * - `.gitignore` — keep artifacts and worktrees untracked.
+ * - `.gitignore` — keep artifacts untracked.
+ *
+ * `.git-worktrees/` is intentionally absent — it is a per-developer global-excludes
+ * concern, not a repo property (see the file header). Because the managed block is
+ * regenerated from these entries on every run, dropping it here also strips the
+ * stale line from any repo that a prior version seeded.
  */
 export const goldenIgnoreFiles: readonly GoldenIgnoreFile[] = [
-  { filename: '.prettierignore', entries: [...TS_ARTIFACTS, WORKTREES] },
-  { filename: '.eslintignore', entries: [...TS_ARTIFACTS, WORKTREES] },
-  { filename: '.gitignore', entries: [...TS_ARTIFACTS, WORKTREES, '.DS_Store'] },
+  { filename: '.prettierignore', entries: [...TS_ARTIFACTS] },
+  { filename: '.eslintignore', entries: [...TS_ARTIFACTS] },
+  { filename: '.gitignore', entries: [...TS_ARTIFACTS, '.DS_Store'] },
 ];
 
 /**
