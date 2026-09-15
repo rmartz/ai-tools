@@ -113,6 +113,19 @@ a block spliced into user content.
     distributing them fleet-wide is a deliberate **per-repo curation** decision
     (tracked with the gate-set curation follow-up), not part of the universal
     golden set. Advisory; `gateChecks: []`.
+  - `commit-convention.yml` (**`manage`**): the **post-merge conventional-commit
+    tripwire** — a `push: [main]` job that fails when a subject reaches the default
+    branch without a valid conventional-commit prefix. It is the counterpart of
+    `pr-title-lint` (which validates titles _pre-merge_ but can't see whether the
+    title reached `main`): it catches a squash-merge setting that used the branch
+    commit message instead of the PR title, a direct push, or a squash that dropped
+    the prefix — any of which makes release-please **silently skip** the release
+    (the failure that dropped `@rmartz/github`'s release, #214–#217). It **alerts,
+    it does not gate** (the commit is already merged), so `gateChecks: []`. Pure —
+    no CLI install, no build — so its golden body is byte-identical to any repo's
+    own copy. It validates the **first-parent chain** of the pushed range, so a
+    squash merge is its single new commit, a stray merge commit is flagged, and a
+    merged branch's internal (deliberately plain) commits are not re-litigated.
 
   `goldenGateChecks` is the union of every entry's `gateChecks` — the cross-repo
   **floor** of the gate.
@@ -179,6 +192,28 @@ trivial _green_ patch/minor bumps with no agent tokens; the agent-driven
 `/dependabot` + PR Shepherd path still owns _red_ and _major_ bumps. The two
 complement rather than overlap.
 
+### Squash-merge convention verifier (`verify-squash-merge-setting.ts`)
+
+The **other network repo-settings verifier**, same class as the auto-merge gate.
+`verifySquashMergeSetting({ repo?, cwd?, apply? })` confirms (and optionally
+applies) the squash-merge default that carries a PR's _conventional_ title onto
+`main`: `squash_merge_commit_title=PR_TITLE` + `squash_merge_commit_message=PR_BODY`.
+
+- **Confirm (default, read-only):** read the repo's two `squash_merge_commit_*`
+  sources in one `gh api repos/{repo}` call; `satisfied` is true only when the
+  title source is `PR_TITLE` **and** the message source is `PR_BODY`.
+- **`--apply` (opt-in, state-changing):** PATCH the repo defaults to `PR_TITLE` +
+  `PR_BODY`. A failed write throws; it never runs unless the gate is unsatisfied.
+
+**The hazard it closes:** with any other squash default, a merge squashes using the
+branch **commit message** — plain, per the "no Conventional Commits within a
+feature branch" rule — instead of the conventional PR **title**. release-please
+only releases conventional commits, so a non-conventional subject on `main` is
+**silently skipped**; this is the setting-side fix for the same failure the
+`commit-convention.yml` tripwire alerts on after the fact. The pair — a **pre-set**
+default here and a **post-merge** alarm in the workflow — closes the loop
+`pr-title-lint` (pre-merge, title-only) cannot.
+
 ## CLIs
 
 Thin `bin/` wrappers; all logic stays in the library:
@@ -197,11 +232,18 @@ Thin `bin/` wrappers; all logic stays in the library:
   (repeatable) overrides the default `goldenGateChecks` set. **Exits non-zero when
   the gate is unsatisfied** (and not applied) — the hard block the `/bootstrap`
   skill runs after writing files.
+- `ai-verify-squash-setting [-C <dir>] [--repo <owner/repo>] [--apply]` — confirm
+  (default) or apply the squash-merge commit convention (`PR_TITLE` + `PR_BODY`) on
+  the repo. Same repo-target precedence as above. **Exits non-zero when the setting
+  is unsatisfied** (and not applied) — the second hard block the `/bootstrap` skill
+  runs, so a repo whose squash default would drop the conventional title is caught
+  before the release-integrity failure it causes.
 
 ## Testing
 
-`ensure-labels` and `verify-automerge-gate` tests `vi.mock('@rmartz/github')` so
-no `gh` subprocess runs (the verifier routes its mocked `ghCall` by argv shape to
-state repo state declaratively); `ensure-project-config` / `ensure-workflow-files`
-tests mock `@rmartz/agent-runtime` to a hard failure (proving the writers never
-shell out) and write to a tmpdir with cleanup — deny-by-default, no network.
+`ensure-labels`, `verify-automerge-gate`, and `verify-squash-merge-setting` tests
+`vi.mock('@rmartz/github')` so no `gh` subprocess runs (each verifier routes its
+mocked `ghCall` by argv shape to state repo state declaratively);
+`ensure-project-config` / `ensure-workflow-files` tests mock `@rmartz/agent-runtime`
+to a hard failure (proving the writers never shell out) and write to a tmpdir with
+cleanup — deny-by-default, no network.

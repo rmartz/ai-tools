@@ -176,7 +176,14 @@ env:
 jobs:
   evaluate:
     name: Evaluate one PR
-    if: github.event_name != 'push'
+    # Only \`breaking change\` among labels affects the verdict (it flips
+    # prIsBreaking), so a labeled/unlabeled event for any other label must not
+    # spin up an evaluate run. Non-label events (opened/synchronize/reopened/
+    # edited/workflow_dispatch) always run; push is handled by \`invalidate\`. (#229)
+    if: >-
+      github.event_name != 'push' &&
+      (github.event.action != 'labeled' && github.event.action != 'unlabeled'
+       || github.event.label.name == 'breaking change')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -282,6 +289,71 @@ jobs:
       - run: ai-repo-hygiene action-pins --check
 `;
 
+// Post-merge conventional-commit tripwire. A `push: [main]` alert (it can't gate
+// — the commit is already merged) that fails loudly when a subject reaches the
+// default branch without a valid conventional-commit prefix. It catches the exact
+// silent-skip that pre-merge `pr-title-lint` cannot see: a squash-merge setting
+// that used the branch commit message instead of the PR title, a direct push, or
+// a squash that dropped the prefix — any of which makes release-please silently
+// skip the release. Validates the first-parent chain of the pushed range (so a
+// squash merge is its single new commit, a stray merge commit is flagged, and a
+// merged branch's internal plain commits are not re-litigated). `actions/checkout`
+// is pinned by full SHA + `major.minor.patch` comment per the Actions-pinning
+// convention; `push` fires on `main` (a non-`main` repo adjusts that one literal).
+const COMMIT_CONVENTION = `name: Conventional Commits (main)
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  commit-convention:
+    name: Validate commit subjects on main
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the pushed range's history must be present to read subjects
+      - name: Validate new commit subjects
+        env:
+          BEFORE: \${{ github.event.before }}
+          AFTER: \${{ github.event.after }}
+        run: |
+          set -euo pipefail
+          # Conventional-commit subject grammar — mirrors pr-title-lint.yml.
+          pattern='^(feat|fix|docs|chore|refactor|test|style|perf|ci|build|revert)(\\([^)]+\\))?!?: [^[:space:]].*$'
+          # On a branch's first push BEFORE is all-zeros; validate just the tip.
+          if printf '%s' "$BEFORE" | grep -qE '^0+$'; then
+            revs="$AFTER"
+          else
+            revs="$(git rev-list --first-parent "\${BEFORE}..\${AFTER}")"
+          fi
+          status=0
+          for sha in $revs; do
+            subject="$(git show -s --format=%s "$sha")"
+            if printf '%s\\n' "$subject" | grep -qE "$pattern"; then
+              echo "ok:   $sha $subject"
+            else
+              echo "FAIL: $sha $subject"
+              status=1
+            fi
+          done
+          if [ "$status" -ne 0 ]; then
+            echo
+            echo "A commit reached \${GITHUB_REF_NAME:-main} with a non-conventional subject."
+            echo "release-please only releases conventional commits, so it silently skips a"
+            echo "non-conventional one. Likely cause: a squash merge used the branch commit"
+            echo "message instead of the PR title. Set the repo squash-merge default to"
+            echo "'PR_TITLE' (ai-verify-squash-setting --apply) so PR titles reach main."
+            exit 1
+          fi
+          echo "All new commit subjects are valid conventional commits."
+`;
+
 /**
  * Golden whole files distributed to every repo. Two idempotency policies (see
  * {@link GoldenWorkflowFile.policy}): `manage` (bootstrap-owned, overwrite drift)
@@ -299,6 +371,9 @@ jobs:
  *   owns; bootstrap writes it only if absent and never overwrites local edits.
  * - `repo-hygiene.yml` (`manage`) — runs the universally-safe `action-pins` check
  *   via the published `@rmartz/repo-hygiene` CLI. Advisory; `gateChecks: []`.
+ * - `commit-convention.yml` (`manage`) — post-merge `push: [main]` tripwire that
+ *   fails when a non-conventional subject reaches the default branch. Alerts (the
+ *   commit is already merged), so `gateChecks: []`.
  */
 export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
   {
@@ -320,6 +395,11 @@ export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
   {
     filename: '.github/workflows/repo-hygiene.yml',
     content: REPO_HYGIENE,
+    gateChecks: [],
+  },
+  {
+    filename: '.github/workflows/commit-convention.yml',
+    content: COMMIT_CONVENTION,
     gateChecks: [],
   },
 ];

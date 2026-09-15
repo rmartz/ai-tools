@@ -68,8 +68,18 @@ stable `merge-safety` so branch protection can match it; only the title varies.
 
 ## The workflow (`.github/workflows/merge-safety.yml`)
 
-- **`pull_request`** (opened / synchronize / reopened) and **`workflow_dispatch`**
-  → **evaluate** one PR and resolve its check-run.
+- **`pull_request`** (opened / synchronize / reopened / edited / labeled /
+  unlabeled) and **`workflow_dispatch`** → **evaluate** one PR and resolve its
+  check-run. A **labeled / unlabeled** event only runs when the label is
+  `breaking change` (the one label that changes the verdict, by flipping
+  `prIsBreaking`); every other label leaves the verdict unchanged, so its event is
+  filtered out at the job's `if:` rather than spinning up a redundant run.
+- **evaluate skips a non-open PR.** `evaluate` reads the PR's `state` and, for a
+  `CLOSED` or `MERGED` PR, posts no check-run and reconciles no labels — a settled
+  PR earns no verdict. (This is a deliberate skip, distinct from the
+  `Could not evaluate` fail-safe, which is for an _open_ PR whose facts are
+  ungatherable.) Together with the label filter above, this stops a post-merge
+  label event from re-stamping an already-merged PR with a merge-safety label.
 - **`push` to `main`** → **invalidate**: for every _other_ open PR, flip its
   check-run to **pending** (a pending required check blocks auto-merge) and
   dispatch that PR's own evaluate run. A PR only goes green again once its own

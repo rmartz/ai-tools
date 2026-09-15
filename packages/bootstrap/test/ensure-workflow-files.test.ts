@@ -131,6 +131,16 @@ describe('goldenWorkflowFiles — the seeded merge-safety workflow', () => {
     expect(mergeSafety?.content).toContain('github.event.repository.default_branch');
   });
 
+  it('narrows label events to the verdict-relevant `breaking change` label', () => {
+    // #229 — a labeled/unlabeled event only changes the verdict for `breaking
+    // change`; every other label (approved, no UAT needed, domain labels) must
+    // not spin up an evaluate run.
+    const content = mergeSafety?.content ?? '';
+    expect(content).toContain("github.event.action != 'labeled'");
+    expect(content).toContain("github.event.action != 'unlabeled'");
+    expect(content).toContain("github.event.label.name == 'breaking change'");
+  });
+
   it('provides the check and so declares no gateChecks of its own', () => {
     expect(mergeSafety?.gateChecks).toEqual([]);
   });
@@ -203,5 +213,48 @@ describe('goldenWorkflowFiles — the seeded repo-hygiene workflow', () => {
 
   it('pins actions/checkout to a full 40-char SHA with a major.minor.patch comment', () => {
     expect(repoHygiene?.content).toMatch(/actions\/checkout@[0-9a-f]{40} # v\d+\.\d+\.\d+/);
+  });
+});
+
+// #219 — the post-merge conventional-commit tripwire: a push:[main] alert that
+// fails loudly when a commit subject reaches the default branch without a valid
+// conventional-commit prefix (the silent release-please skip pre-merge title-lint
+// can't see).
+describe('goldenWorkflowFiles — the commit-convention tripwire', () => {
+  const tripwire = goldenWorkflowFiles.find(
+    (w) => w.filename === '.github/workflows/commit-convention.yml',
+  );
+
+  it('is present in the golden set', () => {
+    expect(tripwire).toBeDefined();
+  });
+
+  it('runs on push to main (post-merge), not on pull_request', () => {
+    const content = tripwire?.content ?? '';
+    expect(content).toContain('push:');
+    expect(content).toContain('branches: [main]');
+    expect(content).not.toContain('pull_request');
+  });
+
+  it('validates the pushed commit range along the first-parent chain', () => {
+    const content = tripwire?.content ?? '';
+    expect(content).toContain('github.event.before');
+    expect(content).toContain('github.event.after');
+    expect(content).toContain('--first-parent');
+  });
+
+  it('accepts every conventional type and the breaking-change marker', () => {
+    const content = tripwire?.content ?? '';
+    expect(content).toContain('feat|fix|docs|chore|refactor|test|style|perf|ci|build|revert');
+    // The `!` breaking-change marker is optional in the subject grammar.
+    expect(content).toContain('!?:');
+  });
+
+  it('pins actions/checkout to a full 40-char SHA with a major.minor.patch comment', () => {
+    expect(tripwire?.content).toMatch(/actions\/checkout@[0-9a-f]{40} # v\d+\.\d+\.\d+/);
+  });
+
+  it('needs no gate check of its own (it alerts, it does not gate)', () => {
+    expect(tripwire?.gateChecks).toEqual([]);
   });
 });
