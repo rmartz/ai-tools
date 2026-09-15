@@ -32,10 +32,16 @@ async function main(): Promise<void> {
   for (const o of result.outcomes) {
     console.log(`  ${o.filename}: ${o.action}`);
   }
-  const changed = result.outcomes.filter((o) => o.action !== 'unchanged').length;
+  const changed = result.outcomes.filter(
+    (o) => o.action === 'created' || o.action === 'updated',
+  ).length;
+  const skipped = result.outcomes.filter((o) => o.action === 'skipped');
   console.log(
-    changed ? `\n${changed} file(s) updated.` : '\nAll managed blocks present — nothing to do.',
+    changed ? `\n${changed} file(s) written.` : '\nAll managed files present — nothing to do.',
   );
+  for (const o of skipped) {
+    console.log(`Note: ${o.filename} left untouched (user-authored; no managed header).`);
+  }
 }
 
 main().catch((err: unknown) => {

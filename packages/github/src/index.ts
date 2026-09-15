@@ -8,6 +8,7 @@ export {
   ghCall,
   issueNumber,
   currentRepo,
+  parseSlugFromRemoteUrl,
   resolveRepoTarget,
   resolveProjectRef,
 } from './gh-call.js';

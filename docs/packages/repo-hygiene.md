@@ -222,6 +222,21 @@ whole-tree invariant, so the check reads the full tracked set and its git modes
 (via `trackedFileModes`) regardless of the run mode. `evaluatePairing(modes)` is
 the pure evaluator; findings are file-level `error`s.
 
+**Bare-wrapper rule (config-gated).** Set `md-pairing.wrapper` to require every
+`CLAUDE.md` to be a bare wrapper whose only meaningful (non-blank) line is that
+import string — the fleet convention where directives live once in `AGENTS.md`
+and each `CLAUDE.md` just imports it. `wrapper: true` is shorthand for
+`@AGENTS.md`; a string sets a custom import line; omit it (or `false`) to leave
+content unchecked, since not every repo uses the convention. When enabled the
+check reads each regular `CLAUDE.md`'s content (a symlinked one is already
+flagged by the mode rule).
+
+```yaml
+checks:
+  md-pairing:
+    wrapper: '@AGENTS.md'
+```
+
 ## Check: `file-caps`
 
 Per-glob file size caps with a migration ramp. Config is an ordered `overrides`
@@ -347,7 +362,10 @@ shapes, executor/attester resource, usage_window, and unknown-key tolerance);
 `action-pins` keeps the ported pure-function suite (`parseUsesLine` /
 `checkActionRef` / `scanYaml`) plus a check-level test that it flags only
 `.github/**` YAML. `md-pairing` is covered through `evaluatePairing` (missing
-pair, symlink violation, per-directory independence); `file-caps` covers the
+pair, symlink violation, per-directory independence, and the config-gated
+bare-wrapper rule — bare import accepted with blank lines ignored, extra content
+rejected, off when unconfigured, never applied to `AGENTS.md`); `file-caps`
+covers the
 byte-size parser, config validation, `computeMetrics`, `evaluateFileCaps`
 (first-match-wins, independent metrics, warn/error tiers, and the grandfather
 downgrade / regrowth / new-file cases), and the baseline build / ratchet-down /

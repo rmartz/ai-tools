@@ -12,7 +12,8 @@ const result = (over: Partial<{ stdout: string; stderr: string; code: number }> 
   ...over,
 });
 
-const { resolveRepoTarget } = await import('../src/gh-call.js');
+const { resolveRepoTarget, currentRepo, parseSlugFromRemoteUrl } =
+  await import('../src/gh-call.js');
 
 describe('resolveRepoTarget', () => {
   beforeEach(() => boundedRun.mockReset());
@@ -57,5 +58,49 @@ describe('resolveRepoTarget', () => {
     boundedRun.mockResolvedValue(result({ stderr: 'not a repo', code: 1 }));
     // Inject a no-op sleeper so the cwd resolver's retry backoff doesn't add real delay.
     expect(await resolveRepoTarget({ env: {}, sleep: async () => {} })).toBeNull();
+  });
+});
+
+describe('parseSlugFromRemoteUrl', () => {
+  it('parses ssh, https, and git:// remotes, with or without .git', () => {
+    expect(parseSlugFromRemoteUrl('git@github.com:rmartz/ai-tools.git')).toBe('rmartz/ai-tools');
+    expect(parseSlugFromRemoteUrl('https://github.com/rmartz/ai-tools.git')).toBe(
+      'rmartz/ai-tools',
+    );
+    expect(parseSlugFromRemoteUrl('https://github.com/rmartz/ai-tools')).toBe('rmartz/ai-tools');
+    expect(parseSlugFromRemoteUrl('ssh://git@github.com/rmartz/ai-tools.git\n')).toBe(
+      'rmartz/ai-tools',
+    );
+  });
+
+  it('accepts an already-bare owner/repo (a pre-resolved slug, no host/protocol)', () => {
+    expect(parseSlugFromRemoteUrl('rmartz/ai-tools')).toBe('rmartz/ai-tools');
+    expect(parseSlugFromRemoteUrl('rmartz/ai-tools.git')).toBe('rmartz/ai-tools');
+  });
+
+  it('returns null for an unparseable url', () => {
+    expect(parseSlugFromRemoteUrl('')).toBeNull();
+    expect(parseSlugFromRemoteUrl('not-a-remote')).toBeNull();
+  });
+});
+
+describe('currentRepo — git-remote fallback', () => {
+  beforeEach(() => boundedRun.mockReset());
+
+  it('uses gh repo view when it succeeds (no git-remote call)', async () => {
+    boundedRun.mockResolvedValueOnce(result({ stdout: 'rmartz/ai-tools\n' }));
+    expect(await currentRepo()).toBe('rmartz/ai-tools');
+    expect(boundedRun).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to the git remote when gh repo view yields nothing', async () => {
+    // gh repo view is rate-limited (ghCall breaks immediately, no retries), then
+    // the git remote resolves the slug — exactly two boundedRun calls.
+    boundedRun.mockResolvedValueOnce(result({ stderr: 'GraphQL: rate limited', code: 1 }));
+    boundedRun.mockResolvedValueOnce(result({ stdout: 'git@github.com:rmartz/ai-tools.git\n' }));
+    expect(await currentRepo({ sleep: async () => {} })).toBe('rmartz/ai-tools');
+    const gitCall = boundedRun.mock.calls.at(-1);
+    expect(gitCall?.[0]).toBe('git');
+    expect(gitCall?.[1]).toEqual(['remote', 'get-url', 'origin']);
   });
 });

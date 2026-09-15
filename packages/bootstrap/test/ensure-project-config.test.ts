@@ -77,12 +77,24 @@ describe('ensureProjectConfig', () => {
     expect(text).toContain('node_modules/');
   });
 
-  it('honors an injected file set', () => {
+  it('honors injected file/workflow sets', () => {
     const res = ensureProjectConfig(dir, {
       files: [{ filename: '.customignore', entries: ['foo/'] }],
+      workflows: [],
     });
     expect(res.outcomes).toEqual([{ filename: '.customignore', action: 'created' }]);
     expect(read('.customignore')).toContain('foo/');
     expect(existsSync(join(dir, '.gitignore'))).toBe(false);
+  });
+
+  it('seeds the golden workflow files alongside the ignore blocks (still hermetic)', () => {
+    // boundedRun is mocked to throw above, so a passing run proves this composed
+    // path never shells out — the whole-file writer is pure fs too.
+    const res = ensureProjectConfig(dir);
+    const workflow = res.outcomes.find(
+      (o) => o.filename === '.github/workflows/dependabot-auto-merge.yml',
+    );
+    expect(workflow?.action).toBe('created');
+    expect(existsSync(join(dir, '.github/workflows/dependabot-auto-merge.yml'))).toBe(true);
   });
 });
