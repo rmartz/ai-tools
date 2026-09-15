@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.0](https://github.com/rmartz/ai-tools/compare/pr-review-v0.4.1...pr-review-v0.5.0) (2026-09-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* **pr-review:** narrow merge-safety label triggers to `breaking change` + skip closed/merged PRs ([#230](https://github.com/rmartz/ai-tools/issues/230))
+
+### Bug Fixes
+
+* **pr-review:** narrow merge-safety label triggers to `breaking change` + skip closed/merged PRs ([#230](https://github.com/rmartz/ai-tools/issues/230)) ([a1d576a](https://github.com/rmartz/ai-tools/commit/a1d576a05b1092e5bbef76176c68b4a49d50d6a1))
+
 ## [0.4.1](https://github.com/rmartz/ai-tools/compare/pr-review-v0.4.0...pr-review-v0.4.1) (2026-09-15)
 
 
