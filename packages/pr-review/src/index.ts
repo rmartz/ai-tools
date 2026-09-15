@@ -51,6 +51,7 @@ export {
   isCiCommitMessage,
   isBreakingTitle,
   hasFileOverlap,
+  overlappingFiles,
   evaluateMergeSafety,
   errorMergeSafetyDecision,
 } from './merge-safety.js';
@@ -59,6 +60,7 @@ export type {
   MergeSafetyFacts,
   MergeSafetyConclusion,
   MergeSafetyDecision,
+  BaseCommit,
 } from './merge-safety.js';
 
 export { gatherMergeSafetyFacts, makeGitRunner } from './merge-safety-facts.js';

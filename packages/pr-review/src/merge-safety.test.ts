@@ -5,6 +5,7 @@ import {
   isCiCommitMessage,
   isBreakingTitle,
   hasFileOverlap,
+  overlappingFiles,
   evaluateMergeSafety,
   errorMergeSafetyDecision,
   type MergeSafetyFacts,
@@ -19,6 +20,9 @@ function makeFacts(overrides: Partial<MergeSafetyFacts> = {}): MergeSafetyFacts 
     prIsBreaking: false,
     fileOverlap: false,
     hasConflict: false,
+    baseBreakingCommits: [],
+    baseCiCommits: [],
+    overlappingFiles: [],
     ...overrides,
   };
 }
@@ -56,6 +60,18 @@ describe('isBreakingTitle', () => {
   it('mirrors the subject-marker rule on a PR title', () => {
     expect(isBreakingTitle('feat(worktree)!: change default base')).toBe(true);
     expect(isBreakingTitle('chore: bump deps')).toBe(false);
+  });
+});
+
+describe('overlappingFiles', () => {
+  it('returns the intersection in PR order', () => {
+    expect(overlappingFiles(['b.ts', 'a.ts', 'c.ts'], ['a.ts', 'c.ts'])).toEqual(['a.ts', 'c.ts']);
+  });
+
+  it('is empty for disjoint sets and for either side empty', () => {
+    expect(overlappingFiles(['a.ts'], ['b.ts'])).toEqual([]);
+    expect(overlappingFiles([], ['a.ts'])).toEqual([]);
+    expect(overlappingFiles(['a.ts'], [])).toEqual([]);
   });
 });
 
@@ -115,6 +131,51 @@ describe('evaluateMergeSafety', () => {
     expect(d.conclusion).toBe('failure');
     expect(d.needsUpdate).toBe(true);
     expect(d.reasons[0]).toMatch(/files the base also changed since merge-base/i);
+  });
+
+  it('lists the overlapping files as nested bullets under the overlap reason', () => {
+    const d = evaluateMergeSafety(
+      makeFacts({
+        isCurrent: false,
+        fileOverlap: true,
+        overlappingFiles: ['src/shared.ts', 'docs/x.md'],
+      }),
+    );
+    expect(d.reasons[0]).toContain('\n  - src/shared.ts\n  - docs/x.md');
+  });
+
+  it('names the base commit (abbreviated sha + subject) that landed a breaking change', () => {
+    const d = evaluateMergeSafety(
+      makeFacts({
+        isCurrent: false,
+        baseBreakingSinceMergeBase: true,
+        baseBreakingCommits: [{ sha: 'abcdef1234567890', subject: 'feat(api)!: rename field' }],
+      }),
+    );
+    expect(d.reasons[0]).toContain('\n  - abcdef1 feat(api)!: rename field');
+  });
+
+  it('names the base commit that landed a ci change', () => {
+    const d = evaluateMergeSafety(
+      makeFacts({
+        isCurrent: false,
+        baseCiSinceMergeBase: true,
+        baseCiCommits: [{ sha: '1234567abcdef', subject: 'ci: add typecheck job' }],
+      }),
+    );
+    expect(d.reasons.some((r) => r.includes('\n  - 1234567 ci: add typecheck job'))).toBe(true);
+  });
+
+  it('keeps the summary to one line even when a reason carries nested detail', () => {
+    const d = evaluateMergeSafety(
+      makeFacts({
+        isCurrent: false,
+        fileOverlap: true,
+        overlappingFiles: ['src/shared.ts', 'src/other.ts'],
+      }),
+    );
+    expect(d.summary).not.toContain('\n');
+    expect(d.summary).toMatch(/files the base also changed since merge-base/i);
   });
 
   it('passes a stale PR with no breaking/ci/overlap triggers', () => {

@@ -34,6 +34,25 @@ can merge two diffs cleanly and still produce invalid code (an earlier PR delete
 a symbol this PR uses), so any file-level overlap forces a rebase + re-CI. A hard
 git **conflict** is folded in as a separate axis, with its own label.
 
+### Report detail — naming the specifics
+
+Each triggering reason names _which_ commits and files caused it, as nested
+bullets under the reason:
+
+- **Clauses 1 & 2** (breaking / `ci` on the base) list the offending base
+  commits as `<abbrev-sha> <subject>`, so you can see exactly what landed since
+  merge-base.
+- **Clause 4** (file overlap) lists the overlapping paths — the PR-changed files
+  that also changed on the base.
+
+`gatherMergeSafetyFacts` fetches these from the same `git log`/`git diff` it
+already runs (`git log` now captures `%H` alongside `%B`), so the detail costs no
+extra git calls. `MergeSafetyFacts` carries the `baseBreakingCommits` /
+`baseCiCommits` / `overlappingFiles` lists beside the booleans they drive, and
+`evaluateMergeSafety` renders them into the reasons. The one-line check-run
+**summary** stays the headline sentence only; the specifics live in the reasons
+detail below it.
+
 ## Labels (visibility)
 
 - **`update required`** — the staleness verdict (`needsUpdate`).

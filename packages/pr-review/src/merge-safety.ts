@@ -44,6 +44,21 @@ function firstLine(message: string): string {
   return message.split('\n', 1)[0] ?? '';
 }
 
+/** Nested markdown bullets, indented two spaces so they sit under a reason's `- `. */
+function nestedBullets(items: readonly string[]): string {
+  return items.map((item) => `  - ${item}`).join('\n');
+}
+
+/** `<short-sha> <subject>` — the one-line form a base commit takes in a reason. */
+function formatBaseCommit(commit: BaseCommit): string {
+  return `${commit.sha.slice(0, 7)} ${commit.subject}`;
+}
+
+/** A reason sentence, with its detail list (if any) appended as nested bullets. */
+function withDetail(sentence: string, detail: readonly string[]): string {
+  return detail.length ? `${sentence}\n${nestedBullets(detail)}` : sentence;
+}
+
 /** True when a commit message marks a breaking change (subject `!` or footer). */
 export function isBreakingCommitMessage(message: string): boolean {
   return BREAKING_SUBJECT_RE.test(firstLine(message)) || BREAKING_FOOTER_RE.test(message);
@@ -59,14 +74,36 @@ export function isBreakingTitle(title: string): boolean {
   return BREAKING_SUBJECT_RE.test(title.trim());
 }
 
-/** True when the PR's changed files intersect the base's changed files. */
-export function hasFileOverlap(prFiles: readonly string[], baseFiles: readonly string[]): boolean {
-  if (!prFiles.length || !baseFiles.length) return false;
+/** The PR's changed files that also changed on the base, preserving PR order. */
+export function overlappingFiles(
+  prFiles: readonly string[],
+  baseFiles: readonly string[],
+): string[] {
+  if (!prFiles.length || !baseFiles.length) return [];
   const base = new Set(baseFiles);
-  return prFiles.some((f) => base.has(f));
+  return prFiles.filter((f) => base.has(f));
 }
 
-/** The gathered facts a merge-safety verdict is computed from. All booleans are pre-derived. */
+/** True when the PR's changed files intersect the base's changed files. */
+export function hasFileOverlap(prFiles: readonly string[], baseFiles: readonly string[]): boolean {
+  return overlappingFiles(prFiles, baseFiles).length > 0;
+}
+
+/** A base commit surfaced in a reason so the report names *which* commit triggered it. */
+export interface BaseCommit {
+  /** The full commit SHA (rendered abbreviated in the report). */
+  sha: string;
+  /** The commit subject (first line of its message). */
+  subject: string;
+}
+
+/**
+ * The gathered facts a merge-safety verdict is computed from. The `*SinceMergeBase`
+ * / `fileOverlap` booleans drive the verdict; the parallel `baseBreakingCommits` /
+ * `baseCiCommits` / `overlappingFiles` detail lists name *which* base commits and
+ * files triggered each, so the report can surface the specifics. Each boolean is
+ * exactly `list.length > 0` — the gatherer derives it from the list.
+ */
 export interface MergeSafetyFacts {
   /** The PR's merge-base is the current base-branch tip — nothing is stale. */
   isCurrent: boolean;
@@ -80,6 +117,12 @@ export interface MergeSafetyFacts {
   fileOverlap: boolean;
   /** Git reports the PR as conflicting (`mergeable === 'CONFLICTING'`). */
   hasConflict: boolean;
+  /** The base commits since merge-base whose message marks a breaking change. */
+  baseBreakingCommits: readonly BaseCommit[];
+  /** The `ci`-typed base commits since merge-base. */
+  baseCiCommits: readonly BaseCommit[];
+  /** The PR's changed files that also changed on the base since merge-base. */
+  overlappingFiles: readonly string[];
 }
 
 export type MergeSafetyConclusion = 'success' | 'failure';
@@ -121,18 +164,31 @@ export function evaluateMergeSafety(facts: MergeSafetyFacts): MergeSafetyDecisio
 
   const stale = !facts.isCurrent;
   if (stale && facts.baseBreakingSinceMergeBase) {
-    reasons.push('A breaking change landed on the base since merge-base — rebase and re-run CI.');
+    reasons.push(
+      withDetail(
+        'A breaking change landed on the base since merge-base — rebase and re-run CI:',
+        facts.baseBreakingCommits.map(formatBaseCommit),
+      ),
+    );
   }
   if (stale && facts.prIsBreaking) {
     reasons.push('This PR is a breaking change — it must be current with the base before merge.');
   }
   if (stale && facts.baseCiSinceMergeBase) {
-    reasons.push('A CI change landed on the base since merge-base — rebase to re-test under it.');
+    reasons.push(
+      withDetail(
+        'A CI change landed on the base since merge-base — rebase to re-test under it:',
+        facts.baseCiCommits.map(formatBaseCommit),
+      ),
+    );
   }
   if (stale && facts.fileOverlap) {
     reasons.push(
-      'This PR changes files the base also changed since merge-base — sync with base and ' +
-        're-run CI before merging to ensure the changes are compatible.',
+      withDetail(
+        'This PR changes files the base also changed since merge-base — sync with base and ' +
+          're-run CI before merging to ensure the changes are compatible:',
+        facts.overlappingFiles,
+      ),
     );
   }
 
@@ -146,10 +202,12 @@ export function evaluateMergeSafety(facts: MergeSafetyFacts): MergeSafetyDecisio
   const conclusion: MergeSafetyConclusion =
     needsUpdate || facts.hasConflict ? 'failure' : 'success';
 
+  // A reason may now carry nested detail bullets; the one-line summary takes only
+  // its headline sentence, leaving the specifics to the full reasons list.
   const summary =
     conclusion === 'success'
       ? 'No update required: current, or no breaking/overlapping changes on the base, and no conflict.'
-      : (reasons[0] ?? 'Not safe to merge as-is.');
+      : firstLine(reasons[0] ?? 'Not safe to merge as-is.');
 
   // Conflict is the more blocking, concrete problem, so it wins the title when a
   // PR is both conflicting and stale; the summary still lists every reason.
