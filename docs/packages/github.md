@@ -148,7 +148,8 @@ The GraphQL Discussions client (no REST / `gh` equivalent), targeting `rmartz/ai
   so it stays correct for callers that need the local checkout's repo (e.g.
   new-worktree assigning an issue).
 - `parseSlugFromRemoteUrl(url)` — pure helper: `owner/repo` from an ssh / https /
-  `git://` GitHub remote URL (with or without `.git`), or `null`.
+  `git://` GitHub remote URL (with or without `.git`), or an already-bare
+  `owner/repo` slug, or `null`.
 - `resolveRepoTarget({ repo?, env?, cwd? })` — the one shared resolver every
   cwd-only PR/GitHub CLI routes through, with a uniform precedence: **explicit
   `repo` (a `--repo` flag) → `GH_REPO` → cwd `gh repo view`**. `GH_REPO` is
