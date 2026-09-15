@@ -54,6 +54,13 @@ async function main(): Promise<void> {
   console.log(
     `Squash commit:   ${result.squashCommitCorrect ? 'PR title + body' : 'NOT PR title + body'}`,
   );
+  if (result.classicProtection) {
+    console.warn(
+      '\n⚠ Legacy classic branch protection is still present. The gate is provisioned as a\n' +
+        '  Ruleset; migrate any remaining required checks into the ruleset and remove the\n' +
+        '  classic protection so the two mechanisms do not drift.',
+    );
+  }
   if (result.applied)
     console.log(
       '\nApplied: enabled auto-merge, set the required gate checks, and fixed the squash setting.',

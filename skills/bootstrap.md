@@ -64,9 +64,16 @@ workflow depends on:
   block** — do not open/land the bootstrap PR until the gate is satisfied. This
   machine-checked confirmation replaces a prose reminder an agent could skip.
 - **To configure the gate:** re-run with `--apply` (admin, state-changing —
-  surface it before running). It enables `allow_auto_merge`, sets the required
-  checks, and sets the squash-merge commit to **PR title + body**. Then re-confirm
-  without `--apply`.
+  surface it before running). It enables `allow_auto_merge`, provisions the
+  required checks as a **Ruleset** (the tool-managed `Auto-merge gate` ruleset —
+  find-or-update by name, so re-running converges rather than duplicating), and
+  sets the squash-merge commit to **PR title + body**. Then re-confirm without
+  `--apply`.
+- **Classic-protection drift:** if the repo still carries legacy classic branch
+  protection, the confirm output flags it. Classic protection still counts toward
+  the gate, but the fleet standardizes on Rulesets — migrate any remaining required
+  checks into the ruleset and remove the classic protection. The verifier reports
+  this drift; it never writes or deletes classic protection.
 
 The squash-merge setting is part of the gate because under auto-merge a merged PR
 must land a **conventional commit subject** (its PR title) or release-please

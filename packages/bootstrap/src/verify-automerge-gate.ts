@@ -6,6 +6,14 @@ import { goldenGateChecks } from './golden-config.js';
  * Dependabot auto-merge depends on. Network-touching, so it lives here rather
  * than in the hermetic `ensure-project-config` writer.
  *
+ * Protection is expressed as a **Ruleset**, not classic branch protection —
+ * classic rules are a legacy mechanism the fleet migrates away from. The read
+ * path resolves the *effective* required checks from the Rulesets API, and
+ * `--apply` provisions a tool-managed ruleset ({@link MANAGED_RULESET_NAME}).
+ * Legacy classic protection, if any lingers, still counts toward the gate (so a
+ * mid-migration repo isn't falsely reported unsatisfied) but is surfaced as
+ * **drift** to migrate — it is never written and never deleted here.
+ *
  * The hazard this closes: `gh pr merge --auto` fires the instant a PR's required
  * checks are green — and with **no** required checks configured, "green" is
  * immediate, so the seeded auto-merge workflow would clear every patch/minor
@@ -21,6 +29,13 @@ import { goldenGateChecks } from './golden-config.js';
  * quietly break its releases on every auto-merged PR.
  */
 
+/**
+ * Name of the tool-owned ruleset `--apply` provisions. Find-or-update keys off
+ * this name, so re-running converges on one ruleset rather than accumulating
+ * duplicates, and a repo's own hand-authored rulesets are left untouched.
+ */
+const MANAGED_RULESET_NAME = 'Auto-merge gate';
+
 export interface VerifyAutomergeGateOptions extends RepoTargetOptions {
   /** Opt-in, state-changing: set the required checks + enable `allow_auto_merge`. */
   apply?: boolean;
@@ -33,7 +48,7 @@ export interface VerifyAutomergeGateResult {
   branch: string;
   /** Whether the repo allows auto-merge (`allow_auto_merge`). */
   allowAutoMerge: boolean;
-  /** Status-check contexts currently marked required on the default branch. */
+  /** Effective status-check contexts required on the default branch (ruleset ∪ classic). */
   requiredChecks: string[];
   /** The gate set that was checked. */
   gateChecks: string[];
@@ -47,15 +62,33 @@ export interface VerifyAutomergeGateResult {
    * skips it — the exact miss that stranded a github release.
    */
   squashCommitCorrect: boolean;
+  /**
+   * Whether legacy **classic** branch protection still requires status checks on
+   * the branch. It counts toward {@link satisfied} (fail-closed union), but is a
+   * migration-drift signal: the fleet standardizes on Rulesets, so classic
+   * protection should be removed once the ruleset is in place.
+   */
+  classicProtection: boolean;
   /** `allowAutoMerge` on AND no missing gate checks AND the squash commit setting correct. */
   satisfied: boolean;
   /** Whether `--apply` mutated repo/branch state during this run. */
   applied: boolean;
 }
 
-interface RequiredChecksResponse {
+interface ClassicRequiredChecksResponse {
   contexts?: string[];
   checks?: { context?: string }[];
+}
+
+/** One effective rule as reported by the Rulesets API (only the parts we read). */
+interface BranchRule {
+  type?: string;
+  parameters?: { required_status_checks?: { context?: string }[] };
+}
+
+interface RulesetSummary {
+  id?: number;
+  name?: string;
 }
 
 async function readJson<T>(argv: string[], opts: RepoTargetOptions): Promise<T | null> {
@@ -66,6 +99,19 @@ async function readJson<T>(argv: string[], opts: RepoTargetOptions): Promise<T |
   } catch {
     return null;
   }
+}
+
+/** Collect the unique `required_status_checks` contexts out of a set of rules. */
+function contextsFromRules(rules: BranchRule[]): string[] {
+  return [
+    ...new Set(
+      rules
+        .filter((r) => r.type === 'required_status_checks')
+        .flatMap((r) => r.parameters?.required_status_checks ?? [])
+        .map((c) => c.context)
+        .filter((c): c is string => !!c),
+    ),
+  ];
 }
 
 /** Resolve the repo's default branch name via `gh repo view`. */
@@ -154,77 +200,128 @@ async function applySquashCommitSetting(repo: string, opts: RepoTargetOptions): 
 }
 
 /**
- * Read the contexts currently marked required on `branch`. A branch with no
- * protection (or no required checks) 404s / soft-fails to `null`, which we read as
- * "no required checks" — the fail-closed direction, so an unprotected branch
- * reports the gate as missing rather than silently satisfied.
+ * The status-check contexts required by **Rulesets** on `branch` — the effective
+ * set across every active ruleset, read via the Rulesets API. The endpoint
+ * reports only ruleset-based rules (classic protection is read separately); a
+ * branch with no ruleset rules reads as `[]`, the fail-closed direction.
  */
-async function readRequiredChecks(
+async function readRulesetRequiredChecks(
   repo: string,
   branch: string,
   opts: RepoTargetOptions,
 ): Promise<string[]> {
-  const res = await readJson<RequiredChecksResponse>(
+  const rules = await readJson<BranchRule[]>(
+    ['gh', 'api', `repos/${repo}/rules/branches/${branch}`],
+    opts,
+  );
+  return rules ? contextsFromRules(rules) : [];
+}
+
+/**
+ * The status-check contexts required by **classic** branch protection on
+ * `branch`, or `null` when no classic protection object exists (404 → the
+ * fail-closed direction). Non-null is the migration-drift signal.
+ */
+async function readClassicRequiredChecks(
+  repo: string,
+  branch: string,
+  opts: RepoTargetOptions,
+): Promise<string[] | null> {
+  const res = await readJson<ClassicRequiredChecksResponse>(
     ['gh', 'api', `repos/${repo}/branches/${branch}/protection/required_status_checks`],
     opts,
   );
-  if (!res) return [];
+  if (!res) return null;
   const fromChecks = (res.checks ?? []).map((c) => c.context).filter((c): c is string => !!c);
   return [...new Set([...(res.contexts ?? []), ...fromChecks])];
 }
 
-/**
- * Apply the gate: enable `allow_auto_merge` if off, and PUT a minimal branch
- * protection requiring the union of the currently-required and gate contexts
- * (strict). PUT replaces the whole protection object, so review/restriction
- * requirements are set to `null` — apply configures a strict required-checks gate,
- * not a review policy. Each write is surfaced (the caller opted in); a failed
- * write throws rather than silently leaving the gate incomplete.
- */
-async function applyGate(
+/** The tool-managed ruleset's id, or `null` when it does not exist yet. */
+async function findManagedRuleset(repo: string, opts: RepoTargetOptions): Promise<number | null> {
+  const list = await readJson<RulesetSummary[]>(['gh', 'api', `repos/${repo}/rulesets`], opts);
+  if (!list) return null;
+  return list.find((r) => r.name === MANAGED_RULESET_NAME)?.id ?? null;
+}
+
+/** The contexts the managed ruleset currently requires (empty if it has none). */
+async function readManagedRulesetContexts(
   repo: string,
-  branch: string,
-  desiredContexts: string[],
-  needAllowAutoMerge: boolean,
+  id: number,
   opts: RepoTargetOptions,
-): Promise<void> {
-  if (needAllowAutoMerge) {
-    const out = await ghCall(
-      { argv: ['gh', 'api', '--method', 'PATCH', `repos/${repo}`, '-F', 'allow_auto_merge=true'] },
-      null,
-      opts,
-    );
-    if (out === null) throw new Error(`failed to enable allow_auto_merge on ${repo}`);
-  }
-  const body = JSON.stringify({
-    required_status_checks: { strict: true, contexts: desiredContexts },
-    enforce_admins: null,
-    required_pull_request_reviews: null,
-    restrictions: null,
+): Promise<string[]> {
+  const detail = await readJson<{ rules?: BranchRule[] }>(
+    ['gh', 'api', `repos/${repo}/rulesets/${id}`],
+    opts,
+  );
+  return contextsFromRules(detail?.rules ?? []);
+}
+
+/**
+ * The managed ruleset body: a single `required_status_checks` rule over the
+ * default branch. `strict_required_status_checks_policy` is **false** by design
+ * — requiring branches to be up-to-date (strict) would re-pend every open PR
+ * whenever the base moves, churning against the `merge-safety` check that already
+ * observes staleness advisorily. A review policy is deliberately not set here.
+ */
+function rulesetBody(contexts: string[]): string {
+  return JSON.stringify({
+    name: MANAGED_RULESET_NAME,
+    target: 'branch',
+    enforcement: 'active',
+    conditions: { ref_name: { include: ['~DEFAULT_BRANCH'], exclude: [] } },
+    rules: [
+      {
+        type: 'required_status_checks',
+        parameters: {
+          required_status_checks: contexts.map((c) => ({ context: c })),
+          strict_required_status_checks_policy: false,
+        },
+      },
+    ],
   });
+}
+
+/** Enable `allow_auto_merge` on the repo. Throws on write failure. */
+async function enableAutoMerge(repo: string, opts: RepoTargetOptions): Promise<void> {
   const out = await ghCall(
-    {
-      argv: [
-        'gh',
-        'api',
-        '--method',
-        'PUT',
-        `repos/${repo}/branches/${branch}/protection`,
-        '--input',
-        '-',
-      ],
-      stdin: body,
-    },
+    { argv: ['gh', 'api', '--method', 'PATCH', `repos/${repo}`, '-F', 'allow_auto_merge=true'] },
     null,
     opts,
   );
-  if (out === null) throw new Error(`failed to set required status checks on ${repo}@${branch}`);
+  if (out === null) throw new Error(`failed to enable allow_auto_merge on ${repo}`);
+}
+
+/**
+ * Create-or-update the managed ruleset so it requires the union of its current
+ * contexts and `gateChecks`. Idempotent: re-running finds the same ruleset by
+ * name and PUTs the converged body rather than creating a second one. Never
+ * writes classic branch protection.
+ */
+async function applyRulesetGate(
+  repo: string,
+  gateChecks: readonly string[],
+  opts: RepoTargetOptions,
+): Promise<void> {
+  const id = await findManagedRuleset(repo, opts);
+  const existing = id === null ? [] : await readManagedRulesetContexts(repo, id, opts);
+  const body = rulesetBody([...new Set([...existing, ...gateChecks])]);
+  const argv =
+    id === null
+      ? ['gh', 'api', '--method', 'POST', `repos/${repo}/rulesets`, '--input', '-']
+      : ['gh', 'api', '--method', 'PUT', `repos/${repo}/rulesets/${id}`, '--input', '-'];
+  const out = await ghCall({ argv, stdin: body }, null, opts);
+  if (out === null) {
+    throw new Error(
+      `failed to ${id === null ? 'create' : 'update'} the auto-merge ruleset on ${repo}`,
+    );
+  }
 }
 
 /**
  * Confirm the auto-merge gate on a repo's default branch; with `apply`, bring it
- * into the required state. Returns the observed (post-apply, if applied) state.
- * `satisfied === false` is the hard signal the `/bootstrap` skill blocks on.
+ * into the required state (provisioning a Ruleset, never classic protection).
+ * Returns the observed (post-apply, if applied) state. `satisfied === false` is
+ * the hard signal the `/bootstrap` skill blocks on.
  */
 export async function verifyAutomergeGate(
   opts: VerifyAutomergeGateOptions = {},
@@ -235,7 +332,10 @@ export async function verifyAutomergeGate(
   const branch = await defaultBranch(repo, opts);
 
   let allowAutoMerge = await readAllowAutoMerge(repo, opts);
-  let requiredChecks = await readRequiredChecks(repo, branch, opts);
+  const rulesetChecks = await readRulesetRequiredChecks(repo, branch, opts);
+  const classicChecks = await readClassicRequiredChecks(repo, branch, opts);
+  const classicProtection = classicChecks !== null;
+  let requiredChecks = [...new Set([...rulesetChecks, ...(classicChecks ?? [])])];
   let missingChecks = gateChecks.filter((c) => !requiredChecks.includes(c));
   let squashCommitCorrect = await readSquashCommitCorrect(repo, opts);
 
@@ -243,10 +343,12 @@ export async function verifyAutomergeGate(
   const gateIncomplete = missingChecks.length > 0 || !allowAutoMerge;
   if (opts.apply && (gateIncomplete || !squashCommitCorrect)) {
     if (gateIncomplete) {
-      const desiredContexts = [...new Set([...requiredChecks, ...gateChecks])];
-      await applyGate(repo, branch, desiredContexts, !allowAutoMerge, opts);
-      allowAutoMerge = true;
-      requiredChecks = desiredContexts;
+      if (!allowAutoMerge) {
+        await enableAutoMerge(repo, opts);
+        allowAutoMerge = true;
+      }
+      await applyRulesetGate(repo, gateChecks, opts);
+      requiredChecks = [...new Set([...requiredChecks, ...gateChecks])];
       missingChecks = [];
     }
     if (!squashCommitCorrect) {
@@ -264,6 +366,7 @@ export async function verifyAutomergeGate(
     gateChecks,
     missingChecks,
     squashCommitCorrect,
+    classicProtection,
     satisfied: allowAutoMerge && missingChecks.length === 0 && squashCommitCorrect,
     applied,
   };
