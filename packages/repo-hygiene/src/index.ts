@@ -8,6 +8,8 @@ export * from './checks/conflict-markers.js';
 export * from './checks/okf.js';
 export * from './checks/okf-fields.js';
 export * from './checks/okf-index.js';
+export * from './checks/md-links.js';
+export * from './checks/docs-links.js';
 export * from './checks/action-pins.js';
 export * from './checks/package-pins.js';
 export * from './checks/md-pairing.js';
