@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.8.0...repo-hygiene-v0.9.0) (2026-09-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **repo-hygiene:** add --format=github workflow-command annotations ([#245](https://github.com/rmartz/ai-tools/issues/245))
+
+### Features
+
+* **repo-hygiene:** add --format=github workflow-command annotations ([#245](https://github.com/rmartz/ai-tools/issues/245)) ([996de00](https://github.com/rmartz/ai-tools/commit/996de0016214c3bf6308b05dd4ab960d54b63fb1))
+
 ## [0.8.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.7.0...repo-hygiene-v0.8.0) (2026-09-16)
 
 
