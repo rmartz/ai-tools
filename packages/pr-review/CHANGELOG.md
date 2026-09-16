@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.0](https://github.com/rmartz/ai-tools/compare/pr-review-v0.5.0...pr-review-v0.6.0) (2026-09-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* **pr-review:** name the files and commits behind each merge-safety verdict ([#234](https://github.com/rmartz/ai-tools/issues/234))
+
+### Features
+
+* **pr-review:** name the files and commits behind each merge-safety verdict ([#234](https://github.com/rmartz/ai-tools/issues/234)) ([666f34f](https://github.com/rmartz/ai-tools/commit/666f34f982cbd57f4e17ae5201991e9b7a3a40d5))
+
 ## [0.5.0](https://github.com/rmartz/ai-tools/compare/pr-review-v0.4.1...pr-review-v0.5.0) (2026-09-15)
 
 
