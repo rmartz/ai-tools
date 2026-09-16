@@ -14,7 +14,7 @@ Packages are organized into layers; a package may only import from layers at or
 below its own. Enforced by `eslint-plugin-boundaries` (see `eslint.config.mjs`).
 
 - **layer-0 — foundation:** `@rmartz/agent-runtime`, `@rmartz/github`
-- **layer-1 — tooling:** `@rmartz/worktree`, `@rmartz/verify`, `@rmartz/repo-hygiene`, `@rmartz/bootstrap`
+- **layer-1 — tooling:** `@rmartz/worktree`, `@rmartz/verify`, `@rmartz/bootstrap`
 - **layer-2 — composed:** `@rmartz/pr-review`, `@rmartz/reporting`, `@rmartz/issues`
 
 PR Shepherd lives in its own repo and depends on these as published packages;
