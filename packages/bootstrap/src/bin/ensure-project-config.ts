@@ -76,11 +76,14 @@ async function main(): Promise<void> {
     console.log(`  ${o.filename}: ${o.action}`);
   }
   const changed = result.outcomes.filter(
-    (o) => o.action === 'created' || o.action === 'updated',
+    (o) => o.action === 'created' || o.action === 'updated' || o.action === 'removed',
   ).length;
   console.log(
-    changed ? `\n${changed} file(s) written.` : '\nAll managed files present — nothing to do.',
+    changed ? `\n${changed} file(s) changed.` : '\nAll managed files present — nothing to do.',
   );
+  for (const o of result.outcomes.filter((o) => o.action === 'removed')) {
+    console.log(`Note: ${o.filename} removed (retired golden file — no longer seeded).`);
+  }
   for (const o of result.outcomes.filter((o) => o.action === 'skipped')) {
     console.log(`Note: ${o.filename} left untouched (user-authored; no managed header).`);
   }
