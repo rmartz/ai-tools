@@ -30,6 +30,15 @@ export type {
   VerifyAutomergeGateResult,
 } from './verify-automerge-gate.js';
 
+export { auditFleet } from './fleet-audit.js';
+export type {
+  FleetAuditOptions,
+  FleetAuditReport,
+  FleetAuditRow,
+  FleetAuditSummary,
+  ProtectionMechanism,
+} from './fleet-audit.js';
+
 export { verifySquashMergeSetting } from './verify-squash-merge-setting.js';
 export type {
   VerifySquashMergeSettingOptions,
