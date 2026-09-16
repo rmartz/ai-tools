@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  packages: read # install @rmartz/repo-hygiene from GitHub Packages
 
 jobs:
   action-pins:
@@ -25,7 +26,4 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      # check:actions runs the built @rmartz/repo-hygiene CLI, so build first to
-      # populate dist/.
-      - run: pnpm run build
       - run: pnpm run check:actions

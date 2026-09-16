@@ -10,7 +10,7 @@ import importPlugin from 'eslint-plugin-import';
  * scripts-vs-libraries convention — enforced by tooling, not prose.
  *
  *   layer-0  foundation   agent-runtime, github        (no internal deps)
- *   layer-1  tooling      worktree, verify, repo-hygiene, bootstrap
+ *   layer-1  tooling      worktree, verify, bootstrap
  *   layer-2  composed     pr-review, reporting, issues
  *
  * PR Shepherd lives in its own repo and may import any of these as published
@@ -21,12 +21,7 @@ import importPlugin from 'eslint-plugin-import';
  */
 const LAYERS = {
   'layer-0': ['packages/agent-runtime', 'packages/github'],
-  'layer-1': [
-    'packages/worktree',
-    'packages/verify',
-    'packages/repo-hygiene',
-    'packages/bootstrap',
-  ],
+  'layer-1': ['packages/worktree', 'packages/verify', 'packages/bootstrap'],
   'layer-2': ['packages/pr-review', 'packages/reporting', 'packages/issues'],
 };
 

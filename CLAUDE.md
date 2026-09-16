@@ -26,7 +26,7 @@ The general-purpose AI toolkit (TypeScript pnpm monorepo). Successor to
 A package may only import from layers at or below its own:
 
 - **layer-0 — foundation:** `@rmartz/agent-runtime`, `@rmartz/github`
-- **layer-1 — tooling:** `@rmartz/worktree`, `@rmartz/verify`, `@rmartz/repo-hygiene`, `@rmartz/bootstrap`
+- **layer-1 — tooling:** `@rmartz/worktree`, `@rmartz/verify`, `@rmartz/bootstrap`
 - **layer-2 — composed:** `@rmartz/pr-review`, `@rmartz/reporting`, `@rmartz/issues`
 
 PR Shepherd is a separate repo that imports these packages. **Nothing in ai-tools

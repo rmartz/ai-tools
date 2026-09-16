@@ -26,6 +26,7 @@ permissions:
   checks: write # post/flip the merge-safety check-run
   pull-requests: write # reconcile the update-required / merge-conflict labels
   contents: read
+  packages: read # install @rmartz/repo-hygiene from GitHub Packages (setup action)
   actions: write # dispatch per-PR evaluate runs from the push fan-out
 
 concurrency:

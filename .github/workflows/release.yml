@@ -58,7 +58,12 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: '@rmartz'
 
+      # The install now resolves @rmartz/repo-hygiene from GitHub Packages (an
+      # external devDependency), so the @rmartz-scope auth token must be present
+      # here, not only on the publish step below.
       - run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - run: pnpm run build
 

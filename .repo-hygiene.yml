@@ -1,6 +1,7 @@
-# @rmartz/repo-hygiene check configuration for this repo.
-# See docs/packages/repo-hygiene.md. Each section under `checks` is read by the
-# check of that name; `severity` (when set) overrides that check's findings.
+# @rmartz/repo-hygiene check configuration for this repo. The checks run via the
+# published @rmartz/repo-hygiene CLI (a devDependency); see the rmartz/repo-hygiene
+# repo for docs. Each section under `checks` is read by the check of that name;
+# `severity` (when set) overrides that check's findings.
 checks:
   # OKF docs frontmatter vocabulary + exemptions (per-repo).
   okf:
