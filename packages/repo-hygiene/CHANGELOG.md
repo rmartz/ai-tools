@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.7.0...repo-hygiene-v0.8.0) (2026-09-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **repo-hygiene:** add a docs link-integrity check for broken intra-repo links ([#242](https://github.com/rmartz/ai-tools/issues/242))
+
+### Features
+
+* **repo-hygiene:** add a docs link-integrity check for broken intra-repo links ([#242](https://github.com/rmartz/ai-tools/issues/242)) ([7e7c753](https://github.com/rmartz/ai-tools/commit/7e7c753204318dc89694f40d75a3b4008ff9e43d))
+
 ## [0.7.0](https://github.com/rmartz/ai-tools/compare/repo-hygiene-v0.6.0...repo-hygiene-v0.7.0) (2026-09-15)
 
 

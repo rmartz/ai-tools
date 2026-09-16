@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.4.0...bootstrap-v0.5.0) (2026-09-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **bootstrap:** provision the auto-merge gate via a Ruleset, not classic branch protection ([#241](https://github.com/rmartz/ai-tools/issues/241))
+
+### Features
+
+* **bootstrap:** provision the auto-merge gate via a Ruleset, not classic branch protection ([#241](https://github.com/rmartz/ai-tools/issues/241)) ([213635c](https://github.com/rmartz/ai-tools/commit/213635c88c687e9ccaaf71b81438186678776027))
+
 ## [0.4.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.3.1...bootstrap-v0.4.0) (2026-09-15)
 
 
