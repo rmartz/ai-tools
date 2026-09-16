@@ -26,11 +26,17 @@ const read = (name: string) => readFileSync(join(dir, name), 'utf8');
 describe('ensureProjectConfig', () => {
   it('creates all golden ignore files in a fresh repo', () => {
     const res = ensureProjectConfig(dir);
-    const ignoreFiles = ['.prettierignore', '.eslintignore', '.gitignore'];
+    const ignoreFiles = ['.prettierignore', '.gitignore'];
     for (const name of ignoreFiles) {
       expect(res.outcomes.find((o) => o.filename === name)?.action).toBe('created');
       expect(existsSync(join(dir, name))).toBe(true);
     }
+  });
+
+  it('no longer seeds `.eslintignore` — ESLint 10 flat config ignores it (#253)', () => {
+    const res = ensureProjectConfig(dir);
+    expect(res.outcomes.find((o) => o.filename === '.eslintignore')?.action).not.toBe('created');
+    expect(existsSync(join(dir, '.eslintignore'))).toBe(false);
   });
 
   it('writes a fenced managed block with the expected entries', () => {
@@ -46,7 +52,6 @@ describe('ensureProjectConfig', () => {
     ensureProjectConfig(dir);
     expect(read('.gitignore')).not.toContain('.git-worktrees/');
     expect(read('.prettierignore')).not.toContain('.git-worktrees/');
-    expect(read('.eslintignore')).not.toContain('.git-worktrees/');
   });
 
   it('strips a stale `.git-worktrees/` line from the managed block on the next run', () => {
@@ -86,11 +91,11 @@ describe('ensureProjectConfig', () => {
 
   it('refreshes a stale managed block without touching surrounding content', () => {
     const stale = `keep-me\n${BLOCK_BEGIN}\nOLD_ENTRY\n${BLOCK_END}\ntrailing-line\n`;
-    writeFileSync(join(dir, '.eslintignore'), stale);
+    writeFileSync(join(dir, '.prettierignore'), stale);
     const res = ensureProjectConfig(dir);
-    const epc = res.outcomes.find((o) => o.filename === '.eslintignore');
+    const epc = res.outcomes.find((o) => o.filename === '.prettierignore');
     expect(epc?.action).toBe('updated');
-    const text = read('.eslintignore');
+    const text = read('.prettierignore');
     expect(text).toContain('keep-me');
     expect(text).toContain('trailing-line');
     expect(text).not.toContain('OLD_ENTRY');
@@ -100,6 +105,7 @@ describe('ensureProjectConfig', () => {
   it('honors injected file/workflow sets', () => {
     const res = ensureProjectConfig(dir, {
       files: [{ filename: '.customignore', entries: ['foo/'] }],
+      retired: [],
       workflows: [],
     });
     expect(res.outcomes).toEqual([{ filename: '.customignore', action: 'created' }]);
@@ -133,5 +139,46 @@ describe('ensureProjectConfig', () => {
     );
     expect(autoMerge?.action).toBe('created');
     expect(existsSync(join(dir, '.github/workflows/dependabot-auto-merge.yml'))).toBe(true);
+  });
+});
+
+// #253 — actively retire the stale `.eslintignore` bootstrap used to seed, so an
+// already-bootstrapped repo (via the next ai-ensure-project-config / golden-sync
+// run) sheds the ESLint-10 warning rather than keeping the inert file forever.
+describe('ensureProjectConfig — retiring `.eslintignore`', () => {
+  const retire = ['.eslintignore'] as const;
+
+  it('deletes a file that held only our managed block', () => {
+    writeFileSync(join(dir, '.eslintignore'), `${BLOCK_BEGIN}\nnode_modules/\n${BLOCK_END}\n`);
+    const res = ensureProjectConfig(dir, { retired: retire });
+    expect(res.outcomes.find((o) => o.filename === '.eslintignore')?.action).toBe('removed');
+    expect(existsSync(join(dir, '.eslintignore'))).toBe(false);
+  });
+
+  it('strips only our block from a file that also has user content', () => {
+    const local = `# my rules\n*.local\n${BLOCK_BEGIN}\nnode_modules/\n${BLOCK_END}\ntrailing\n`;
+    writeFileSync(join(dir, '.eslintignore'), local);
+    const res = ensureProjectConfig(dir, { retired: retire });
+    expect(res.outcomes.find((o) => o.filename === '.eslintignore')?.action).toBe('updated');
+    const text = read('.eslintignore');
+    expect(existsSync(join(dir, '.eslintignore'))).toBe(true);
+    expect(text).toContain('*.local');
+    expect(text).toContain('trailing');
+    expect(text).not.toContain(BLOCK_BEGIN);
+    expect(text).not.toContain('node_modules/');
+  });
+
+  it('leaves a user-authored `.eslintignore` (no managed block) untouched', () => {
+    const local = '# entirely mine\ndist-custom/\n';
+    writeFileSync(join(dir, '.eslintignore'), local);
+    const res = ensureProjectConfig(dir, { retired: retire });
+    expect(res.outcomes.find((o) => o.filename === '.eslintignore')?.action).toBe('unchanged');
+    expect(read('.eslintignore')).toBe(local);
+  });
+
+  it('reports unchanged when there is no `.eslintignore` at all', () => {
+    const res = ensureProjectConfig(dir, { retired: retire });
+    expect(res.outcomes.find((o) => o.filename === '.eslintignore')?.action).toBe('unchanged');
+    expect(existsSync(join(dir, '.eslintignore'))).toBe(false);
   });
 });

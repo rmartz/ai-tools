@@ -1,7 +1,8 @@
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   goldenIgnoreFiles,
+  retiredIgnoreFiles,
   BLOCK_BEGIN,
   BLOCK_END,
   type GoldenIgnoreFile,
@@ -15,10 +16,11 @@ export { BLOCK_BEGIN, BLOCK_END } from './golden-config.js';
  * Idempotently apply golden-state config to a repository — two categories, two
  * mechanisms. TS-toolchain reframe of dotfiles' `ensure_project_config.py`.
  *
- * 1. **Ignore files** (`.prettierignore`, `.eslintignore`, `.gitignore`) get one
- *    fenced "managed" block (BLOCK_BEGIN…BLOCK_END): we rewrite only that block's
- *    contents and preserve any user-authored lines outside it — "ensure block
- *    present, don't clobber user content".
+ * 1. **Ignore files** (`.prettierignore`, `.gitignore`) get one fenced "managed"
+ *    block (BLOCK_BEGIN…BLOCK_END): we rewrite only that block's contents and
+ *    preserve any user-authored lines outside it — "ensure block present, don't
+ *    clobber user content". A **retired** ignore file (`.eslintignore`, #253) runs
+ *    the inverse: strip our block, and delete the file if it held only that block.
  * 2. **Whole workflow files** (`.github/workflows/*.yml`) are managed as whole
  *    files (write-if-absent / overwrite-if-drifted), delegated to
  *    `ensure-workflow-files.ts`.
@@ -27,7 +29,7 @@ export { BLOCK_BEGIN, BLOCK_END } from './golden-config.js';
  * tests can point at a tmpdir.
  */
 
-export type ConfigAction = 'created' | 'updated' | 'unchanged' | 'skipped' | 'withheld';
+export type ConfigAction = 'created' | 'updated' | 'unchanged' | 'skipped' | 'withheld' | 'removed';
 
 export interface ConfigOutcome {
   filename: string;
@@ -77,9 +79,42 @@ function ensureFile(root: string, file: GoldenIgnoreFile): ConfigOutcome {
   return { filename: file.filename, action: existed ? 'updated' : 'created' };
 }
 
+/**
+ * Remove our managed block from `text` (the inverse of {@link spliceBlock}),
+ * preserving lines outside it. Returns `text` unchanged when no block is present.
+ */
+function stripBlock(text: string): string {
+  const begin = text.indexOf(BLOCK_BEGIN);
+  if (begin === -1) return text;
+  const endMarker = text.indexOf(BLOCK_END, begin);
+  const endOfBlock = endMarker === -1 ? text.length : endMarker + BLOCK_END.length;
+  return `${text.slice(0, begin)}${text.slice(endOfBlock).replace(/^\n/, '')}`;
+}
+
+/**
+ * Retire a formerly-seeded ignore file: strip our managed block, delete the file
+ * if that block was all it held, and never touch a file we didn't manage (one with
+ * no block). Absent file → `unchanged`.
+ */
+function retireFile(root: string, filename: string): ConfigOutcome {
+  const path = join(root, filename);
+  if (!existsSync(path)) return { filename, action: 'unchanged' };
+  const current = readFileSync(path, 'utf8');
+  const stripped = stripBlock(current);
+  if (stripped === current) return { filename, action: 'unchanged' };
+  if (stripped.trim() === '') {
+    rmSync(path);
+    return { filename, action: 'removed' };
+  }
+  writeFileSync(path, stripped, 'utf8');
+  return { filename, action: 'updated' };
+}
+
 export interface EnsureProjectConfigOptions {
   /** Override the golden ignore-file set (tests). Defaults to `goldenIgnoreFiles`. */
   files?: readonly GoldenIgnoreFile[];
+  /** Override the retired ignore-file set (tests). Defaults to `retiredIgnoreFiles`. */
+  retired?: readonly string[];
   /** Override the golden workflow-file set (tests). Defaults to `goldenWorkflowFiles`. */
   workflows?: readonly GoldenWorkflowFile[];
   /**
@@ -93,18 +128,21 @@ export interface EnsureProjectConfigOptions {
 
 /**
  * Ensure every golden ignore file's managed block and every golden workflow file
- * under `root` are present and current. Pure fs — no subprocess, no network.
- * Returns a combined per-file outcome list (ignore files first, then workflows).
+ * under `root` are present and current, and retire any formerly-seeded ignore file.
+ * Pure fs — no subprocess, no network. Returns a combined per-file outcome list
+ * (golden ignore files, then retired ignore files, then workflows).
  */
 export function ensureProjectConfig(
   root: string,
   opts: EnsureProjectConfigOptions = {},
 ): EnsureProjectConfigResult {
   const files = opts.files ?? goldenIgnoreFiles;
+  const retired = opts.retired ?? retiredIgnoreFiles;
   const ignoreOutcomes = files.map((file) => ensureFile(root, file));
+  const retiredOutcomes = retired.map((filename) => retireFile(root, filename));
   const workflowOutcomes = ensureWorkflowFiles(root, {
     workflows: opts.workflows,
     satisfiedGateChecks: opts.satisfiedGateChecks,
   });
-  return { root, outcomes: [...ignoreOutcomes, ...workflowOutcomes] };
+  return { root, outcomes: [...ignoreOutcomes, ...retiredOutcomes, ...workflowOutcomes] };
 }

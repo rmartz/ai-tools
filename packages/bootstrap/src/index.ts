@@ -50,6 +50,7 @@ export type {
 
 export {
   goldenIgnoreFiles,
+  retiredIgnoreFiles,
   goldenWorkflowFiles,
   goldenGateChecks,
   BLOCK_BEGIN,
