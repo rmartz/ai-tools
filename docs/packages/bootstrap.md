@@ -86,6 +86,25 @@ a block spliced into user content.
     files repos are expected to customize (`.github/dependabot.yml`), where
     overwriting local edits on every bootstrap would be wrong.
 
+  **The per-file rule (seed vs. manage).** Bootstrap seeds a good _starting_ state
+  once; ongoing conformance lives in the reusable workflow + Dependabot + golden-sync,
+  **never a manual `/bootstrap` re-run**. So the policy is chosen per file:
+  - A file becomes **`seed`** once it is a **self-updating reference** — a
+    Dependabot-bumpable pin or a reusable-workflow caller (`repo-hygiene.yml`;
+    `merge-safety.yml` once #247 makes it a caller). Dependabot then owns updates,
+    so a `manage` re-sync would fight it over the pin (and clobber a hand-tuned
+    caller). `.github/dependabot.yml` is `seed` for the same "repo then owns it"
+    reason.
+  - A file stays **`manage`** while its **logic is embedded inline**
+    (`commit-convention.yml`, `dependabot-auto-merge.yml`) — it has no Dependabot
+    channel, so its logic must keep propagating via golden-sync.
+  - **golden-sync (#233) composes with `seed`, it doesn't fight it.** Being
+    write-if-absent, golden-sync never clobbers an existing bumped/hand-tuned
+    reference, yet still propagates _newly-added_ golden files to existing repos and
+    keeps the ignore blocks conformant. A repo that fully self-manages its `.github`
+    (e.g. the `rmartz/repo-hygiene` tooling-source repo itself) simply doesn't seed
+    `golden-sync.yml` at all — that is its opt-out.
+
   `ensureProjectConfig` composes this after the ignore blocks, returning one
   combined outcome list.
 
@@ -103,7 +122,7 @@ a block spliced into user content.
   both converge to "present iff the gate is satisfied". The **network** read that
   produces the satisfied set is `resolveSatisfiedGateChecks` (below).
 
-- `goldenWorkflowFiles` — seeded with five `manage` workflows and one `seed` config:
+- `goldenWorkflowFiles` — seeded with four `manage` workflows and two `seed` files:
   - `dependabot-auto-merge.yml`: on a green `semver-patch` / `semver-minor`
     Dependabot PR it enables GitHub-native auto-merge (majors stay manual).
     `dependabot/fetch-metadata` is pinned to a full commit SHA + `major.minor.patch`
@@ -127,14 +146,20 @@ a block spliced into user content.
     action SHAs, including the auto-merge workflow's `fetch-metadata`, fresh) plus
     the `npm` ecosystem (the ideal for the JS repos this toolkit targets), both
     grouped. Written only if absent; a repo then owns and tailors it.
-  - `repo-hygiene.yml` (**`manage`**): runs the **universally-safe `action-pins`**
-    check via the published `@rmartz/repo-hygiene` CLI (consumer shape). Only
-    `action-pins` is fleet-safe — the other registered checks (`okf` /
-    `md-pairing` / `file-caps`) are ai-tools conventions that would false-fail on
-    an arbitrary repo (e.g. `okf` flags any docs lacking OKF frontmatter), so
-    distributing them fleet-wide is a deliberate **per-repo curation** decision
-    (tracked with the gate-set curation follow-up), not part of the universal
-    golden set. Advisory; `gateChecks: []`.
+  - `repo-hygiene.yml` (**`seed`**): a thin **caller** of the SHA-pinned
+    `rmartz/repo-hygiene` reusable workflow
+    (`uses: rmartz/repo-hygiene/.github/workflows/hygiene.yml@<sha> # vX.Y.Z`),
+    replacing the old hand-rolled `npm install -g @rmartz/repo-hygiene@<env-pin>` +
+    `action-pins` run. Dependabot's `github-actions` ecosystem bumps the pin — and
+    the CLI version the reusable workflow installs, which tracks the release in
+    lockstep — via reviewable PRs, so updates (including newly-added
+    universally-safe checks) propagate with **no per-repo YAML edit**. Passing no
+    `checks:` input runs the package's registry-derived **default-on** set (the
+    universally-safe checks); a repo opts into repo-specific checks (`okf`,
+    `docs-links`) by adding a `checks:` input to its own copy. It is **`seed`**, not
+    `manage`, precisely because it is now a self-updating reference: bootstrap
+    writes it once and Dependabot owns the pin thereafter, so a re-seed / golden-sync
+    run never reverts a bumped or hand-tuned caller. Advisory; `gateChecks: []`.
   - `commit-convention.yml` (**`manage`**): the **post-merge conventional-commit
     tripwire** — a `push: [main]` job that fails when a subject reaches the default
     branch without a valid conventional-commit prefix. It is the counterpart of

@@ -237,32 +237,35 @@ describe('goldenWorkflowFiles — the seeded Dependabot config', () => {
   });
 });
 
-// #213 — the seeded repo-hygiene CI workflow (consumer shape; the universal
-// action-pins check only).
-describe('goldenWorkflowFiles — the seeded repo-hygiene workflow', () => {
+// #251 — the seeded repo-hygiene CI is a thin caller of the rmartz/repo-hygiene
+// reusable workflow (SHA-pinned, Dependabot-bumped), seeded once and thereafter
+// repo-owned (`seed`), so bootstrap re-seed / golden-sync never fights Dependabot
+// over the pin.
+describe('goldenWorkflowFiles — the seeded repo-hygiene reusable-workflow caller', () => {
   const repoHygiene = goldenWorkflowFiles.find(
     (w) => w.filename === '.github/workflows/repo-hygiene.yml',
   );
 
-  it('is present in the golden set', () => {
+  it('is present with the seed policy and no gate check of its own', () => {
     expect(repoHygiene).toBeDefined();
+    expect(repoHygiene?.policy).toBe('seed');
+    expect(repoHygiene?.gateChecks).toEqual([]);
   });
 
-  it('installs the published @rmartz/repo-hygiene CLI and runs action-pins', () => {
+  it('calls the rmartz/repo-hygiene reusable workflow, SHA-pinned with a version comment', () => {
+    expect(repoHygiene?.content).toMatch(
+      /uses: rmartz\/repo-hygiene\/\.github\/workflows\/hygiene\.yml@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
+    );
+  });
+
+  it('grants packages: read so the reusable workflow can install from GitHub Packages', () => {
+    expect(repoHygiene?.content).toContain('packages: read');
+  });
+
+  it('drops the hand-rolled CLI install and the bare env version pin', () => {
     const content = repoHygiene?.content ?? '';
-    expect(content).toContain('npm install -g "@rmartz/repo-hygiene@');
-    expect(content).toContain('ai-repo-hygiene action-pins --check');
-  });
-
-  it('runs only the universal action-pins check, not the ai-tools-specific ones', () => {
-    const content = repoHygiene?.content ?? '';
-    expect(content).not.toContain('okf');
-    expect(content).not.toContain('file-caps');
-    expect(content).not.toContain('md-pairing');
-  });
-
-  it('pins actions/checkout to a full 40-char SHA with a major.minor.patch comment', () => {
-    expect(repoHygiene?.content).toMatch(/actions\/checkout@[0-9a-f]{40} # v\d+\.\d+\.\d+/);
+    expect(content).not.toContain('npm install -g');
+    expect(content).not.toContain('REPO_HYGIENE_VERSION');
   });
 });
 

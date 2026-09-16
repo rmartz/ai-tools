@@ -158,14 +158,17 @@ updates:
         dependency-type: production
 `;
 
-// Generic repo-hygiene CI, consumer shape (installs the published
-// @rmartz/repo-hygiene CLI rather than building from source). It runs only the
-// universally-safe `action-pins` check — every repo with workflows benefits from
-// SHA-pinned actions. The other registered checks (okf / md-pairing / file-caps)
-// are ai-tools-specific conventions that would false-fail on an arbitrary repo
-// (okf flags any docs lacking OKF frontmatter; file-caps needs a per-repo
-// baseline), so distributing them fleet-wide is a deliberate per-repo curation
-// decision, not part of the universal golden set. `push` fires on `main`.
+// Generic repo-hygiene CI, consumer shape — a thin CALLER of the
+// rmartz/repo-hygiene reusable workflow rather than a hand-rolled CLI install.
+// The reusable workflow is SHA-pinned with a version comment, so Dependabot's
+// github-actions ecosystem bumps the pin (and the CLI version it installs, which
+// tracks the release in lockstep) via reviewable PRs — updates, including
+// newly-added universally-safe checks, propagate with no per-repo YAML edit and
+// no bootstrap re-manage. Passing no `checks:` input runs the package's
+// registry-derived default-on set (the universally-safe checks); a repo opts into
+// repo-specific checks (e.g. `okf`, `docs-links`) by adding a `checks:` input to
+// its own copy. `push` fires on `main`; permissions live on the job so they reach
+// the reusable workflow (effective perms = caller ∩ workflow-declared).
 export const REPO_HYGIENE = `name: repo-hygiene
 
 on:
@@ -173,27 +176,12 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: read
-  packages: read
-
-env:
-  REPO_HYGIENE_VERSION: 0.4.0
-
 jobs:
-  action-pins:
-    name: GitHub Actions SHA pins
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install ai-repo-hygiene
-        env:
-          NODE_AUTH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-        run: |
-          printf '@rmartz:registry=https://npm.pkg.github.com\\n//npm.pkg.github.com/:_authToken=%s\\n' "\${NODE_AUTH_TOKEN}" > ~/.npmrc
-          npm install -g "@rmartz/repo-hygiene@\${REPO_HYGIENE_VERSION}"
-      - run: ai-repo-hygiene action-pins --check
+  hygiene:
+    permissions:
+      contents: read
+      packages: read
+    uses: rmartz/repo-hygiene/.github/workflows/hygiene.yml@f1dcbeb51e68dec2f2064aca4620bd052d455a8f # v1.0.1
 `;
 
 // Post-merge conventional-commit tripwire. A `push: [main]` alert (it can't gate
