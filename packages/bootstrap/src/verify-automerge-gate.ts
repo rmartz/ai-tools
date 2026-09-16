@@ -1,10 +1,19 @@
 import { ghCall, resolveRepoTarget, type RepoTargetOptions } from '@rmartz/github';
 import { goldenGateChecks } from './golden-config.js';
+import { applyRulesetGate, readJson, readRulesetRequiredChecks } from './ruleset-gate.js';
 
 /**
  * Confirm (and optionally apply) the branch-protection gate that GitHub-native
  * Dependabot auto-merge depends on. Network-touching, so it lives here rather
  * than in the hermetic `ensure-project-config` writer.
+ *
+ * Protection is expressed as a **Ruleset**, not classic branch protection —
+ * classic rules are a legacy mechanism the fleet migrates away from. The read
+ * path resolves the *effective* required checks from the Rulesets API, and
+ * `--apply` provisions a tool-managed ruleset. Legacy classic protection, if any
+ * lingers, still counts toward the gate (so a mid-migration repo isn't falsely
+ * reported unsatisfied) but is surfaced as **drift** to migrate — it is never
+ * written and never deleted here.
  *
  * The hazard this closes: `gh pr merge --auto` fires the instant a PR's required
  * checks are green — and with **no** required checks configured, "green" is
@@ -33,7 +42,7 @@ export interface VerifyAutomergeGateResult {
   branch: string;
   /** Whether the repo allows auto-merge (`allow_auto_merge`). */
   allowAutoMerge: boolean;
-  /** Status-check contexts currently marked required on the default branch. */
+  /** Effective status-check contexts required on the default branch (ruleset ∪ classic). */
   requiredChecks: string[];
   /** The gate set that was checked. */
   gateChecks: string[];
@@ -47,25 +56,22 @@ export interface VerifyAutomergeGateResult {
    * skips it — the exact miss that stranded a github release.
    */
   squashCommitCorrect: boolean;
+  /**
+   * Whether legacy **classic** branch protection still requires status checks on
+   * the branch. It counts toward {@link satisfied} (fail-closed union), but is a
+   * migration-drift signal: the fleet standardizes on Rulesets, so classic
+   * protection should be removed once the ruleset is in place.
+   */
+  classicProtection: boolean;
   /** `allowAutoMerge` on AND no missing gate checks AND the squash commit setting correct. */
   satisfied: boolean;
   /** Whether `--apply` mutated repo/branch state during this run. */
   applied: boolean;
 }
 
-interface RequiredChecksResponse {
+interface ClassicRequiredChecksResponse {
   contexts?: string[];
   checks?: { context?: string }[];
-}
-
-async function readJson<T>(argv: string[], opts: RepoTargetOptions): Promise<T | null> {
-  const out = await ghCall({ argv }, null, opts);
-  if (out === null) return null;
-  try {
-    return JSON.parse(out) as T;
-  } catch {
-    return null;
-  }
 }
 
 /** Resolve the repo's default branch name via `gh repo view`. */
@@ -154,77 +160,39 @@ async function applySquashCommitSetting(repo: string, opts: RepoTargetOptions): 
 }
 
 /**
- * Read the contexts currently marked required on `branch`. A branch with no
- * protection (or no required checks) 404s / soft-fails to `null`, which we read as
- * "no required checks" — the fail-closed direction, so an unprotected branch
- * reports the gate as missing rather than silently satisfied.
+ * The status-check contexts required by **classic** branch protection on
+ * `branch`, or `null` when no classic protection object exists (404 → the
+ * fail-closed direction). Non-null is the migration-drift signal.
  */
-async function readRequiredChecks(
+async function readClassicRequiredChecks(
   repo: string,
   branch: string,
   opts: RepoTargetOptions,
-): Promise<string[]> {
-  const res = await readJson<RequiredChecksResponse>(
+): Promise<string[] | null> {
+  const res = await readJson<ClassicRequiredChecksResponse>(
     ['gh', 'api', `repos/${repo}/branches/${branch}/protection/required_status_checks`],
     opts,
   );
-  if (!res) return [];
+  if (!res) return null;
   const fromChecks = (res.checks ?? []).map((c) => c.context).filter((c): c is string => !!c);
   return [...new Set([...(res.contexts ?? []), ...fromChecks])];
 }
 
-/**
- * Apply the gate: enable `allow_auto_merge` if off, and PUT a minimal branch
- * protection requiring the union of the currently-required and gate contexts
- * (strict). PUT replaces the whole protection object, so review/restriction
- * requirements are set to `null` — apply configures a strict required-checks gate,
- * not a review policy. Each write is surfaced (the caller opted in); a failed
- * write throws rather than silently leaving the gate incomplete.
- */
-async function applyGate(
-  repo: string,
-  branch: string,
-  desiredContexts: string[],
-  needAllowAutoMerge: boolean,
-  opts: RepoTargetOptions,
-): Promise<void> {
-  if (needAllowAutoMerge) {
-    const out = await ghCall(
-      { argv: ['gh', 'api', '--method', 'PATCH', `repos/${repo}`, '-F', 'allow_auto_merge=true'] },
-      null,
-      opts,
-    );
-    if (out === null) throw new Error(`failed to enable allow_auto_merge on ${repo}`);
-  }
-  const body = JSON.stringify({
-    required_status_checks: { strict: true, contexts: desiredContexts },
-    enforce_admins: null,
-    required_pull_request_reviews: null,
-    restrictions: null,
-  });
+/** Enable `allow_auto_merge` on the repo. Throws on write failure. */
+async function enableAutoMerge(repo: string, opts: RepoTargetOptions): Promise<void> {
   const out = await ghCall(
-    {
-      argv: [
-        'gh',
-        'api',
-        '--method',
-        'PUT',
-        `repos/${repo}/branches/${branch}/protection`,
-        '--input',
-        '-',
-      ],
-      stdin: body,
-    },
+    { argv: ['gh', 'api', '--method', 'PATCH', `repos/${repo}`, '-F', 'allow_auto_merge=true'] },
     null,
     opts,
   );
-  if (out === null) throw new Error(`failed to set required status checks on ${repo}@${branch}`);
+  if (out === null) throw new Error(`failed to enable allow_auto_merge on ${repo}`);
 }
 
 /**
  * Confirm the auto-merge gate on a repo's default branch; with `apply`, bring it
- * into the required state. Returns the observed (post-apply, if applied) state.
- * `satisfied === false` is the hard signal the `/bootstrap` skill blocks on.
+ * into the required state (provisioning a Ruleset, never classic protection).
+ * Returns the observed (post-apply, if applied) state. `satisfied === false` is
+ * the hard signal the `/bootstrap` skill blocks on.
  */
 export async function verifyAutomergeGate(
   opts: VerifyAutomergeGateOptions = {},
@@ -235,7 +203,10 @@ export async function verifyAutomergeGate(
   const branch = await defaultBranch(repo, opts);
 
   let allowAutoMerge = await readAllowAutoMerge(repo, opts);
-  let requiredChecks = await readRequiredChecks(repo, branch, opts);
+  const rulesetChecks = await readRulesetRequiredChecks(repo, branch, opts);
+  const classicChecks = await readClassicRequiredChecks(repo, branch, opts);
+  const classicProtection = classicChecks !== null;
+  let requiredChecks = [...new Set([...rulesetChecks, ...(classicChecks ?? [])])];
   let missingChecks = gateChecks.filter((c) => !requiredChecks.includes(c));
   let squashCommitCorrect = await readSquashCommitCorrect(repo, opts);
 
@@ -243,10 +214,12 @@ export async function verifyAutomergeGate(
   const gateIncomplete = missingChecks.length > 0 || !allowAutoMerge;
   if (opts.apply && (gateIncomplete || !squashCommitCorrect)) {
     if (gateIncomplete) {
-      const desiredContexts = [...new Set([...requiredChecks, ...gateChecks])];
-      await applyGate(repo, branch, desiredContexts, !allowAutoMerge, opts);
-      allowAutoMerge = true;
-      requiredChecks = desiredContexts;
+      if (!allowAutoMerge) {
+        await enableAutoMerge(repo, opts);
+        allowAutoMerge = true;
+      }
+      await applyRulesetGate(repo, gateChecks, opts);
+      requiredChecks = [...new Set([...requiredChecks, ...gateChecks])];
       missingChecks = [];
     }
     if (!squashCommitCorrect) {
@@ -264,6 +237,7 @@ export async function verifyAutomergeGate(
     gateChecks,
     missingChecks,
     squashCommitCorrect,
+    classicProtection,
     satisfied: allowAutoMerge && missingChecks.length === 0 && squashCommitCorrect,
     applied,
   };

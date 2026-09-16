@@ -155,21 +155,30 @@ The **network** half — deliberately separate from the hermetic writer above.
 optionally applies) the branch-protection gate the seeded auto-merge workflow
 depends on.
 
-- **Confirm (default, read-only):** read the default branch's
-  `required_status_checks`, the repo's `allow_auto_merge`, and the repo's
-  **squash-merge commit setting**; `satisfied` is true only when auto-merge is on,
-  every gate check is marked required, **and** the squash commit is set to PR title
-  - body (`squash_merge_commit_title=PR_TITLE`, `squash_merge_commit_message=PR_BODY`).
-    A branch with no protection reads as "no required checks" — the **fail-closed**
-    direction, so an unprotected branch reports the gate missing rather than silently
-    passing.
-- **`--apply` (opt-in, state-changing):** enable `allow_auto_merge` if off, PUT
-  a minimal branch protection requiring the **union** of the currently-required and
-  gate contexts (`strict`), and PATCH the squash-merge commit to PR title + body.
-  PUT replaces the whole protection object, so this configures a strict
-  required-checks gate, **not** a review policy (`required_pull_request_reviews` /
-  `restrictions` are set null). Admin-level mutation, so it never runs unless
-  explicitly requested; a failed write throws.
+Protection is expressed as a **Ruleset**, not classic branch protection — classic
+rules are a legacy mechanism the fleet migrates away from.
+
+- **Confirm (default, read-only):** read the default branch's **effective required
+  checks from the Rulesets API** (`repos/{repo}/rules/branches/{branch}`), the
+  repo's `allow_auto_merge`, and the repo's **squash-merge commit setting**;
+  `satisfied` is true only when auto-merge is on, every gate check is marked
+  required, **and** the squash commit is set to PR title + body
+  (`squash_merge_commit_title=PR_TITLE`, `squash_merge_commit_message=PR_BODY`). A
+  branch with no ruleset (or classic) requiring the gate checks reads as missing —
+  the **fail-closed** direction. Legacy classic protection, if any lingers, still
+  **counts toward** the gate (so a mid-migration repo is not falsely reported
+  unsatisfied), but is surfaced as **drift** (`classicProtection`) to migrate.
+- **`--apply` (opt-in, state-changing):** enable `allow_auto_merge` if off,
+  **find-or-update the tool-managed ruleset** (`Auto-merge gate`) so it requires
+  the **union** of its current contexts and the gate checks, and PATCH the
+  squash-merge commit to PR title + body. Find-or-update by ruleset name is
+  idempotent (re-running converges on one ruleset, never a duplicate) and leaves a
+  repo's own hand-authored rulesets untouched. `strict_required_status_checks_policy`
+  is **false** by design — requiring branches to be up-to-date would re-pend every
+  open PR whenever the base moves, churning against the `merge-safety` check that
+  already observes staleness. No review policy is set. Classic protection is never
+  written and never deleted — drift is reported, not auto-migrated. Admin-level
+  mutation, so it never runs unless explicitly requested; a failed write throws.
 
 **Why the squash setting is part of this gate:** under auto-merge a merged PR must
 land a **conventional commit subject** (its PR title) or release-please silently
