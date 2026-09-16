@@ -7,7 +7,8 @@ vi.mock('@rmartz/agent-runtime', () => ({ boundedRun }));
 
 const { createRegistry, builtinChecks } = await import('../src/registry.js');
 const { runHygiene } = await import('../src/runner.js');
-const { formatFinding, formatFindings } = await import('../src/reporter.js');
+const { formatFinding, formatFindings, formatFindingGithub, formatFindingsGithub, resolveFormat } =
+  await import('../src/reporter.js');
 const { conflictMarkersCheck } = await import('../src/checks/conflict-markers.js');
 
 const ok = (stdout: string) => ({ stdout, stderr: '', code: 0, timedOut: false });
@@ -180,5 +181,73 @@ describe('reporter', () => {
 
   it('joins findings with newlines', () => {
     expect(formatFindings([err('a'), warn('b')])).toBe('error [a] boom\nwarn [b] meh');
+  });
+});
+
+describe('github reporter', () => {
+  it('maps severity to the workflow command and carries file, line, and title', () => {
+    expect(
+      formatFindingGithub({
+        check: 'file-caps',
+        path: 'src/a.ts',
+        line: 12,
+        message: 'too long',
+        severity: 'error',
+      }),
+    ).toBe('::error file=src/a.ts,line=12,title=file-caps::too long');
+    expect(
+      formatFindingGithub({
+        check: 'okf',
+        path: 'docs/x.md',
+        line: 3,
+        message: 'missing title',
+        severity: 'warn',
+      }),
+    ).toBe('::warning file=docs/x.md,line=3,title=okf::missing title');
+  });
+
+  it('omits line for a file-level finding and file for a repo-level finding', () => {
+    expect(
+      formatFindingGithub({
+        check: 'md-pairing',
+        path: 'AGENTS.md',
+        message: 'no CLAUDE.md',
+        severity: 'error',
+      }),
+    ).toBe('::error file=AGENTS.md,title=md-pairing::no CLAUDE.md');
+    expect(formatFindingGithub({ check: 'x', message: 'repo-level', severity: 'error' })).toBe(
+      '::error title=x::repo-level',
+    );
+  });
+
+  it('escapes command data in the message and property values', () => {
+    expect(
+      formatFindingGithub({
+        check: 'okf',
+        path: 'weird,file:name.ts',
+        line: 1,
+        message: 'bad: 50% off\nsecond line',
+        severity: 'error',
+      }),
+    ).toBe('::error file=weird%2Cfile%3Aname.ts,line=1,title=okf::bad: 50%25 off%0Asecond line');
+  });
+
+  it('joins findings with newlines', () => {
+    expect(formatFindingsGithub([err('a'), warn('b')])).toBe(
+      '::error title=a::boom\n::warning title=b::meh',
+    );
+  });
+});
+
+describe('resolveFormat', () => {
+  it('honours an explicit format over the environment', () => {
+    expect(resolveFormat('text', { GITHUB_ACTIONS: 'true' })).toBe('text');
+    expect(resolveFormat('github', {})).toBe('github');
+  });
+
+  it('auto-detects github under GITHUB_ACTIONS and defaults to text otherwise', () => {
+    expect(resolveFormat(undefined, { GITHUB_ACTIONS: 'true' })).toBe('github');
+    expect(resolveFormat(undefined, {})).toBe('text');
+    expect(resolveFormat(undefined, { GITHUB_ACTIONS: 'false' })).toBe('text');
   });
 });

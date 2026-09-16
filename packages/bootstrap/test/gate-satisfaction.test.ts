@@ -18,6 +18,7 @@ function makeGateResult(
     missingChecks: [],
     squashCommitCorrect: true,
     classicProtection: false,
+    rulesetProtection: false,
     satisfied: true,
     applied: false,
     ...overrides,

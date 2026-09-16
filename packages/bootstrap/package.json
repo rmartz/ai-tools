@@ -12,7 +12,8 @@
     "ai-ensure-labels": "./dist/bin/ensure-labels.js",
     "ai-ensure-project-config": "./dist/bin/ensure-project-config.js",
     "ai-verify-automerge-gate": "./dist/bin/verify-automerge-gate.js",
-    "ai-verify-squash-setting": "./dist/bin/verify-squash-setting.js"
+    "ai-verify-squash-setting": "./dist/bin/verify-squash-setting.js",
+    "ai-fleet-audit": "./dist/bin/fleet-audit.js"
   },
   "files": [
     "dist"

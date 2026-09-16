@@ -215,6 +215,25 @@ trivial _green_ patch/minor bumps with no agent tokens; the agent-driven
 `/dependabot` + PR Shepherd path still owns _red_ and _major_ bumps. The two
 complement rather than overlap.
 
+### Fleet audit (`fleet-audit.ts`)
+
+The **read-only, multi-repo** pre-flight before any fleet-wide `--apply`.
+`auditFleet({ repos, gateChecks? })` runs one `verifyAutomergeGate` **confirm**
+(never `apply`) per repo and aggregates the per-repo state into a report, so a
+caller can decide go/no-go and spot which repos still carry legacy
+classic-protection drift.
+
+- **Strictly read-only** — it reuses the gate verifier's confirm path and never
+  sets `apply`, so it is safe to sweep across the fleet before mutating anything.
+- **Per-repo row** — `mechanism` (`none` / `classic` / `ruleset` / `both`, derived
+  from the verifier's `rulesetProtection` + `classicProtection` flags),
+  `allowAutoMerge`, `requiredChecks`, `missingChecks`, `squashCommitCorrect`,
+  `classicProtection` (the migrate-and-remove drift signal), and `satisfied`.
+- **Fail-closed** — a repo that cannot be read becomes an `ok: false`, unsatisfied
+  row (counted in the summary's `errored`) rather than aborting the whole sweep.
+- **Summary** — `total` / `satisfied` / `unsatisfied` / `classicDrift` / `errored`,
+  the machine-readable basis for the CLI's go/no-go exit code.
+
 ### Squash-merge convention verifier (`verify-squash-merge-setting.ts`)
 
 The **other network repo-settings verifier**, same class as the auto-merge gate.
@@ -267,6 +286,11 @@ Thin `bin/` wrappers; all logic stays in the library:
   is unsatisfied** (and not applied) — the second hard block the `/bootstrap` skill
   runs, so a repo whose squash default would drop the conventional title is caught
   before the release-integrity failure it causes.
+- `ai-fleet-audit --repo <owner/repo> [--repo <owner/repo>]... [--check <ctx>]... [--json]`
+  — read-only audit of the auto-merge gate across every named repo. Prints a
+  per-repo table + summary (or `--json` for the full report); `--check` (repeatable)
+  overrides the default `goldenGateChecks`. **Never writes.** **Exits non-zero when
+  any repo is unsatisfied or unreadable** — the go/no-go signal for a fleet apply.
 
 ## Testing
 

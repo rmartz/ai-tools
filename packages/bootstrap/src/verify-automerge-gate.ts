@@ -63,6 +63,12 @@ export interface VerifyAutomergeGateResult {
    * protection should be removed once the ruleset is in place.
    */
   classicProtection: boolean;
+  /**
+   * Whether a **Ruleset** requires status checks on the branch. Symmetric with
+   * {@link classicProtection}; together they let a fleet audit classify the
+   * protection mechanism (none / classic / ruleset / both).
+   */
+  rulesetProtection: boolean;
   /** `allowAutoMerge` on AND no missing gate checks AND the squash commit setting correct. */
   satisfied: boolean;
   /** Whether `--apply` mutated repo/branch state during this run. */
@@ -206,6 +212,7 @@ export async function verifyAutomergeGate(
   const rulesetChecks = await readRulesetRequiredChecks(repo, branch, opts);
   const classicChecks = await readClassicRequiredChecks(repo, branch, opts);
   const classicProtection = classicChecks !== null;
+  let rulesetProtection = rulesetChecks.length > 0;
   let requiredChecks = [...new Set([...rulesetChecks, ...(classicChecks ?? [])])];
   let missingChecks = gateChecks.filter((c) => !requiredChecks.includes(c));
   let squashCommitCorrect = await readSquashCommitCorrect(repo, opts);
@@ -219,6 +226,7 @@ export async function verifyAutomergeGate(
         allowAutoMerge = true;
       }
       await applyRulesetGate(repo, gateChecks, opts);
+      rulesetProtection = true;
       requiredChecks = [...new Set([...requiredChecks, ...gateChecks])];
       missingChecks = [];
     }
@@ -238,6 +246,7 @@ export async function verifyAutomergeGate(
     missingChecks,
     squashCommitCorrect,
     classicProtection,
+    rulesetProtection,
     satisfied: allowAutoMerge && missingChecks.length === 0 && squashCommitCorrect,
     applied,
   };

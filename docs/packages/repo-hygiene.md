@@ -101,13 +101,28 @@ checks:
 A missing file is not an error (defaults apply); a present-but-malformed file
 throws with a filename-prefixed message.
 
-### Reporter (`reporter.ts`)
+### Reporters (`reporter.ts`)
 
-`formatFindings(findings)` renders the MVP's one output format — plain
-`severity [check] path:line: message` lines — serving both the husky gate and CI
-logs. Location collapses gracefully for file-level (no line) and repo-level (no
-path) findings. Richer surfacing (`--format=github` annotations, SARIF) is
-tracked as post-MVP follow-ups.
+Two output formats, selected by `--format` (default `text`):
+
+- **`text`** — `formatFindings(findings)` renders plain
+  `severity [check] path:line: message` lines on **stderr**, serving both the
+  husky gate and CI logs. Location collapses gracefully for file-level (no line)
+  and repo-level (no path) findings.
+- **`github`** — `formatFindingsGithub(findings)` renders GitHub
+  [workflow-command](https://docs.github.com/actions/reference/workflow-commands-for-github-actions)
+  annotations on **stdout**, which GitHub parses to surface each finding inline
+  on the PR diff at its file and line, coloured by severity: `error` →
+  `::error`, `warn` → `::warning`, with `file`/`line` included when present and
+  the check name in `title`. Message data escapes `%`/CR/LF and property values
+  additionally escape `:`/`,`. `resolveFormat(explicit, env)` picks the format —
+  an explicit `--format` wins, otherwise it auto-detects GitHub Actions
+  (`GITHUB_ACTIONS=true`), else `text`. (SARIF stays a post-MVP follow-up.)
+
+> GitHub renders ~10 annotations per level per check run (the rest stay in the
+> logs) and only inline for lines within the diff — a mild nudge toward the
+> per-check jobs the framework already supports, since each job gets its own
+> annotation budget.
 
 ## Reference check: `conflict-markers`
 
@@ -387,11 +402,14 @@ before invoking this Action.
 
 ## CLIs
 
-- `ai-repo-hygiene [<check>...] [--staged|--check|--check-diff] [--config <path>]`
+- `ai-repo-hygiene [<check>...] [--staged|--check|--check-diff] [--config <path>] [--format text|github]`
   — the framework CLI. No check name runs every registered check (one aggregate
   status); naming one or more runs just those (independent per-check statuses).
   Mode defaults to `--staged`. Exit `0` when clean or warn-only, `1` on any error
-  finding (report on stderr), `2` on a usage error or unknown check.
+  finding, `2` on a usage error or unknown check.
+  - `--format` is `text` (default; report on **stderr**) or `github`
+    (workflow-command annotations on **stdout**); when omitted it auto-detects
+    GitHub Actions via `GITHUB_ACTIONS`.
   - `--update-baseline` regenerates the file-caps grandfather baseline
     (`.repo-hygiene-baseline.json`) instead of running checks, then exits `0`.
 - `ai-check-conflict-markers [mode] [-C <dir>]` — the original single-check wrapper,
@@ -405,7 +423,11 @@ before invoking this Action.
 The git boundary is mocked (`vi.mock('@rmartz/agent-runtime')`) so no subprocess
 runs; worktree reads use fs fixtures in a tmpdir with cleanup. The framework is
 tested with fake checks (registry lookup, per-check and all-checks dispatch, exit
-codes, and the severity-override ramp in both directions); the config loader is
+codes, and the severity-override ramp in both directions); both reporters are
+covered (the plain `severity [check] path:line` form with its location collapse,
+and the `github` annotations with severity mapping, `file`/`line`/`title`
+placement, data/property escaping, and `resolveFormat`'s explicit-over-env
+precedence); the config loader is
 covered for valid, empty, and malformed shapes; conflict-marker detection is
 covered as a pure function alongside the framework adapter and the env bypass.
 `okf` is covered through `validateDoc` (vocabulary, missing fields, the resource
