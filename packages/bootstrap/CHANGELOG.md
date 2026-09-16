@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.7.0...bootstrap-v0.8.0) (2026-09-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **bootstrap:** seed repo-hygiene.yml as the reusable-workflow caller ([#261](https://github.com/rmartz/ai-tools/issues/261))
+
+### Features
+
+* **bootstrap:** seed repo-hygiene.yml as the reusable-workflow caller ([#261](https://github.com/rmartz/ai-tools/issues/261)) ([48ec987](https://github.com/rmartz/ai-tools/commit/48ec987a48b13b4cebd711a8cc002faa5c3fdd99))
+
 ## [0.7.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.6.0...bootstrap-v0.7.0) (2026-09-16)
 
 
