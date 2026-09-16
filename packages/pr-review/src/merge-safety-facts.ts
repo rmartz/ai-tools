@@ -7,10 +7,11 @@
  */
 import { boundedRun } from '@rmartz/agent-runtime';
 import {
-  hasFileOverlap,
   isBreakingCommitMessage,
   isBreakingTitle,
   isCiCommitMessage,
+  overlappingFiles,
+  type BaseCommit,
   type MergeSafetyFacts,
 } from './merge-safety.js';
 
@@ -53,6 +54,35 @@ function splitLines(out: string | null): string[] {
 }
 
 /**
+ * Parse `git log -z --format=%H%n%B` into `{ sha, message }` records. `-z`
+ * NUL-terminates each commit; within a record the first line is the SHA and the
+ * remainder is the full message (subject + body), so breaking-footer detection
+ * still sees the whole body.
+ */
+function parseBaseCommits(logOut: string): { sha: string; message: string }[] {
+  return logOut
+    .split('\0')
+    .map((record) => record.replace(/^\n+/, ''))
+    .filter((record) => record.trim().length > 0)
+    .map((record) => {
+      const newline = record.indexOf('\n');
+      const sha = (newline === -1 ? record : record.slice(0, newline)).trim();
+      const message = newline === -1 ? '' : record.slice(newline + 1).trim();
+      return { sha, message };
+    });
+}
+
+/** Base commits matching `predicate`, projected to the surfaced `{ sha, subject }` shape. */
+function selectCommits(
+  commits: readonly { sha: string; message: string }[],
+  predicate: (message: string) => boolean,
+): BaseCommit[] {
+  return commits
+    .filter((c) => predicate(c.message))
+    .map((c) => ({ sha: c.sha, subject: c.message.split('\n', 1)[0] ?? '' }));
+}
+
+/**
  * Assemble {@link MergeSafetyFacts} for one PR. Throws when the merge-base or base
  * tip can't be resolved — the caller must treat an ungatherable PR as unsafe
  * (fail the check) rather than let a stale green through.
@@ -69,13 +99,13 @@ export async function gatherMergeSafetyFacts(
 
   const isCurrent = mergeBase === baseTip;
 
-  // NUL-delimit commit bodies so multi-line messages split cleanly.
-  const logOut = await git(['log', '-z', '--format=%B', `${mergeBase}..${baseRef}`]);
+  // Capture each base commit's SHA (`%H`) alongside its body (`%B`) so a triggering
+  // commit can be named in the report; `-z` NUL-terminates records for a clean split.
+  const logOut = await git(['log', '-z', '--format=%H%n%B', `${mergeBase}..${baseRef}`]);
   if (logOut === null) throw new Error(`git log failed for ${mergeBase}..${baseRef}`);
-  const messages = logOut
-    .split('\0')
-    .map((m) => m.trim())
-    .filter(Boolean);
+  const commits = parseBaseCommits(logOut);
+  const baseBreakingCommits = selectCommits(commits, isBreakingCommitMessage);
+  const baseCiCommits = selectCommits(commits, isCiCommitMessage);
 
   const baseFilesOut = await git(['diff', '--name-only', mergeBase, baseRef]);
   if (baseFilesOut === null) throw new Error(`git diff failed for ${mergeBase}..${baseRef}`);
@@ -84,15 +114,20 @@ export async function gatherMergeSafetyFacts(
   const prFilesOut = await git(['diff', '--name-only', mergeBase, meta.headSha]);
   if (prFilesOut === null) throw new Error(`git diff failed for ${mergeBase}..${meta.headSha}`);
   const prFiles = splitLines(prFilesOut);
+  const overlaps = overlappingFiles(prFiles, baseFiles);
 
   const labels = meta.labels.map((l) => l.toLowerCase());
 
   return {
     isCurrent,
-    baseBreakingSinceMergeBase: messages.some(isBreakingCommitMessage),
-    baseCiSinceMergeBase: messages.some(isCiCommitMessage),
+    // Each boolean is derived from its detail list — one computation, two views.
+    baseBreakingSinceMergeBase: baseBreakingCommits.length > 0,
+    baseCiSinceMergeBase: baseCiCommits.length > 0,
     prIsBreaking: isBreakingTitle(meta.title) || labels.includes(BREAKING_LABEL),
-    fileOverlap: hasFileOverlap(prFiles, baseFiles),
+    fileOverlap: overlaps.length > 0,
     hasConflict: meta.mergeable.toUpperCase() === 'CONFLICTING',
+    baseBreakingCommits,
+    baseCiCommits,
+    overlappingFiles: overlaps,
   };
 }
