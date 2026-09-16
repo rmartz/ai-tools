@@ -6,16 +6,17 @@
  *
  * Two categories, two idempotency strategies:
  *
- * - **Ignore files** (`.prettierignore` / `.eslintignore` / `.gitignore`) — a
- *   fenced marker block spliced into a possibly user-authored file. We ensure the
- *   block is present and leave lines outside it untouched: "ensure block present,
- *   don't clobber user content". Reframe of dotfiles' `ensure_project_config.py`,
- *   which appended a single `.git-worktrees` line plus an `eslint.config.js`
- *   array-splice; here the stack is pnpm + TS, so the ignores cover the TS
- *   build/test artifacts (`dist`, `.turbo`, `*.tsbuildinfo`, `coverage`) and
- *   `node_modules`. The `.git-worktrees/` dir is deliberately *not* seeded: the
- *   worktree layout is a per-developer process choice, so it belongs in the
- *   developer's global `core.excludesFile`, never in each repo's tree.
+ * - **Ignore files** (`.prettierignore` / `.gitignore`) — a fenced marker block
+ *   spliced into a possibly user-authored file. We ensure the block is present and
+ *   leave lines outside it untouched: "ensure block present, don't clobber user
+ *   content". Reframe of dotfiles' `ensure_project_config.py`, which appended a
+ *   single `.git-worktrees` line plus an `eslint.config.js` array-splice; here the
+ *   stack is pnpm + TS, so the ignores cover the TS build/test artifacts (`dist`,
+ *   `.turbo`, `*.tsbuildinfo`, `coverage`) and `node_modules`. The `.git-worktrees/`
+ *   dir is deliberately *not* seeded: the worktree layout is a per-developer
+ *   process choice, so it belongs in the developer's global `core.excludesFile`,
+ *   never in each repo's tree. `.eslintignore` is deliberately **retired**, not
+ *   seeded (see {@link retiredIgnoreFiles}).
  * - **Whole workflow files** (`.github/workflows/*.yml`) — a whole managed file,
  *   not a block spliced into user content. A GitHub Actions workflow that is
  *   identical across every repo (zero project-specific logic) is a
@@ -52,20 +53,31 @@ const TS_ARTIFACTS = ['node_modules/', 'dist/', '.turbo/', '*.tsbuildinfo', 'cov
  * The golden ignore files for a pnpm/TS monorepo:
  *
  * - `.prettierignore` — skip build output and vendored deps.
- * - `.eslintignore` — same; honored by flat config via `--ignore-path` and the
- *   universal fallback when an `eslint.config.*` ignores array can't be edited safely.
  * - `.gitignore` — keep artifacts untracked.
  *
- * `.git-worktrees/` is intentionally absent — it is a per-developer global-excludes
- * concern, not a repo property (see the file header). Because the managed block is
- * regenerated from these entries on every run, dropping it here also strips the
- * stale line from any repo that a prior version seeded.
+ * `.eslintignore` is **not** here — ESLint 10 (flat config) no longer reads it and
+ * warns on its presence (`The ".eslintignore" file is no longer supported`), so
+ * seeding it is pure noise; a flat config carries the equivalent `ignores` array
+ * instead. It is retired via {@link retiredIgnoreFiles}. `.git-worktrees/` is
+ * intentionally absent too — a per-developer global-excludes concern, not a repo
+ * property (see the file header). Because the managed block is regenerated from
+ * these entries on every run, dropping an entry here also strips the stale line
+ * from any repo that a prior version seeded.
  */
 export const goldenIgnoreFiles: readonly GoldenIgnoreFile[] = [
   { filename: '.prettierignore', entries: [...TS_ARTIFACTS] },
-  { filename: '.eslintignore', entries: [...TS_ARTIFACTS] },
   { filename: '.gitignore', entries: [...TS_ARTIFACTS, '.DS_Store'] },
 ];
+
+/**
+ * Ignore files bootstrap used to seed but should now actively **retire** — remove
+ * our managed block, and delete the file entirely if it held nothing but that
+ * block. `.eslintignore` is the first: ESLint 10 dropped support for it (#253), so
+ * an already-bootstrapped repo needs the inert file swept up on the next
+ * `ai-ensure-project-config` / golden-sync run, not left to warn forever. A repo's
+ * own `.eslintignore` (one without our managed block) is left untouched.
+ */
+export const retiredIgnoreFiles: readonly string[] = ['.eslintignore'];
 
 /**
  * Substring that marks a workflow file as bootstrap-managed. Its presence is the

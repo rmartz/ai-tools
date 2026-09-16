@@ -48,13 +48,21 @@ gate/verdict labels — the roster here is the cross-cutting + meta set only.
   entry and spliced an `eslint.config.js` ignores array via a comment-aware
   parser. Here the stack is pnpm + TS, so the golden ignores cover the TS
   build/test artifacts (`node_modules`, `dist`, `.turbo`, `*.tsbuildinfo`,
-  `coverage`), written to `.prettierignore`, `.eslintignore`, and `.gitignore`.
+  `coverage`), written to `.prettierignore` and `.gitignore`.
   `.git-worktrees/` is **deliberately not seeded** — the worktree layout is a
   per-developer process choice, so it belongs in the developer's global
   `core.excludesFile`, never in each repo's tree. Because the managed block is
   regenerated from these entries on every run, a repo that a prior version seeded
   has the stale `.git-worktrees/` line stripped on the next run. The marker-block
   approach replaces the Python's fragile flat-config array splice entirely.
+- `retiredIgnoreFiles` — ignore files bootstrap used to seed but now actively
+  **retires** (#253): on each run it strips our managed block and deletes the file
+  if that block was all it held, while leaving a user-authored file (one without
+  our block) untouched. `.eslintignore` is the first entry — ESLint 10 (flat
+  config) no longer reads it and warns on its presence, so it is retired rather
+  than seeded, and an already-bootstrapped repo sheds the inert file on its next
+  `ai-ensure-project-config` / golden-sync run. A flat config's own `ignores`
+  array carries the equivalent artifact list.
 
 ### Whole workflow files (`ensure-workflow-files.ts`, `golden-config.ts`)
 
