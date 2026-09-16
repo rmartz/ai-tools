@@ -23,9 +23,17 @@ const writeAt = (name: string, text: string) => {
   writeFileSync(path, text, 'utf8');
 };
 
+// Ungated: the whole-file-management tests exercise create/update/skip, not the
+// gate. A gated fixture is used by the withhold tests further down.
 const fixture: GoldenWorkflowFile = {
   filename: '.github/workflows/demo.yml',
   content: 'name: Demo\non: push\n',
+  gateChecks: [],
+};
+
+const gatedFixture: GoldenWorkflowFile = {
+  filename: '.github/workflows/gated.yml',
+  content: 'name: Gated\non: push\n',
   gateChecks: ['demo-check'],
 };
 
@@ -73,6 +81,48 @@ describe('ensureWorkflowFiles — whole-file management', () => {
     const [outcome] = ensureWorkflowFiles(dir, { workflows: [fixture] });
     expect(outcome?.action).toBe('skipped');
     expect(read(fixture.filename)).toBe(userContent);
+  });
+});
+
+// #239 — a gated workflow is withheld unless its gateChecks are satisfied, so a
+// `gh pr merge --auto` workflow never lands ungated.
+describe('ensureWorkflowFiles — gate-before-go-live', () => {
+  it('withholds an absent gated workflow when its gate is not satisfied (default)', () => {
+    const [outcome] = ensureWorkflowFiles(dir, { workflows: [gatedFixture] });
+    expect(outcome).toEqual({ filename: gatedFixture.filename, action: 'withheld' });
+    expect(existsSync(join(dir, gatedFixture.filename))).toBe(false);
+  });
+
+  it('seeds the gated workflow once its gate check is satisfied', () => {
+    const [outcome] = ensureWorkflowFiles(dir, {
+      workflows: [gatedFixture],
+      satisfiedGateChecks: ['demo-check'],
+    });
+    expect(outcome?.action).toBe('created');
+    expect(existsSync(join(dir, gatedFixture.filename))).toBe(true);
+  });
+
+  it('withholds when only some of the required gate checks are satisfied', () => {
+    const twoGate: GoldenWorkflowFile = { ...gatedFixture, gateChecks: ['a', 'b'] };
+    const [outcome] = ensureWorkflowFiles(dir, {
+      workflows: [twoGate],
+      satisfiedGateChecks: ['a'],
+    });
+    expect(outcome?.action).toBe('withheld');
+  });
+
+  it('does not touch an already-present gated workflow even with an empty satisfied set', () => {
+    // seed-then-gate ordering: once the file exists, an unproven gate must not
+    // delete it — withholding blocks creation only.
+    writeAt(gatedFixture.filename, renderManagedWorkflow(gatedFixture));
+    const [outcome] = ensureWorkflowFiles(dir, { workflows: [gatedFixture] });
+    expect(outcome?.action).toBe('unchanged');
+    expect(existsSync(join(dir, gatedFixture.filename))).toBe(true);
+  });
+
+  it('leaves ungated workflows unaffected by the satisfied set', () => {
+    const [outcome] = ensureWorkflowFiles(dir, { workflows: [fixture], satisfiedGateChecks: [] });
+    expect(outcome?.action).toBe('created');
   });
 });
 

@@ -49,6 +49,13 @@ Idempotent per file: a drifted **managed** workflow is overwritten back to golde
 a **seed** file is written only when absent; and a user-authored workflow of the
 same name (no managed header) is left untouched (`skipped`).
 
+**The `dependabot-auto-merge.yml` is `withheld` here, by design (#239).** It is a
+gated workflow — seeding it before its required-checks gate exists would auto-merge
+every green bump ungated — so a plain `ai-ensure-project-config` run **does not
+create it** (a `withheld` outcome), and neither does any direct call. It is seeded
+in Step 3 **after** the gate is confirmed, via `ai-ensure-project-config --with-gate`.
+This machine-enforces the ordering at the tooling boundary, not just in this skill.
+
 ## Step 3 — Confirm the auto-merge gate (hard block)
 
 A seeded `dependabot-auto-merge.yml` **must not** land in a repo where auto-merge
@@ -74,6 +81,12 @@ workflow depends on:
   the gate, but the fleet standardizes on Rulesets — migrate any remaining required
   checks into the ruleset and remove the classic protection. The verifier reports
   this drift; it never writes or deletes classic protection.
+- **Seed the auto-merge workflow (gate now satisfied):** once the gate confirms
+  satisfied, re-run `ai-ensure-project-config --with-gate -C <repo>` to seed the
+  `dependabot-auto-merge.yml` that Step 2 withheld. `--with-gate` re-reads the gate
+  (read-only) and creates the workflow **only if it is actually satisfied**, so the
+  ungated workflow can never land — the ordering is enforced by the tooling, not by
+  remembering to run this step.
 
 The squash-merge setting is part of the gate because under auto-merge a merged PR
 must land a **conventional commit subject** (its PR title) or release-please

@@ -26,10 +26,11 @@ const read = (name: string) => readFileSync(join(dir, name), 'utf8');
 describe('ensureProjectConfig', () => {
   it('creates all golden ignore files in a fresh repo', () => {
     const res = ensureProjectConfig(dir);
-    expect(res.outcomes.every((o) => o.action === 'created')).toBe(true);
-    expect(existsSync(join(dir, '.prettierignore'))).toBe(true);
-    expect(existsSync(join(dir, '.eslintignore'))).toBe(true);
-    expect(existsSync(join(dir, '.gitignore'))).toBe(true);
+    const ignoreFiles = ['.prettierignore', '.eslintignore', '.gitignore'];
+    for (const name of ignoreFiles) {
+      expect(res.outcomes.find((o) => o.filename === name)?.action).toBe('created');
+      expect(existsSync(join(dir, name))).toBe(true);
+    }
   });
 
   it('writes a fenced managed block with the expected entries', () => {
@@ -61,7 +62,11 @@ describe('ensureProjectConfig', () => {
     ensureProjectConfig(dir);
     const first = read('.prettierignore');
     const res = ensureProjectConfig(dir);
-    expect(res.outcomes.every((o) => o.action === 'unchanged')).toBe(true);
+    // No new writes on a second run: everything is unchanged, and the gated
+    // auto-merge workflow stays withheld (idempotent, not re-created).
+    expect(res.outcomes.every((o) => o.action === 'unchanged' || o.action === 'withheld')).toBe(
+      true,
+    );
     expect(read('.prettierignore')).toBe(first);
     // Exactly one managed block.
     const occurrences = first.split(BLOCK_BEGIN).length - 1;
@@ -102,14 +107,31 @@ describe('ensureProjectConfig', () => {
     expect(existsSync(join(dir, '.gitignore'))).toBe(false);
   });
 
-  it('seeds the golden workflow files alongside the ignore blocks (still hermetic)', () => {
+  it('seeds the ungated golden workflow files alongside the ignore blocks (still hermetic)', () => {
     // boundedRun is mocked to throw above, so a passing run proves this composed
     // path never shells out — the whole-file writer is pure fs too.
     const res = ensureProjectConfig(dir);
-    const workflow = res.outcomes.find(
+    const mergeSafety = res.outcomes.find(
+      (o) => o.filename === '.github/workflows/merge-safety.yml',
+    );
+    expect(mergeSafety?.action).toBe('created');
+  });
+
+  it('withholds the gated auto-merge workflow by default — never seeds it ungated (#239)', () => {
+    const res = ensureProjectConfig(dir);
+    const autoMerge = res.outcomes.find(
       (o) => o.filename === '.github/workflows/dependabot-auto-merge.yml',
     );
-    expect(workflow?.action).toBe('created');
+    expect(autoMerge?.action).toBe('withheld');
+    expect(existsSync(join(dir, '.github/workflows/dependabot-auto-merge.yml'))).toBe(false);
+  });
+
+  it('seeds the auto-merge workflow when its gate is passed as satisfied', () => {
+    const res = ensureProjectConfig(dir, { satisfiedGateChecks: ['merge-safety'] });
+    const autoMerge = res.outcomes.find(
+      (o) => o.filename === '.github/workflows/dependabot-auto-merge.yml',
+    );
+    expect(autoMerge?.action).toBe('created');
     expect(existsSync(join(dir, '.github/workflows/dependabot-auto-merge.yml'))).toBe(true);
   });
 });
