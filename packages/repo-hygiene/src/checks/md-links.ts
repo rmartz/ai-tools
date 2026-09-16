@@ -16,7 +16,8 @@ export interface MarkdownLink {
 // Inline `[text](href)` — the destination is everything up to the closing paren.
 // `[^\]]`/`[^)]` intentionally span newlines, matching the whole-content scan the
 // okf-index check has always used; the line number is derived from the offset.
-const LINK_RE = /\[[^\]]*\]\(([^)]+)\)/g;
+// Caps prevent polynomial backtracking on pathological inputs (CodeQL CWE-1333).
+const LINK_RE = /\[[^\]]{0,2000}\]\(([^)]{0,4000})\)/g;
 
 /** Every inline `[text](href)` link in `content`, with 1-based line numbers. */
 export function scanLinks(content: string): MarkdownLink[] {
