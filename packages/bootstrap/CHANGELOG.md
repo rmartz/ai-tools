@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.6.0...bootstrap-v0.7.0) (2026-09-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **bootstrap:** stop seeding stale .eslintignore and retire existing ones (ESLint 10) ([#254](https://github.com/rmartz/ai-tools/issues/254))
+
+### Bug Fixes
+
+* **bootstrap:** stop seeding stale .eslintignore and retire existing ones (ESLint 10) ([#254](https://github.com/rmartz/ai-tools/issues/254)) ([f0b5487](https://github.com/rmartz/ai-tools/commit/f0b5487b4542256a3107f2c422a060d3dd80d52e))
+
 ## [0.6.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.5.0...bootstrap-v0.6.0) (2026-09-16)
 
 
