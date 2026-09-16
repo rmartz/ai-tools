@@ -10,7 +10,6 @@
     "packages/github": {},
     "packages/issues": {},
     "packages/pr-review": {},
-    "packages/repo-hygiene": {},
     "packages/reporting": {},
     "packages/verify": {},
     "packages/worktree": {}
