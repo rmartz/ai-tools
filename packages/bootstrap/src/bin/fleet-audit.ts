@@ -17,9 +17,19 @@ function parseArgs(argv: string[]): Args {
   const args: Args = { repos: [], checks: [], json: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--repo') args.repos.push(argv[++i] ?? '');
-    else if (a === '--check') args.checks.push(argv[++i] ?? '');
-    else if (a === '--json') args.json = true;
+    if (a === '--repo') {
+      if (i + 1 >= argv.length) {
+        console.error('error: --repo requires a value');
+        process.exit(2);
+      }
+      args.repos.push(argv[++i]!);
+    } else if (a === '--check') {
+      if (i + 1 >= argv.length) {
+        console.error('error: --check requires a value');
+        process.exit(2);
+      }
+      args.checks.push(argv[++i]!);
+    } else if (a === '--json') args.json = true;
     else {
       console.error(`unknown argument: ${a}`);
       console.error(
