@@ -81,7 +81,7 @@ a block spliced into user content.
   `ensureProjectConfig` composes this after the ignore blocks, returning one
   combined outcome list.
 
-- `goldenWorkflowFiles` — seeded with two `manage` workflows and one `seed` config:
+- `goldenWorkflowFiles` — seeded with five `manage` workflows and one `seed` config:
   - `dependabot-auto-merge.yml`: on a green `semver-patch` / `semver-minor`
     Dependabot PR it enables GitHub-native auto-merge (majors stay manual).
     `dependabot/fetch-metadata` is pinned to a full commit SHA + `major.minor.patch`
@@ -126,6 +126,21 @@ a block spliced into user content.
     own copy. It validates the **first-parent chain** of the pushed range, so a
     squash merge is its single new commit, a stray merge commit is flagged, and a
     merged branch's internal (deliberately plain) commits are not re-litigated.
+  - `golden-sync.yml` (**`manage`**): the **self-update loop** that keeps an
+    already-bootstrapped repo current **without a manual `/bootstrap` re-run**
+    (#233). A scheduled job (weekly + `workflow_dispatch`) installs the _latest_
+    published `@rmartz/bootstrap`, re-runs `ai-ensure-project-config` to rewrite any
+    drifted managed file back to golden, and opens a PR **only when something
+    actually changed** (staged-diff guard) — so it is not the "blind periodic
+    overwrite" a naive re-bootstrap cron would be, and it stays quiet once a repo is
+    current. It needs only the default `GITHUB_TOKEN` (`contents` + `pull-requests`
+    write, `packages` read) — **no per-repo secret and no consumer manifest /
+    devDependency change** — so it is genuinely hands-off. Being a `manage` file it
+    **self-propagates**: a change to this very workflow reaches every repo through
+    the next sync. The CLI is deliberately **unpinned** (latest) — unlike the
+    runtime check CLIs whose versions are pinned for reproducibility (#247), the
+    sync tool is a maintenance bot that should always apply the newest golden state.
+    Advisory; `gateChecks: []`.
 
   `goldenGateChecks` is the union of every entry's `gateChecks` — the cross-repo
   **floor** of the gate.
