@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.5.0...bootstrap-v0.6.0) (2026-09-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **bootstrap:** machine-enforce gate-before-go-live for the auto-merge workflow ([#249](https://github.com/rmartz/ai-tools/issues/249))
+
+### Features
+
+* **bootstrap:** add a read-only fleet audit of the auto-merge gate ([#246](https://github.com/rmartz/ai-tools/issues/246)) ([56ae0ea](https://github.com/rmartz/ai-tools/commit/56ae0ead739a1da13fff6777d3df477fd28cc10c))
+* **bootstrap:** machine-enforce gate-before-go-live for the auto-merge workflow ([#249](https://github.com/rmartz/ai-tools/issues/249)) ([1b81ef5](https://github.com/rmartz/ai-tools/commit/1b81ef5948e8cdbed155354a30a4b4f1c63cb7db))
+* **bootstrap:** seed a golden-sync workflow so golden updates reach the fleet without re-bootstrap ([#250](https://github.com/rmartz/ai-tools/issues/250)) ([dfff939](https://github.com/rmartz/ai-tools/commit/dfff939a68cd9f498c82fcd4d4ae04b59af2aa23))
+
 ## [0.5.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.4.0...bootstrap-v0.5.0) (2026-09-16)
 
 
