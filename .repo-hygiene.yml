@@ -8,3 +8,7 @@ checks:
     roots: [docs]
     exempt: [docs/index.md] # the reserved OKF root listing (§3.1)
     resourceExemptTypes: [Design] # Design pages need no backing resource
+  # Intra-repo Markdown link integrity for docs pages.
+  docs-links:
+    roots: [docs] # docs pages whose body links are resolved
+    exempt: [] # resolved target paths allowed to dangle (intentionally-missing)

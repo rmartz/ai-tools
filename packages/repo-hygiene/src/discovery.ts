@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { isAbsolute, join, resolve } from 'node:path';
 import { boundedRun } from '@rmartz/agent-runtime';
 
 /**
@@ -111,6 +111,25 @@ export async function trackedFileModes(opts: ScanOptions = {}): Promise<Map<stri
     if (mode) modes.set(path, mode);
   }
   return modes;
+}
+
+/**
+ * A predicate telling whether a repo-relative path exists in the set a run
+ * scans. In `--staged` mode it probes the git index (so a file staged for
+ * deletion but still present in the worktree reads as absent, matching what the
+ * check actually sees); in every other mode it stats the worktree. Shared by the
+ * checks that resolve a link/resource target against the tree.
+ */
+export async function repoPathExists(
+  mode: Mode,
+  opts: ScanOptions = {},
+): Promise<(path: string) => boolean> {
+  if (mode === '--staged') {
+    const indexPaths = new Set(await trackedFiles(opts));
+    return (path) => indexPaths.has(path);
+  }
+  const cwd = opts.cwd ?? process.cwd();
+  return (path) => existsSync(resolve(cwd, path));
 }
 
 /** Resolve the path list and per-path reader for a mode. */

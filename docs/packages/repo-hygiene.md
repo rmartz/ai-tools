@@ -1,7 +1,7 @@
 ---
 type: Library
 title: repo-hygiene
-description: Layer-1 repo-quality gates — a pluggable check framework (registry, config, severity, reporter) shipping conflict-markers, OKF-frontmatter, OKF-index, action-pin, package-pin, md-pairing, and file-caps checks.
+description: Layer-1 repo-quality gates — a pluggable check framework (registry, config, severity, reporter) shipping conflict-markers, OKF-frontmatter, OKF-index, docs-links, action-pin, package-pin, md-pairing, and file-caps checks.
 resource: packages/repo-hygiene/src/index.ts
 tags: [tooling, quality-gates, ci, merge]
 ---
@@ -18,8 +18,8 @@ The package exists to end the per-repo duplication of the same hygiene checks
 enforcement): one tested implementation here, thin callers everywhere else. This
 page documents the **framework** (the check contract, config, dispatch, output
 contract) and the checks it ships: `conflict-markers` (the reference check),
-`okf`, `okf-index`, `action-pins`, `package-pins`, `md-pairing`, and `file-caps`.
-Further checks land on top of this foundation (epic #163).
+`okf`, `okf-index`, `docs-links`, `action-pins`, `package-pins`, `md-pairing`, and
+`file-caps`. Further checks land on top of this foundation (epic #163).
 
 ## The check framework
 
@@ -199,6 +199,39 @@ is the pure evaluator (findings are file-level `error`s). Ported from
 firebase-nextjs-template's `validate-docs-index.mjs` + the `validateIndex` half of
 `validate-docs.mjs`, so that repo can retire its last bespoke docs script.
 
+## Check: `docs-links`
+
+Intra-repo Markdown **link integrity** — the file-existence gap `okf` (only the
+`resource:` frontmatter target) and `okf-index` (only that content pages are
+_reachable_ from an index) leave open. Neither verifies that the inline links in a
+page **body** still resolve. When a docs page or a source file is renamed, moved,
+or deleted, such a link silently rots — it still parses, but a reader hits a 404.
+Over the configured `roots`, this check resolves every intra-repo link target —
+relative links between docs pages (a `../packages/foo.md` destination) and links
+from `docs/**` into source (a `../../packages/repo-hygiene/src/index.ts`
+destination) — and emits a line-anchored `error` for any whose resolved path does
+not exist on disk.
+
+Static and filesystem-only (hermetic by construction): external
+`http(s)`/`mailto` links, pure `#anchor` links, and absolute paths are out of
+scope, and a link's `#anchor` suffix is stripped before resolving the file part —
+anchor _validity_ is neighbouring work (#204/#226), not this check. The scan is
+**textual** (a shared naive link regex, as in `okf-index`): a destination written
+purely as an illustration is resolved like any other, so list an intentionally
+-unresolvable one under `exempt`. The scanning and path-resolution primitives
+(`scanLinks`, `resolveRel`, `intraRepoTarget`) live in `checks/md-links.ts` and
+are shared with `okf-index`; `checkDocLinks(...)` is the pure per-page validator
+and `docsLinksCheck` filters the file set to in-scope docs pages and runs it
+(existence resolved through the shared `repoPathExists`, which probes the git
+index in `--staged` mode).
+
+```yaml
+checks:
+  docs-links:
+    roots: [docs] # docs pages whose body links are resolved
+    exempt: [] # resolved target paths allowed to dangle (intentionally-missing)
+```
+
 ## Check: `action-pins`
 
 GitHub Actions SHA-pin conformance — ported from ai-tools'
@@ -304,13 +337,14 @@ crosses the line cap.
 
 ## Dogfooding
 
-ai-tools runs `okf`, `action-pins`, and `package-pins` against itself through the
-published CLI: its `check:okf`, `check:actions`, and `check:pins` package scripts
-invoke `ai-repo-hygiene <check> --check`, replacing the former standalone
+ai-tools runs `okf`, `docs-links`, `action-pins`, and `package-pins` against
+itself through the published CLI: its `check:okf`, `check:docs-links`,
+`check:actions`, and `check:pins` package scripts invoke
+`ai-repo-hygiene <check> --check`, replacing the former standalone
 `scripts/check-okf-frontmatter.ts`, `scripts/check-action-pins.ts`, and
 `scripts/check-pins.ts` (now deleted). Because the scripts run the built CLI, the
-`okf`, `action-pins`, and `pins` CI jobs build the workspace first (as the `test`
-job does).
+`okf`, `docs-links`, `action-pins`, and `pins` CI jobs build the workspace first
+(as the `test` job does).
 
 ## Composite Action
 
@@ -397,4 +431,11 @@ drop / never-add logic. `okf-index` is covered through `evaluateOkfIndex`
 (navigable bundle, unlinked page, missing directory index, unlinked sub-index,
 `../` resolution with external/anchor/non-md link skipping, and the
 index-frontmatter rule — bundle-root `okf_version`, extra-key and non-root
-frontmatter rejection, malformed block).
+frontmatter rejection, malformed block). The shared `md-links` primitives are
+covered directly (`scanLinks` line-numbering, `resolveRel` `./`/`../` resolution,
+`intraRepoTarget` anchor/title stripping and external/absolute rejection);
+`docs-links` is covered through `checkDocLinks` (valid target passes, missing
+target flagged with source page + line, `docs/**`→source resolution across `../`,
+anchor/external/mailto skipping, and the `exempt` allowance) plus a
+`docsLinksCheck.run` scope test (only in-scope docs pages under `roots`, custom
+roots honoured).
