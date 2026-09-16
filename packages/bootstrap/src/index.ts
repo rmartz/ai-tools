@@ -30,6 +30,9 @@ export type {
   VerifyAutomergeGateResult,
 } from './verify-automerge-gate.js';
 
+export { resolveSatisfiedGateChecks } from './gate-satisfaction.js';
+export type { ResolveSatisfiedGateChecksOptions } from './gate-satisfaction.js';
+
 export { verifySquashMergeSetting } from './verify-squash-merge-setting.js';
 export type {
   VerifySquashMergeSettingOptions,
