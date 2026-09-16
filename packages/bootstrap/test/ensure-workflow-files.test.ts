@@ -258,3 +258,53 @@ describe('goldenWorkflowFiles — the commit-convention tripwire', () => {
     expect(tripwire?.gateChecks).toEqual([]);
   });
 });
+
+// #233 — the seeded self-sync workflow: it re-runs `ai-ensure-project-config`
+// against the latest published @rmartz/bootstrap on a schedule and opens a
+// golden-refresh PR only when a managed file drifted — so golden-config updates
+// reach the fleet automatically, with no per-repo manual `/bootstrap` re-run and
+// no per-repo secret. Being a `manage` file, it also self-propagates: a change to
+// its own definition reaches every repo through the next sync.
+describe('goldenWorkflowFiles — the golden-sync self-update workflow', () => {
+  const goldenSync = goldenWorkflowFiles.find(
+    (w) => w.filename === '.github/workflows/golden-sync.yml',
+  );
+
+  it('is present as a managed (self-propagating) file with no gate check of its own', () => {
+    expect(goldenSync).toBeDefined();
+    expect(goldenSync?.policy ?? 'manage').toBe('manage');
+    expect(goldenSync?.gateChecks).toEqual([]);
+  });
+
+  it('runs automatically on a schedule and manual dispatch — never on pull_request', () => {
+    const content = goldenSync?.content ?? '';
+    expect(content).toContain('schedule:');
+    expect(content).toContain('cron:');
+    expect(content).toContain('workflow_dispatch:');
+    expect(content).not.toContain('pull_request');
+  });
+
+  it('installs the latest published @rmartz/bootstrap (unpinned) and re-runs ai-ensure-project-config', () => {
+    const content = goldenSync?.content ?? '';
+    expect(content).toContain('npm install -g "@rmartz/bootstrap"');
+    expect(content).toContain('ai-ensure-project-config');
+  });
+
+  it('opens a PR only when golden files actually changed — not a blind overwrite', () => {
+    const content = goldenSync?.content ?? '';
+    // Staged-diff guard catches both modified and newly-created managed files.
+    expect(content).toContain('git diff --cached --quiet');
+    expect(content).toContain('gh pr create');
+  });
+
+  it('needs only the default token — contents + pull-requests write, packages read', () => {
+    const content = goldenSync?.content ?? '';
+    expect(content).toContain('contents: write');
+    expect(content).toContain('pull-requests: write');
+    expect(content).toContain('packages: read');
+  });
+
+  it('pins actions/checkout to a full 40-char SHA with a major.minor.patch comment', () => {
+    expect(goldenSync?.content).toMatch(/actions\/checkout@[0-9a-f]{40} # v\d+\.\d+\.\d+/);
+  });
+});
