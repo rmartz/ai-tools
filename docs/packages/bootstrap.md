@@ -64,8 +64,8 @@ workflow with zero project-specific logic is a copy-distribution candidate — t
 win is drift control, not code reuse — so it is managed as a **whole file**, not
 a block spliced into user content.
 
-- `ensureWorkflowFiles(root, { workflows? })` — pure fs. Two per-file idempotency
-  policies (`GoldenWorkflowFile.policy`):
+- `ensureWorkflowFiles(root, { workflows?, satisfiedGateChecks? })` — pure fs. Two
+  per-file idempotency policies (`GoldenWorkflowFile.policy`):
   - **`manage`** (default) — a bootstrap-owned file: **write if absent**,
     **overwrite if drifted** from the golden template, report **unchanged** if
     identical, and **skip** if a _user-authored_ file (one lacking the managed
@@ -80,6 +80,20 @@ a block spliced into user content.
 
   `ensureProjectConfig` composes this after the ignore blocks, returning one
   combined outcome list.
+
+- **Gate-before-go-live (`withheld`, #239).** A `gh pr merge --auto` workflow
+  seeded into a repo with **no** required checks auto-merges every green bump
+  _immediately_ — so the writer **withholds** the creation of any workflow whose
+  declared `gateChecks` are not all in the passed-in `satisfiedGateChecks` set
+  (a fifth outcome, `withheld`). The default is `[]`, so a plain call **never**
+  lands the gated auto-merge workflow — even a direct `ai-ensure-project-config`
+  run, not just the `/bootstrap` skill. The writer stays **hermetic**: it does not
+  read the gate itself; it receives the resolved satisfied set. Withholding blocks
+  **creation only** — an existing file is managed normally (an empty set may just
+  mean "the caller did not check the gate", so deleting on it would be wrong),
+  which keeps the coupling **order-independent**: seed-then-gate and gate-then-seed
+  both converge to "present iff the gate is satisfied". The **network** read that
+  produces the satisfied set is `resolveSatisfiedGateChecks` (below).
 
 - `goldenWorkflowFiles` — seeded with two `manage` workflows and one `seed` config:
   - `dependabot-auto-merge.yml`: on a green `semver-patch` / `semver-minor`
@@ -250,10 +264,16 @@ Thin `bin/` wrappers; all logic stays in the library:
   repo, resolved through `resolveRepoTarget` (positional `owner/repo` → `GH_REPO`
   → cwd), so a caller that cannot pin its cwd never needs `cd <dir> && ai-*`.
   Prints a per-label outcome summary; exits non-zero if any label failed.
-- `ai-ensure-project-config [-C <dir>]` — detect the repo root (`git rev-parse
---show-toplevel`, run in `-C`/`--cwd <dir>` when given) and ensure the golden
-  ignore blocks **and** golden workflow files. Prints a per-file outcome summary;
-  a `skipped` line flags any user-authored workflow left untouched.
+- `ai-ensure-project-config [-C <dir>] [--with-gate [--repo <owner/repo>] [--check <ctx>]...]`
+  — detect the repo root (`git rev-parse --show-toplevel`, run in `-C`/`--cwd <dir>`
+  when given) and ensure the golden ignore blocks **and** golden workflow files.
+  Prints a per-file outcome summary; a `skipped` line flags any user-authored
+  workflow left untouched, a `withheld` line the gated auto-merge workflow held
+  back until its gate is satisfied. **By default the gated auto-merge workflow is
+  withheld** (never seeded ungated). `--with-gate` reads the repo's real auto-merge
+  gate (read-only, via `resolveSatisfiedGateChecks`) and seeds the gated workflow
+  **only if the gate is actually satisfied** — `--check` (repeatable) overrides the
+  gate-check set; a failed read withholds (the safe direction).
 - `ai-verify-automerge-gate [-C <dir>] [--repo <owner/repo>] [--apply] [--check <ctx>]...`
   — confirm (default) or apply the auto-merge gate on the repo's default branch.
   Repo target: `--repo` → `GH_REPO` → the `-C`/`--cwd` checkout. `--check`

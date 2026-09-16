@@ -27,7 +27,7 @@ export { BLOCK_BEGIN, BLOCK_END } from './golden-config.js';
  * tests can point at a tmpdir.
  */
 
-export type ConfigAction = 'created' | 'updated' | 'unchanged' | 'skipped';
+export type ConfigAction = 'created' | 'updated' | 'unchanged' | 'skipped' | 'withheld';
 
 export interface ConfigOutcome {
   filename: string;
@@ -82,6 +82,13 @@ export interface EnsureProjectConfigOptions {
   files?: readonly GoldenIgnoreFile[];
   /** Override the golden workflow-file set (tests). Defaults to `goldenWorkflowFiles`. */
   workflows?: readonly GoldenWorkflowFile[];
+  /**
+   * Gate checks known satisfied on the repo. Passed through to
+   * {@link ensureWorkflowFiles}: a gated workflow (e.g. the auto-merge workflow)
+   * is **withheld** unless its `gateChecks` are all present. Defaults to `[]`, so
+   * a direct call never lands the auto-merge workflow ungated (#239).
+   */
+  satisfiedGateChecks?: readonly string[];
 }
 
 /**
@@ -95,6 +102,9 @@ export function ensureProjectConfig(
 ): EnsureProjectConfigResult {
   const files = opts.files ?? goldenIgnoreFiles;
   const ignoreOutcomes = files.map((file) => ensureFile(root, file));
-  const workflowOutcomes = ensureWorkflowFiles(root, { workflows: opts.workflows });
+  const workflowOutcomes = ensureWorkflowFiles(root, {
+    workflows: opts.workflows,
+    satisfiedGateChecks: opts.satisfiedGateChecks,
+  });
   return { root, outcomes: [...ignoreOutcomes, ...workflowOutcomes] };
 }
