@@ -117,6 +117,17 @@ export interface GoldenWorkflowFile {
    *   only if absent, and never touch it again once present. For files repos are
    *   expected to customize (`.github/dependabot.yml`), where overwriting local
    *   edits on every bootstrap would be wrong.
+   *
+   * **The per-file rule (the seed-vs-manage principle):** a file is `seed` once it
+   * is a **self-updating reference** — a Dependabot-bumpable pin or a
+   * reusable-workflow caller (`repo-hygiene.yml`; `merge-safety.yml` once #247
+   * makes it a caller). Dependabot then owns updates, so a `manage` re-sync would
+   * fight it over the pin. A file whose **logic is embedded inline**
+   * (`commit-convention.yml`, `dependabot-auto-merge.yml`) stays `manage` — it has
+   * no Dependabot channel, so its logic must keep propagating via golden-sync
+   * (#233). golden-sync composes with `seed`: being write-if-absent, it never
+   * clobbers an existing (bumped / hand-tuned) reference, yet still propagates
+   * *newly-added* golden files and keeps the ignore blocks conformant.
    */
   policy?: 'manage' | 'seed';
 }
@@ -136,8 +147,12 @@ export interface GoldenWorkflowFile {
  *   *provides* the check the auto-merge file depends on rather than consuming one.
  * - `.github/dependabot.yml` (`seed`) — a starting Dependabot config the repo then
  *   owns; bootstrap writes it only if absent and never overwrites local edits.
- * - `repo-hygiene.yml` (`manage`) — runs the universally-safe `action-pins` check
- *   via the published `@rmartz/repo-hygiene` CLI. Advisory; `gateChecks: []`.
+ * - `repo-hygiene.yml` (**`seed`**) — a thin caller of the SHA-pinned
+ *   `rmartz/repo-hygiene` reusable workflow (Dependabot bumps the pin, and the CLI
+ *   version it installs, in lockstep). `seed` (write-if-absent) because it is now a
+ *   self-updating reference: bootstrap seeds it once and Dependabot owns the pin
+ *   thereafter, so a re-seed / golden-sync run never reverts a bumped or hand-tuned
+ *   caller. Advisory; `gateChecks: []`. (See the seed-vs-manage principle below.)
  * - `commit-convention.yml` (`manage`) — post-merge `push: [main]` tripwire that
  *   fails when a non-conventional subject reaches the default branch. Alerts (the
  *   commit is already merged), so `gateChecks: []`.
@@ -167,6 +182,7 @@ export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
     filename: '.github/workflows/repo-hygiene.yml',
     content: REPO_HYGIENE,
     gateChecks: [],
+    policy: 'seed',
   },
   {
     filename: '.github/workflows/commit-convention.yml',
