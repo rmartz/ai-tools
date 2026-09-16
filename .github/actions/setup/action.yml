@@ -16,5 +16,14 @@ runs:
       with:
         node-version: 24.x
         cache: 'pnpm'
+    # @rmartz/repo-hygiene is consumed from GitHub Packages (see the repo .npmrc's
+    # scoped registry). GitHub Packages requires a token even for public packages,
+    # so write the job's built-in GITHUB_TOKEN as the @rmartz-scope auth before
+    # install. Needs `packages: read` on the calling workflow.
+    - name: Authenticate to GitHub Packages (@rmartz scope)
+      shell: bash
+      run: printf '//npm.pkg.github.com/:_authToken=%s\n' "${NODE_AUTH_TOKEN}" >> ~/.npmrc
+      env:
+        NODE_AUTH_TOKEN: ${{ github.token }}
     - run: pnpm install ${{ inputs.frozen-lockfile == 'true' && '--frozen-lockfile' || '--no-frozen-lockfile' }}
       shell: bash

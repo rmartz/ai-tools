@@ -71,7 +71,6 @@ change can't silently break the daemon.
 
 - **`@rmartz/worktree`** — `new-worktree`, `git-cleanup`, `worker-permissions`.
 - **`@rmartz/verify`** — `pre-push-verify`, `tool-resolver`, `infra-failure`.
-- **`@rmartz/repo-hygiene`** — `check-conflict-markers`.
 - **`@rmartz/bootstrap`** — `ensure-labels`, `ensure-project-config`.
 
 ### layer-2 (in progress — scope confirmed against PR Shepherd)
