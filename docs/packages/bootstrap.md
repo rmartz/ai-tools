@@ -63,6 +63,17 @@ gate/verdict labels — the roster here is the cross-cutting + meta set only.
   than seeded, and an already-bootstrapped repo sheds the inert file on its next
   `ai-ensure-project-config` / golden-sync run. A flat config's own `ignores`
   array carries the equivalent artifact list.
+- `retiredWorkflowFiles` — the **whole-file** analogue for workflows bootstrap used
+  to distribute but no longer does (#264): `retireWorkflowFile` deletes the copy
+  _we_ wrote (it carries the managed marker) and leaves a user-authored file at the
+  same path untouched (`removed` / `skipped` / `unchanged` outcomes). Unlike a
+  retired ignore file (a managed _block_ spliced into possibly user-authored
+  content), a workflow is a whole managed file, so retirement is a delete-if-ours
+  rather than a strip-the-block. `.github/workflows/dependabot-auto-merge.yml` is the
+  first entry — #264 renamed the golden auto-merge file to `bot-automerge.yml` (a
+  reusable-workflow caller that also covers release-please PRs), so an
+  already-bootstrapped repo drops the old inline copy on its next run instead of
+  running two auto-merge workflows.
 
 ### Whole workflow files (`ensure-workflow-files.ts`, `golden-config.ts`)
 
@@ -96,8 +107,8 @@ a block spliced into user content.
     (and clobber a hand-tuned caller). `.github/dependabot.yml` is `seed` for the
     same "repo then owns it" reason.
   - A file stays **`manage`** while its **logic is embedded inline**
-    (`commit-convention.yml`, `dependabot-auto-merge.yml`) — it has no Dependabot
-    channel, so its logic must keep propagating via golden-sync.
+    (`commit-convention.yml`) — it has no Dependabot channel, so its logic must keep
+    propagating via golden-sync.
   - **golden-sync (#233) composes with `seed`, it doesn't fight it.** Being
     write-if-absent, golden-sync never clobbers an existing bumped/hand-tuned
     reference, yet still propagates _newly-added_ golden files to existing repos and
@@ -122,13 +133,24 @@ a block spliced into user content.
   both converge to "present iff the gate is satisfied". The **network** read that
   produces the satisfied set is `resolveSatisfiedGateChecks` (below).
 
-- `goldenWorkflowFiles` — seeded with three `manage` workflows and three `seed` files:
-  - `dependabot-auto-merge.yml`: on a green `semver-patch` / `semver-minor`
-    Dependabot PR it enables GitHub-native auto-merge (majors stay manual).
-    `dependabot/fetch-metadata` is pinned to a full commit SHA + `major.minor.patch`
-    comment per the Actions-pinning convention; Dependabot's `github-actions`
-    ecosystem keeps the SHA fresh. It declares the `gateChecks` its native
-    auto-merge depends on (here `merge-safety`).
+- `goldenWorkflowFiles` — seeded with two `manage` workflows and four `seed` files:
+  - `bot-automerge.yml` (**`seed`**, #264): a thin **caller** of the SHA-pinned
+    `rmartz/bot-automerge` reusable workflow
+    (`uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha> # vX.Y.Z`).
+    It enables GitHub-native auto-merge for trustworthy **bot** PRs — green
+    `semver-patch` / `semver-minor` Dependabot bumps (majors stay manual) **and**
+    release-please release PRs — replacing the old inline Dependabot-only
+    `dependabot-auto-merge.yml` (now retired via `retiredWorkflowFiles`). Dependabot's
+    `github-actions` ecosystem bumps the pin (and the CLI version the reusable
+    workflow installs, in lockstep), so it is `seed`, not `manage`. The trigger is
+    `pull_request_target` (required, not `pull_request`, so Dependabot's
+    read-only-token PRs get base-context write) and it `secrets: inherit`s. It stays
+    **gated**: it keeps `gateChecks: ['merge-safety']`, so the writer **withholds** its
+    creation until `merge-safety` is a satisfied required check (an ungated
+    `gh pr merge --auto` merges immediately). _(Adopting this for a repo's own
+    **release-please** CD additionally needs a real-actor merge so the merge
+    re-triggers the publish workflow — tracked by #236 / rmartz/bot-automerge#8; the
+    Dependabot path is unaffected.)_
   - `merge-safety.yml` (**`seed`**): a thin **caller** of the SHA-pinned
     `rmartz/merge-safety` reusable workflow
     (`uses: rmartz/merge-safety/.github/workflows/merge-safety.yml@<sha> # vX.Y.Z`),
@@ -149,8 +171,8 @@ a block spliced into user content.
     are seeded by the label roster above.
   - `.github/dependabot.yml` (**`seed`**): a starting Dependabot config — the
     `github-actions` ecosystem (the minimum every repo wants; it keeps pinned
-    action SHAs, including the auto-merge workflow's `fetch-metadata`, fresh) plus
-    the `npm` ecosystem (the ideal for the JS repos this toolkit targets), both
+    action SHAs, including the `bot-automerge` caller's reusable-workflow pin, fresh)
+    plus the `npm` ecosystem (the ideal for the JS repos this toolkit targets), both
     grouped. Written only if absent; a repo then owns and tailors it.
   - `repo-hygiene.yml` (**`seed`**): a thin **caller** of the SHA-pinned
     `rmartz/repo-hygiene` reusable workflow

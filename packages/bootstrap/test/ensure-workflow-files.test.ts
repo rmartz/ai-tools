@@ -3,7 +3,11 @@ import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, mkdirSync
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 
-import { ensureWorkflowFiles, renderManagedWorkflow } from '../src/ensure-workflow-files.js';
+import {
+  ensureWorkflowFiles,
+  renderManagedWorkflow,
+  retireWorkflowFile,
+} from '../src/ensure-workflow-files.js';
 import {
   goldenWorkflowFiles,
   WORKFLOW_MANAGED_MARKER,
@@ -126,30 +130,82 @@ describe('ensureWorkflowFiles — gate-before-go-live', () => {
   });
 });
 
-// Criterion A2 — seeded with the generic dependabot-auto-merge workflow: patch/
-// minor only (majors stay manual), fetch-metadata pinned by full SHA + version.
-describe('goldenWorkflowFiles — the seeded Dependabot auto-merge workflow', () => {
-  const dependabot = goldenWorkflowFiles.find(
-    (w) => w.filename === '.github/workflows/dependabot-auto-merge.yml',
+// #264 — the seeded bot-automerge workflow is a thin caller of the
+// rmartz/bot-automerge reusable workflow (SHA-pinned, Dependabot-bumped), seeded
+// once and thereafter repo-owned (`seed`). Expanded from the old inline
+// Dependabot-only `dependabot-auto-merge.yml` to also cover release-please PRs; the
+// old file is retired via `retiredWorkflowFiles`. Still gated on `merge-safety`.
+describe('goldenWorkflowFiles — the seeded bot-automerge reusable-workflow caller', () => {
+  const botAutomerge = goldenWorkflowFiles.find(
+    (w) => w.filename === '.github/workflows/bot-automerge.yml',
   );
 
-  it('is present in the golden set', () => {
-    expect(dependabot).toBeDefined();
+  it('is present with the seed policy', () => {
+    expect(botAutomerge).toBeDefined();
+    expect(botAutomerge?.policy).toBe('seed');
   });
 
-  it('pins dependabot/fetch-metadata to a full 40-char SHA with a major.minor.patch comment', () => {
-    expect(dependabot?.content).toMatch(/dependabot\/fetch-metadata@[0-9a-f]{40} # v\d+\.\d+\.\d+/);
+  it('calls the rmartz/bot-automerge reusable workflow, SHA-pinned with a version comment', () => {
+    expect(botAutomerge?.content).toMatch(
+      /uses: rmartz\/bot-automerge\/\.github\/workflows\/bot-automerge\.yml@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
+    );
   });
 
-  it('enables auto-merge only for semver-patch and semver-minor (majors stay manual)', () => {
-    const content = dependabot?.content ?? '';
-    expect(content).toContain('version-update:semver-patch');
-    expect(content).toContain('version-update:semver-minor');
-    expect(content).not.toContain('version-update:semver-major');
+  it('triggers on pull_request_target (not pull_request) and inherits secrets', () => {
+    const content = botAutomerge?.content ?? '';
+    expect(content).toContain('pull_request_target:');
+    expect(content).toContain('secrets: inherit');
   });
 
-  it('declares the merge-safety gate check the auto-merge depends on', () => {
-    expect(dependabot?.gateChecks).toContain('merge-safety');
+  it('grants packages: read so the reusable workflow can install from GitHub Packages', () => {
+    expect(botAutomerge?.content).toContain('packages: read');
+  });
+
+  it('drops the inline fetch-metadata step and the inline merge command', () => {
+    const content = botAutomerge?.content ?? '';
+    expect(content).not.toContain('dependabot/fetch-metadata');
+    expect(content).not.toContain('gh pr merge');
+  });
+
+  it('stays gated on the merge-safety check (an ungated auto-merge would merge immediately)', () => {
+    expect(botAutomerge?.gateChecks).toContain('merge-safety');
+  });
+
+  it('no longer ships the retired inline dependabot-auto-merge.yml', () => {
+    expect(
+      goldenWorkflowFiles.find((w) => w.filename === '.github/workflows/dependabot-auto-merge.yml'),
+    ).toBeUndefined();
+  });
+});
+
+// #264 — retireWorkflowFile: delete the copy *we* wrote (managed marker), leave a
+// user-authored file at the same path untouched, no-op when absent. The whole-file
+// analogue of ensure-project-config's retireFile for managed-block ignore files.
+describe('retireWorkflowFile', () => {
+  const retired: GoldenWorkflowFile = {
+    filename: '.github/workflows/dependabot-auto-merge.yml',
+    content: 'name: Old Auto-merge\non: pull_request_target\n',
+    gateChecks: [],
+  };
+
+  it('removes a file we previously wrote (carries the managed marker)', () => {
+    writeAt(retired.filename, renderManagedWorkflow(retired));
+    const outcome = retireWorkflowFile(dir, retired.filename);
+    expect(outcome).toEqual({ filename: retired.filename, action: 'removed' });
+    expect(existsSync(join(dir, retired.filename))).toBe(false);
+  });
+
+  it('leaves a user-authored file (no managed marker) untouched', () => {
+    const userContent = 'name: My Own Auto-merge\non: pull_request_target\n';
+    writeAt(retired.filename, userContent);
+    const outcome = retireWorkflowFile(dir, retired.filename);
+    expect(outcome).toEqual({ filename: retired.filename, action: 'skipped' });
+    expect(read(retired.filename)).toBe(userContent);
+  });
+
+  it('reports unchanged when the file is absent', () => {
+    const outcome = retireWorkflowFile(dir, retired.filename);
+    expect(outcome).toEqual({ filename: retired.filename, action: 'unchanged' });
   });
 });
 

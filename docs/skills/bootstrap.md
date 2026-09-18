@@ -15,8 +15,9 @@ The `bootstrap` skill readies a repository for the PR workflow by composing
   domain label roster the review/route/merge skills rely on.
 - **`ai-ensure-project-config`** — apply the golden-state tooling ignores
   (`.prettierignore`, ESLint ignore config, `.gitignore` baselines) **and** the
-  golden whole-file workflows (`dependabot-auto-merge.yml`) so formatters/linters
-  don't fight generated files and drift-controlled workflows stay in sync.
+  golden whole-file workflows (`bot-automerge.yml`, `commit-convention.yml`) so
+  formatters/linters don't fight generated files and drift-controlled workflows stay
+  in sync.
 - **`ai-verify-automerge-gate`** — after the workflow is written, confirm (or
   `--apply`) the branch-protection gate native auto-merge depends on. A non-zero
   exit is a **hard block**: a seeded auto-merge file in a repo with no required

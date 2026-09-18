@@ -27,7 +27,7 @@
  */
 
 import {
-  DEPENDABOT_AUTO_MERGE,
+  BOT_AUTOMERGE,
   MERGE_SAFETY,
   DEPENDABOT_CONFIG,
   REPO_HYGIENE,
@@ -80,6 +80,23 @@ export const goldenIgnoreFiles: readonly GoldenIgnoreFile[] = [
 export const retiredIgnoreFiles: readonly string[] = ['.eslintignore'];
 
 /**
+ * Whole workflow files bootstrap used to seed/manage but should now actively
+ * **retire** — delete our previously-written copy so a stale duplicate is not left
+ * running. Unlike a retired *ignore* file (a managed block spliced into possibly
+ * user-authored content), a workflow is a whole managed file, so retirement is a
+ * delete-if-ours guarded by {@link WORKFLOW_MANAGED_MARKER}: a file we wrote (carries
+ * the header) is removed; a user-authored file at the same path (no header) is left
+ * untouched. `.github/workflows/dependabot-auto-merge.yml` is the first: #264 renamed
+ * the golden auto-merge file to `bot-automerge.yml` (a reusable-workflow caller that
+ * also covers release-please PRs), so an already-bootstrapped repo must shed the old
+ * inline copy on the next `ai-ensure-project-config` / golden-sync run — otherwise it
+ * would run *two* auto-merge workflows. See {@link retireWorkflowFile}.
+ */
+export const retiredWorkflowFiles: readonly string[] = [
+  '.github/workflows/dependabot-auto-merge.yml',
+];
+
+/**
  * Substring that marks a workflow file as bootstrap-managed. Its presence is the
  * signal `ensure-workflow-files` uses to decide it may overwrite a drifted file:
  * a file *without* this marker is user-authored and is left untouched.
@@ -120,11 +137,11 @@ export interface GoldenWorkflowFile {
    *
    * **The per-file rule (the seed-vs-manage principle):** a file is `seed` once it
    * is a **self-updating reference** — a Dependabot-bumpable pin or a
-   * reusable-workflow caller (`repo-hygiene.yml`; `merge-safety.yml` once #247
-   * makes it a caller). Dependabot then owns updates, so a `manage` re-sync would
-   * fight it over the pin. A file whose **logic is embedded inline**
-   * (`commit-convention.yml`, `dependabot-auto-merge.yml`) stays `manage` — it has
-   * no Dependabot channel, so its logic must keep propagating via golden-sync
+   * reusable-workflow caller (`repo-hygiene.yml`; `bot-automerge.yml` (#264);
+   * `merge-safety.yml` once #247 makes it a caller). Dependabot then owns updates,
+   * so a `manage` re-sync would fight it over the pin. A file whose **logic is
+   * embedded inline** (`commit-convention.yml`) stays `manage` — it has no
+   * Dependabot channel, so its logic must keep propagating via golden-sync
    * (#233). golden-sync composes with `seed`: being write-if-absent, it never
    * clobbers an existing (bumped / hand-tuned) reference, yet still propagates
    * *newly-added* golden files and keeps the ignore blocks conformant.
@@ -135,13 +152,19 @@ export interface GoldenWorkflowFile {
 /**
  * Golden whole files distributed to every repo. Two idempotency policies (see
  * {@link GoldenWorkflowFile.policy}): `manage` (bootstrap-owned, overwrite drift)
- * for the workflows, `seed` (write-once, repo-owned) for the Dependabot config.
+ * for the inline-logic workflows, `seed` (write-once, repo-owned) for the
+ * reusable-workflow callers and the Dependabot config.
  *
- * - `dependabot-auto-merge.yml` (`manage`) — GitHub-native auto-merge for green
- *   patch/minor Dependabot PRs. Depends on `merge-safety` being a *required* check
- *   — the gate the auto-merge verifier confirms before the file may be seeded (an
- *   ungated `gh pr merge --auto` merges *immediately*, so it must never land
- *   without the gate).
+ * - `bot-automerge.yml` (**`seed`**) — a thin caller of the SHA-pinned
+ *   `rmartz/bot-automerge` reusable workflow (Dependabot bumps the pin, and the CLI
+ *   version it installs, in lockstep). GitHub-native auto-merge for trustworthy bot
+ *   PRs: green patch/minor Dependabot bumps *and* release-please release PRs (#264,
+ *   expanded from the old inline Dependabot-only `dependabot-auto-merge.yml`, which
+ *   is retired via {@link retiredWorkflowFiles}). `seed` for the self-updating-
+ *   reference reason (see the seed-vs-manage principle). Still **gated**: keeps
+ *   `gateChecks: ['merge-safety']` so the writer withholds its creation until
+ *   merge-safety is a satisfied required check — an ungated `gh pr merge --auto`
+ *   merges *immediately*, so it must never land without the gate.
  * - `merge-safety.yml` (**`seed`**) — a thin caller of the SHA-pinned
  *   `rmartz/merge-safety` reusable workflow (Dependabot bumps the pin, and the CLI
  *   version it installs, in lockstep). `seed` for the same self-updating-reference
@@ -166,9 +189,10 @@ export interface GoldenWorkflowFile {
  */
 export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
   {
-    filename: '.github/workflows/dependabot-auto-merge.yml',
-    content: DEPENDABOT_AUTO_MERGE,
+    filename: '.github/workflows/bot-automerge.yml',
+    content: BOT_AUTOMERGE,
     gateChecks: ['merge-safety'],
+    policy: 'seed',
   },
   {
     filename: '.github/workflows/merge-safety.yml',

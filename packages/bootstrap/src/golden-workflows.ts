@@ -7,38 +7,40 @@
  * no logic. See `golden-config.ts` for how they are assembled into the golden set.
  */
 
-// Generic Dependabot native-auto-merge workflow: on a green `semver-patch` /
-// `semver-minor` Dependabot PR it enables GitHub-native auto-merge (majors stay
-// manual). Zero project-specific logic, so it is distributed by idempotent copy
-// rather than reimplemented per repo. `dependabot/fetch-metadata` is pinned to a
-// full commit SHA with a `major.minor.patch` comment per the Actions-pinning
-// convention; Dependabot's `github-actions` ecosystem keeps the SHA fresh.
-export const DEPENDABOT_AUTO_MERGE = `name: Dependabot Auto-merge
+// Consumer-shape `bot-automerge` workflow — a thin CALLER of the
+// rmartz/bot-automerge reusable workflow (SHA-pinned + version comment, so
+// Dependabot's github-actions ecosystem bumps the pin, and the CLI version it
+// installs tracks the release in lockstep). bot-automerge ships from its own repo
+// (#264), *expanded* from the old inline Dependabot-only auto-merge to also cover
+// release-please release PRs: it enables GitHub-native auto-merge for trustworthy
+// bot PRs (green Dependabot patch/minor bumps — majors stay manual — plus
+// release-please release PRs), and the reusable side (`on: workflow_call`) owns the
+// bot-detection + update-type/PR-type classification + `gh pr merge --auto`
+// enablement. The caller carries the real trigger and the write scopes and
+// `secrets: inherit`; the reusable workflow derives the PR from the event context,
+// so no `with:` input is needed. The trigger is `pull_request_target` (NOT
+// `pull_request`) — required so Dependabot's read-only-token PRs get base-context
+// write. It stays **gated**: its `goldenWorkflowFiles` entry keeps
+// `gateChecks: ['merge-safety']`, so the hermetic writer withholds its *creation*
+// until merge-safety is a satisfied required check (an ungated `gh pr merge --auto`
+// merges immediately). It is a `seed` file (see the per-file seed-vs-manage
+// principle in golden-config.ts) — a self-updating reference, so bootstrap seeds it
+// once and Dependabot owns the pin thereafter.
+export const BOT_AUTOMERGE = `name: bot-automerge
 
-on: pull_request_target
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled]
 
 permissions:
   contents: write
   pull-requests: write
+  packages: read
 
 jobs:
-  auto-merge:
-    name: Enable auto-merge
-    runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
-    steps:
-      - name: Fetch Dependabot metadata
-        id: metadata
-        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2.5.0
-        with:
-          github-token: \${{ secrets.GITHUB_TOKEN }}
-
-      - name: Enable auto-merge for patch and minor updates
-        if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
-        run: gh pr merge --auto --squash "$PR_URL"
-        env:
-          PR_URL: \${{ github.event.pull_request.html_url }}
-          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+  bot-automerge:
+    uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@139f4ce609c2dfe65f1e090c00f17204bfce1b3e # v0.1.1
+    secrets: inherit
 `;
 
 // Consumer-shape `merge-safety` workflow — a thin CALLER of the rmartz/merge-safety
@@ -84,9 +86,9 @@ jobs:
 
 // Generic Dependabot config, seeded (write-if-absent) as a starting point repos
 // then own. github-actions is the minimum every repo wants (it keeps pinned
-// action SHAs — including the auto-merge workflow's fetch-metadata — fresh); the
-// npm ecosystem is the ideal for the JS repos this toolkit targets (it also feeds
-// the native auto-merge path). Both are grouped so related bumps land as one PR.
+// action SHAs — including the bot-automerge caller's reusable-workflow pin — fresh);
+// the npm ecosystem is the ideal for the JS repos this toolkit targets (it also
+// feeds the native auto-merge path). Both are grouped so related bumps land as one PR.
 // A repo without an npm manifest, or wanting other ecosystems, edits its copy —
 // which the `seed` policy then leaves untouched.
 export const DEPENDABOT_CONFIG = `version: 2
