@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.8.0...bootstrap-v0.9.0) (2026-09-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **bootstrap:** adopt @rmartz/bot-automerge — seed the reusable-workflow caller, retire the inline auto-merge ([#270](https://github.com/rmartz/ai-tools/issues/270))
+
+### Features
+
+* **bootstrap:** adopt @rmartz/bot-automerge — seed the reusable-workflow caller, retire the inline auto-merge ([#270](https://github.com/rmartz/ai-tools/issues/270)) ([d0129f9](https://github.com/rmartz/ai-tools/commit/d0129f996e2fcc48b71ab5f642847f41a9cc15a2))
+
 ## [0.8.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.7.0...bootstrap-v0.8.0) (2026-09-16)
 
 
