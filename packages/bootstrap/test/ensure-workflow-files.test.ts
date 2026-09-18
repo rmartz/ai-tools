@@ -153,46 +153,43 @@ describe('goldenWorkflowFiles — the seeded Dependabot auto-merge workflow', ()
   });
 });
 
-// #188 — the seeded merge-safety check workflow (consumer shape: installs the
-// published CLI, provides the check rather than depending on one).
-describe('goldenWorkflowFiles — the seeded merge-safety workflow', () => {
+// #247 — the seeded merge-safety CI is now a thin caller of the rmartz/merge-safety
+// reusable workflow (SHA-pinned, Dependabot-bumped), seeded once and thereafter
+// repo-owned (`seed`), like repo-hygiene.yml. The evaluate/invalidate logic + the
+// label-narrowing live inside the reusable workflow now, not the caller.
+describe('goldenWorkflowFiles — the seeded merge-safety reusable-workflow caller', () => {
   const mergeSafety = goldenWorkflowFiles.find(
     (w) => w.filename === '.github/workflows/merge-safety.yml',
   );
 
-  it('is present in the golden set', () => {
+  it('is present with the seed policy and no gate check of its own', () => {
     expect(mergeSafety).toBeDefined();
-  });
-
-  it('installs the published @rmartz/pr-review CLI rather than building from source', () => {
-    const content = mergeSafety?.content ?? '';
-    expect(content).toContain('npm install -g "@rmartz/pr-review@');
-    expect(content).toContain('ai-merge-safety evaluate');
-    expect(content).toContain('ai-merge-safety invalidate');
-    expect(content).not.toContain('pnpm build');
-  });
-
-  it('pins actions/checkout to a full 40-char SHA with a major.minor.patch comment', () => {
-    expect(mergeSafety?.content).toMatch(/actions\/checkout@[0-9a-f]{40} # v\d+\.\d+\.\d+/);
-  });
-
-  it('reads the base branch from the PR (falling back to the repo default) for portability', () => {
-    expect(mergeSafety?.content).toContain('github.event.pull_request.base.ref');
-    expect(mergeSafety?.content).toContain('github.event.repository.default_branch');
-  });
-
-  it('narrows label events to the verdict-relevant `breaking change` label', () => {
-    // #229 — a labeled/unlabeled event only changes the verdict for `breaking
-    // change`; every other label (approved, no UAT needed, domain labels) must
-    // not spin up an evaluate run.
-    const content = mergeSafety?.content ?? '';
-    expect(content).toContain("github.event.action != 'labeled'");
-    expect(content).toContain("github.event.action != 'unlabeled'");
-    expect(content).toContain("github.event.label.name == 'breaking change'");
-  });
-
-  it('provides the check and so declares no gateChecks of its own', () => {
+    expect(mergeSafety?.policy).toBe('seed');
     expect(mergeSafety?.gateChecks).toEqual([]);
+  });
+
+  it('calls the rmartz/merge-safety reusable workflow, SHA-pinned with a version comment', () => {
+    expect(mergeSafety?.content).toMatch(
+      /uses: rmartz\/merge-safety\/\.github\/workflows\/merge-safety\.yml@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
+    );
+  });
+
+  it('carries the triggers + write scopes the reusable workflow needs, threads pr, inherits secrets', () => {
+    const content = mergeSafety?.content ?? '';
+    expect(content).toContain('pull_request:');
+    expect(content).toContain('push:');
+    expect(content).toContain('workflow_dispatch:');
+    expect(content).toContain('checks: write');
+    expect(content).toContain('pull-requests: write');
+    expect(content).toContain('actions: write');
+    expect(content).toContain('pr: ${{ inputs.pr }}');
+    expect(content).toContain('secrets: inherit');
+  });
+
+  it('drops the hand-rolled CLI install and the bare env version pin', () => {
+    const content = mergeSafety?.content ?? '';
+    expect(content).not.toContain('npm install -g');
+    expect(content).not.toContain('MERGE_SAFETY_VERSION');
   });
 });
 

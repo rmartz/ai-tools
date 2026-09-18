@@ -41,18 +41,19 @@ jobs:
           GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
 `;
 
-// Consumer-shape `merge-safety` workflow: it INSTALLS the published
-// `@rmartz/pr-review` CLI (a public GitHub Packages package) and posts the
-// `merge-safety` check-run — it does not build from source the way ai-tools' own
-// in-repo workflow does, because a consumer repo has no monorepo checkout. It is
-// generic across repos: the base branch is taken from the PR (falling back to the
-// repo's default branch) on the evaluate path, and `push` fires on `main` (the
-// default-branch case — a non-`main` repo adjusts that one literal). Advisory by
-// default: seeding it makes the check *run*; making it a required gate is a
-// separate per-repo curation step. `actions/checkout` is pinned by full SHA +
-// `major.minor.patch` comment per the Actions-pinning convention; the CLI version
-// is pinned here and re-synced by re-seeding (Dependabot does not bump workflow
-// env), never `@latest`.
+// Consumer-shape `merge-safety` workflow — a thin CALLER of the rmartz/merge-safety
+// reusable workflow (SHA-pinned + version comment, so Dependabot's github-actions
+// ecosystem bumps it, and the CLI version it installs tracks the release in
+// lockstep). merge-safety now ships from its own repo (extracted from
+// @rmartz/pr-review, #247). The caller carries the real triggers
+// (pull_request/push/workflow_dispatch) and the write scopes, threads the dispatch
+// `pr` input via `with:`, and `secrets: inherit`; the reusable side is
+// `on: workflow_call` and owns the evaluate-vs-invalidate branch + the
+// label-narrowing logic. Advisory by default: seeding it makes the `merge-safety`
+// check *run*; making it a required gate is the separate per-repo curation step.
+// It is a `seed` file (see the per-file seed-vs-manage principle in
+// golden-config.ts) — a self-updating reference, so bootstrap seeds it once and
+// Dependabot owns the pin thereafter.
 export const MERGE_SAFETY = `name: merge-safety
 
 on:
@@ -73,61 +74,12 @@ permissions:
   actions: write
   packages: read
 
-concurrency:
-  group: merge-safety-\${{ github.event_name == 'push' && 'invalidate' || github.event.pull_request.number || inputs.pr }}
-  cancel-in-progress: false
-
-env:
-  MERGE_SAFETY_VERSION: 0.4.0
-
 jobs:
-  evaluate:
-    name: Evaluate one PR
-    # Only \`breaking change\` among labels affects the verdict (it flips
-    # prIsBreaking), so a labeled/unlabeled event for any other label must not
-    # spin up an evaluate run. Non-label events (opened/synchronize/reopened/
-    # edited/workflow_dispatch) always run; push is handled by \`invalidate\`. (#229)
-    if: >-
-      github.event_name != 'push' &&
-      (github.event.action != 'labeled' && github.event.action != 'unlabeled'
-       || github.event.label.name == 'breaking change')
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      GH_TOKEN: \${{ github.token }}
-      PR_NUMBER: \${{ github.event.pull_request.number || inputs.pr }}
-      BASE_REF: \${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: \${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
-          fetch-depth: 0 # merge-base + diffs need full history
-      - name: Install ai-merge-safety
-        env:
-          NODE_AUTH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-        run: |
-          printf '@rmartz:registry=https://npm.pkg.github.com\\n//npm.pkg.github.com/:_authToken=%s\\n' "\${NODE_AUTH_TOKEN}" > ~/.npmrc
-          npm install -g "@rmartz/pr-review@\${MERGE_SAFETY_VERSION}"
-      # Fetch the PR head as git data so merge-base/diffs resolve — the dispatched
-      # (workflow_dispatch) path checks out the base and would otherwise lack it.
-      - run: git fetch --quiet origin "\${BASE_REF}" "pull/\${PR_NUMBER}/head"
-      - run: ai-merge-safety evaluate --pr "\${PR_NUMBER}" --repo "\${GITHUB_REPOSITORY}" --base "origin/\${BASE_REF}"
-
-  invalidate:
-    name: Invalidate open PRs (base moved)
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      GH_TOKEN: \${{ github.token }}
-    steps:
-      - name: Install ai-merge-safety
-        env:
-          NODE_AUTH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-        run: |
-          printf '@rmartz:registry=https://npm.pkg.github.com\\n//npm.pkg.github.com/:_authToken=%s\\n' "\${NODE_AUTH_TOKEN}" > ~/.npmrc
-          npm install -g "@rmartz/pr-review@\${MERGE_SAFETY_VERSION}"
-      - run: ai-merge-safety invalidate --repo "\${GITHUB_REPOSITORY}"
+  merge-safety:
+    uses: rmartz/merge-safety/.github/workflows/merge-safety.yml@db145fb8c20164185eb9e1a1c237dc4d9085c69f # v0.1.0
+    with:
+      pr: \${{ inputs.pr }}
+    secrets: inherit
 `;
 
 // Generic Dependabot config, seeded (write-if-absent) as a starting point repos

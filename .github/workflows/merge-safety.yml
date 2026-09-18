@@ -1,15 +1,13 @@
 name: merge-safety
 
-# Surfaces the coordinator's "must this PR be brought current before merge?"
-# verdict as a `merge-safety` check-run, and — via the push fan-out — invalidates
-# every open PR's verdict when the base moves. POC for issue #185.
-#
-# Two paths:
-#   - pull_request / workflow_dispatch → evaluate ONE PR and resolve its check.
-#   - push to main                     → invalidate every other open PR (flip to
-#                                        pending + dispatch its own evaluate),
-#                                        so a moved base holds auto-merge until
-#                                        each PR re-clears against the new base.
+# Calls the rmartz/merge-safety reusable workflow: `evaluate` posts the
+# `merge-safety` check-run (the coordinator's "must this PR be brought current
+# before merge?" verdict) and, via the push fan-out, `invalidate` flips every open
+# PR's verdict when the base moves. ai-tools consumes it like any other repo now
+# that merge-safety ships from its own repo (extracted from @rmartz/pr-review, #247);
+# the reusable workflow is SHA-pinned with a version comment so Dependabot's
+# github-actions ecosystem keeps it current, and the CLI version it installs tracks
+# the release in lockstep.
 
 on:
   pull_request:
@@ -26,56 +24,12 @@ permissions:
   checks: write # post/flip the merge-safety check-run
   pull-requests: write # reconcile the update-required / merge-conflict labels
   contents: read
-  packages: read # install @rmartz/repo-hygiene from GitHub Packages (setup action)
   actions: write # dispatch per-PR evaluate runs from the push fan-out
-
-concurrency:
-  group: merge-safety-${{ github.event_name == 'push' && 'invalidate' || github.event.pull_request.number || inputs.pr }}
-  cancel-in-progress: false
+  packages: read # the reusable workflow installs @rmartz/merge-safety from GitHub Packages
 
 jobs:
-  evaluate:
-    name: Evaluate one PR
-    # Only `breaking change` among labels affects the verdict (it flips
-    # prIsBreaking), so a labeled/unlabeled event for any other label must not
-    # spin up an evaluate run. Non-label events (opened/synchronize/reopened/
-    # edited/workflow_dispatch) always run; push is handled by `invalidate`. (#229)
-    if: >-
-      github.event_name != 'push' &&
-      (github.event.action != 'labeled' && github.event.action != 'unlabeled'
-       || github.event.label.name == 'breaking change')
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      GH_TOKEN: ${{ github.token }}
-      PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
-    steps:
-      # Build the tool from `main`, never the PR: a gate must apply the trusted,
-      # merged logic — immune to the PR compiling, and never running PR-authored
-      # build scripts under this write-scoped token. The PR is consumed purely as
-      # git data fetched below, so no PR working tree is needed.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: main
-          fetch-depth: 0 # merge-base + diffs need full history
-      - uses: ./.github/actions/setup
-      - run: pnpm build --filter @rmartz/pr-review
-      # Fetch immediately before evaluate so the fetched head matches what
-      # gh pr view returns, minimising the race window to near-zero (CLI startup
-      # + one API call). The dispatched (workflow_dispatch) path checks out main
-      # and would otherwise lack the head entirely.
-      - run: git fetch --quiet origin main "pull/${PR_NUMBER}/head"
-      - run: node packages/pr-review/dist/bin/merge-safety.js evaluate --pr "$PR_NUMBER" --repo "$GITHUB_REPOSITORY"
-
-  invalidate:
-    name: Invalidate open PRs (base moved)
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/setup
-      - run: pnpm build --filter @rmartz/pr-review
-      - run: node packages/pr-review/dist/bin/merge-safety.js invalidate --repo "$GITHUB_REPOSITORY"
+  merge-safety:
+    uses: rmartz/merge-safety/.github/workflows/merge-safety.yml@db145fb8c20164185eb9e1a1c237dc4d9085c69f # v0.1.0
+    with:
+      pr: ${{ inputs.pr }}
+    secrets: inherit

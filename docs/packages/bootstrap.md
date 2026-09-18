@@ -90,11 +90,11 @@ a block spliced into user content.
   once; ongoing conformance lives in the reusable workflow + Dependabot + golden-sync,
   **never a manual `/bootstrap` re-run**. So the policy is chosen per file:
   - A file becomes **`seed`** once it is a **self-updating reference** — a
-    Dependabot-bumpable pin or a reusable-workflow caller (`repo-hygiene.yml`;
-    `merge-safety.yml` once #247 makes it a caller). Dependabot then owns updates,
-    so a `manage` re-sync would fight it over the pin (and clobber a hand-tuned
-    caller). `.github/dependabot.yml` is `seed` for the same "repo then owns it"
-    reason.
+    Dependabot-bumpable pin or a reusable-workflow caller (`repo-hygiene.yml` and
+    `merge-safety.yml` both call their respective `rmartz/*` reusable workflows).
+    Dependabot then owns updates, so a `manage` re-sync would fight it over the pin
+    (and clobber a hand-tuned caller). `.github/dependabot.yml` is `seed` for the
+    same "repo then owns it" reason.
   - A file stays **`manage`** while its **logic is embedded inline**
     (`commit-convention.yml`, `dependabot-auto-merge.yml`) — it has no Dependabot
     channel, so its logic must keep propagating via golden-sync.
@@ -122,25 +122,31 @@ a block spliced into user content.
   both converge to "present iff the gate is satisfied". The **network** read that
   produces the satisfied set is `resolveSatisfiedGateChecks` (below).
 
-- `goldenWorkflowFiles` — seeded with four `manage` workflows and two `seed` files:
+- `goldenWorkflowFiles` — seeded with three `manage` workflows and three `seed` files:
   - `dependabot-auto-merge.yml`: on a green `semver-patch` / `semver-minor`
     Dependabot PR it enables GitHub-native auto-merge (majors stay manual).
     `dependabot/fetch-metadata` is pinned to a full commit SHA + `major.minor.patch`
     comment per the Actions-pinning convention; Dependabot's `github-actions`
     ecosystem keeps the SHA fresh. It declares the `gateChecks` its native
     auto-merge depends on (here `merge-safety`).
-  - `merge-safety.yml`: posts the advisory `merge-safety` check (the coordinator's
-    "must this PR be brought current before merge?" verdict). This is the
-    **consumer shape** — it `npm install -g`s the published `@rmartz/pr-review` CLI
-    (a **public** GitHub Packages package, read with the repo's own `GITHUB_TOKEN`
-    — no grant or PAT) and runs `ai-merge-safety`, rather than building from source
-    the way ai-tools' own in-repo copy does. Generic across repos: the base branch
-    comes from the PR (falling back to the repo default) on the evaluate path;
-    `push` fires on `main`. Seeding it makes the check **run**; making it a
-    **required gate** is the separate per-repo curation step (it is `gateChecks: []`
-    — it _provides_ the check the auto-merge file depends on, it doesn't consume
-    one). Its `update required` / `merge conflict` labels are seeded by the label
-    roster above.
+  - `merge-safety.yml` (**`seed`**): a thin **caller** of the SHA-pinned
+    `rmartz/merge-safety` reusable workflow
+    (`uses: rmartz/merge-safety/.github/workflows/merge-safety.yml@<sha> # vX.Y.Z`),
+    which posts the advisory `merge-safety` check (the coordinator's "must this PR
+    be brought current before merge?" verdict) and, via the push fan-out,
+    invalidates open PRs when the base moves. merge-safety now ships from its own
+    repo (extracted from `@rmartz/pr-review`, #247); Dependabot's `github-actions`
+    ecosystem bumps the pin — and the CLI version the reusable workflow installs,
+    which tracks the release in lockstep. The caller carries the triggers
+    (`pull_request` / `push` / `workflow_dispatch`) and the write scopes
+    (`checks` / `pull-requests` / `actions`), threads the dispatch `pr` via `with:`,
+    and `secrets: inherit`; the reusable side is `on: workflow_call` and owns the
+    evaluate-vs-invalidate branch + the label-narrowing. Seeding it makes the check
+    **run**; making it a **required gate** is the separate per-repo curation step
+    (it is `gateChecks: []` — it _provides_ the check the auto-merge file depends
+    on, it doesn't consume one). It is **`seed`** for the same self-updating-reference
+    reason as `repo-hygiene.yml`. Its `update required` / `merge conflict` labels
+    are seeded by the label roster above.
   - `.github/dependabot.yml` (**`seed`**): a starting Dependabot config — the
     `github-actions` ecosystem (the minimum every repo wants; it keeps pinned
     action SHAs, including the auto-merge workflow's `fetch-metadata`, fresh) plus

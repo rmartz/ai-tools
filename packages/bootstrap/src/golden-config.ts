@@ -142,9 +142,12 @@ export interface GoldenWorkflowFile {
  *   — the gate the auto-merge verifier confirms before the file may be seeded (an
  *   ungated `gh pr merge --auto` merges *immediately*, so it must never land
  *   without the gate).
- * - `merge-safety.yml` (`manage`) — posts the advisory `merge-safety` check
- *   (consumer shape, installs `@rmartz/pr-review`). No `gateChecks` of its own: it
- *   *provides* the check the auto-merge file depends on rather than consuming one.
+ * - `merge-safety.yml` (**`seed`**) — a thin caller of the SHA-pinned
+ *   `rmartz/merge-safety` reusable workflow (Dependabot bumps the pin, and the CLI
+ *   version it installs, in lockstep). `seed` for the same self-updating-reference
+ *   reason as `repo-hygiene.yml` (see the seed-vs-manage principle below). No
+ *   `gateChecks` of its own: it *provides* the `merge-safety` check the auto-merge
+ *   file depends on rather than consuming one.
  * - `.github/dependabot.yml` (`seed`) — a starting Dependabot config the repo then
  *   owns; bootstrap writes it only if absent and never overwrites local edits.
  * - `repo-hygiene.yml` (**`seed`**) — a thin caller of the SHA-pinned
@@ -171,6 +174,7 @@ export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
     filename: '.github/workflows/merge-safety.yml',
     content: MERGE_SAFETY,
     gateChecks: [],
+    policy: 'seed',
   },
   {
     filename: '.github/dependabot.yml',
