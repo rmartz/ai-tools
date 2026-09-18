@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   bot-automerge:
-    uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@53d53a17fce13eba215ef50f483cdca626512bfe # v0.1.0
+    uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@139f4ce609c2dfe65f1e090c00f17204bfce1b3e # v0.1.1
     secrets: inherit
 `;
 
