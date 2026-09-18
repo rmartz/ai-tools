@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { renderManagedWorkflow } from '../src/ensure-workflow-files.js';
 
 // Pure fs — still deny network by mocking the runtime to a hard failure, proving
 // ensure-project-config never shells out.
@@ -106,6 +107,7 @@ describe('ensureProjectConfig', () => {
     const res = ensureProjectConfig(dir, {
       files: [{ filename: '.customignore', entries: ['foo/'] }],
       retired: [],
+      retiredWorkflows: [],
       workflows: [],
     });
     expect(res.outcomes).toEqual([{ filename: '.customignore', action: 'created' }]);
@@ -123,22 +125,22 @@ describe('ensureProjectConfig', () => {
     expect(mergeSafety?.action).toBe('created');
   });
 
-  it('withholds the gated auto-merge workflow by default — never seeds it ungated (#239)', () => {
+  it('withholds the gated bot-automerge workflow by default — never seeds it ungated (#239)', () => {
     const res = ensureProjectConfig(dir);
     const autoMerge = res.outcomes.find(
-      (o) => o.filename === '.github/workflows/dependabot-auto-merge.yml',
+      (o) => o.filename === '.github/workflows/bot-automerge.yml',
     );
     expect(autoMerge?.action).toBe('withheld');
-    expect(existsSync(join(dir, '.github/workflows/dependabot-auto-merge.yml'))).toBe(false);
+    expect(existsSync(join(dir, '.github/workflows/bot-automerge.yml'))).toBe(false);
   });
 
-  it('seeds the auto-merge workflow when its gate is passed as satisfied', () => {
+  it('seeds the bot-automerge workflow when its gate is passed as satisfied', () => {
     const res = ensureProjectConfig(dir, { satisfiedGateChecks: ['merge-safety'] });
     const autoMerge = res.outcomes.find(
-      (o) => o.filename === '.github/workflows/dependabot-auto-merge.yml',
+      (o) => o.filename === '.github/workflows/bot-automerge.yml',
     );
     expect(autoMerge?.action).toBe('created');
-    expect(existsSync(join(dir, '.github/workflows/dependabot-auto-merge.yml'))).toBe(true);
+    expect(existsSync(join(dir, '.github/workflows/bot-automerge.yml'))).toBe(true);
   });
 });
 
@@ -180,5 +182,37 @@ describe('ensureProjectConfig — retiring `.eslintignore`', () => {
     const res = ensureProjectConfig(dir, { retired: retire });
     expect(res.outcomes.find((o) => o.filename === '.eslintignore')?.action).toBe('unchanged');
     expect(existsSync(join(dir, '.eslintignore'))).toBe(false);
+  });
+});
+
+// #264 — ensureProjectConfig retires the old inline dependabot-auto-merge.yml
+// (renamed to the bot-automerge.yml reusable-workflow caller) via the default
+// retiredWorkflowFiles, so an already-bootstrapped repo does not run two auto-merge
+// workflows. A user-authored file at that path is left untouched.
+describe('ensureProjectConfig — retiring the old dependabot-auto-merge.yml (#264)', () => {
+  const oldFile = '.github/workflows/dependabot-auto-merge.yml';
+
+  it('removes a bootstrap-managed copy of the old auto-merge workflow', () => {
+    mkdirSync(join(dir, '.github/workflows'), { recursive: true });
+    writeFileSync(
+      join(dir, oldFile),
+      renderManagedWorkflow({
+        filename: oldFile,
+        content: 'name: Old Auto-merge\non: pull_request_target\n',
+        gateChecks: [],
+      }),
+    );
+    const res = ensureProjectConfig(dir);
+    expect(res.outcomes.find((o) => o.filename === oldFile)?.action).toBe('removed');
+    expect(existsSync(join(dir, oldFile))).toBe(false);
+  });
+
+  it('leaves a user-authored dependabot-auto-merge.yml untouched', () => {
+    mkdirSync(join(dir, '.github/workflows'), { recursive: true });
+    const userContent = 'name: My Own Auto-merge\non: pull_request_target\n';
+    writeFileSync(join(dir, oldFile), userContent);
+    const res = ensureProjectConfig(dir);
+    expect(res.outcomes.find((o) => o.filename === oldFile)?.action).toBe('skipped');
+    expect(read(oldFile)).toBe(userContent);
   });
 });

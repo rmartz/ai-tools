@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import {
   goldenWorkflowFiles,
@@ -28,7 +28,8 @@ import {
  * caller did not check the gate", and deleting on that would be wrong.
  */
 
-export type WorkflowAction = 'created' | 'updated' | 'unchanged' | 'skipped' | 'withheld';
+export type WorkflowAction =
+  'created' | 'updated' | 'unchanged' | 'skipped' | 'withheld' | 'removed';
 
 export interface WorkflowOutcome {
   filename: string;
@@ -44,6 +45,26 @@ export function renderManagedWorkflow(file: GoldenWorkflowFile): string {
 /** A file we previously wrote carries the managed marker; anything else is user-authored. */
 function isBootstrapManaged(text: string): boolean {
   return text.includes(WORKFLOW_MANAGED_MARKER);
+}
+
+/**
+ * Retire a golden workflow file we no longer distribute: delete the copy *we* wrote
+ * (it carries {@link WORKFLOW_MANAGED_MARKER}) so a stale duplicate is not left
+ * running, and never touch a user-authored file at the same path (no marker → left
+ * intact). The whole-file analogue of `ensure-project-config`'s `retireFile` for
+ * managed-block ignore files. Absent file → `unchanged`. Used to sweep up
+ * `dependabot-auto-merge.yml` after #264 renamed the golden auto-merge file to
+ * `bot-automerge.yml`, so an already-bootstrapped repo does not run two auto-merge
+ * workflows.
+ */
+export function retireWorkflowFile(root: string, filename: string): WorkflowOutcome {
+  const path = join(root, filename);
+  if (!existsSync(path)) return { filename, action: 'unchanged' };
+  const current = readFileSync(path, 'utf8');
+  // Only remove a file we manage; a user-authored file (no marker) is left alone.
+  if (!isBootstrapManaged(current)) return { filename, action: 'skipped' };
+  rmSync(path);
+  return { filename, action: 'removed' };
 }
 
 /** True when every gate check a workflow declares is in the satisfied set. */
