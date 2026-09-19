@@ -1,0 +1,35 @@
+name: bot-automerge
+
+# Enables GitHub-native auto-merge for trustworthy bot PRs by calling the
+# rmartz/bot-automerge reusable workflow (SHA-pinned, Dependabot-bumped). Two
+# consumers in this repo:
+#   - release-please release PRs → hands-off continuous delivery (#236): the
+#     release PR auto-merges once its required checks are green. Crucially,
+#     bot-automerge (>= v0.1.1) enables that merge via RELEASE_PLEASE_PAT, not
+#     GITHUB_TOKEN — so the merge push RE-TRIGGERS release.yml (`on: push`) and its
+#     publish/tag job runs. A GITHUB_TOKEN-attributed merge is github-actions[bot],
+#     and GITHUB_TOKEN pushes do NOT trigger workflows, so nothing would publish
+#     (the gap that was rmartz/bot-automerge#8).
+#   - green Dependabot patch/minor bumps → auto-merge (majors stay manual).
+#
+# `secrets: inherit` passes RELEASE_PLEASE_PAT through to the reusable workflow;
+# absent that secret the release-PR path falls back to github.token (auto-merge
+# still enabled, but the publish re-trigger would not fire). Native auto-merge
+# waits on the branch ruleset's required checks (Test / Format / Typecheck /
+# Build), so it never merges ahead of CI. `pull_request_target` (not
+# `pull_request`) is required so Dependabot's read-only-token PRs get base-context
+# write. The reusable workflow derives the PR from the event context, so no `with:`.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: read
+
+jobs:
+  bot-automerge:
+    uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@139f4ce609c2dfe65f1e090c00f17204bfce1b3e # v0.1.1
+    secrets: inherit
