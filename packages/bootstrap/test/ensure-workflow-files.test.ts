@@ -290,11 +290,11 @@ describe('goldenWorkflowFiles — the seeded Dependabot config', () => {
   });
 });
 
-// #251 — the seeded repo-hygiene CI is a thin caller of the rmartz/repo-hygiene
-// reusable workflow (SHA-pinned, Dependabot-bumped), seeded once and thereafter
-// repo-owned (`seed`), so bootstrap re-seed / golden-sync never fights Dependabot
-// over the pin.
-describe('goldenWorkflowFiles — the seeded repo-hygiene reusable-workflow caller', () => {
+// #278 — the seeded repo-hygiene CI is a thin consumer of the rmartz/repo-hygiene-action
+// COMPOSITE ACTION (a step-level `- uses:` after actions/checkout), SHA-pinned +
+// Dependabot-bumped, seeded once and thereafter repo-owned (`seed`). Replaces the
+// earlier rmartz/repo-hygiene reusable-workflow caller (#251).
+describe('goldenWorkflowFiles — the seeded repo-hygiene composite-action consumer', () => {
   const repoHygiene = goldenWorkflowFiles.find(
     (w) => w.filename === '.github/workflows/repo-hygiene.yml',
   );
@@ -305,18 +305,26 @@ describe('goldenWorkflowFiles — the seeded repo-hygiene reusable-workflow call
     expect(repoHygiene?.gateChecks).toEqual([]);
   });
 
-  it('calls the rmartz/repo-hygiene reusable workflow, SHA-pinned with a version comment', () => {
+  it('uses the rmartz/repo-hygiene-action composite action, SHA-pinned with a version comment', () => {
     expect(repoHygiene?.content).toMatch(
-      /uses: rmartz\/repo-hygiene\/\.github\/workflows\/hygiene\.yml@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
+      /- uses: rmartz\/repo-hygiene-action@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
     );
   });
 
-  it('grants packages: read so the reusable workflow can install from GitHub Packages', () => {
+  it('checks out the tree before the action step (the action scans the workspace, not history)', () => {
+    const content = repoHygiene?.content ?? '';
+    expect(content).toMatch(/- uses: actions\/checkout@[0-9a-f]{40} # v\d+\.\d+\.\d+/);
+    // Tree-based checks — a plain shallow checkout, never fetch-depth: 0.
+    expect(content).not.toContain('fetch-depth: 0');
+  });
+
+  it('grants packages: read so the action can install the CLI from GitHub Packages', () => {
     expect(repoHygiene?.content).toContain('packages: read');
   });
 
-  it('drops the hand-rolled CLI install and the bare env version pin', () => {
+  it('is no longer a reusable-workflow caller and carries no hand-rolled CLI install', () => {
     const content = repoHygiene?.content ?? '';
+    expect(content).not.toContain('rmartz/repo-hygiene/.github/workflows/hygiene.yml');
     expect(content).not.toContain('npm install -g');
     expect(content).not.toContain('REPO_HYGIENE_VERSION');
   });
