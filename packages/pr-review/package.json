@@ -8,9 +8,6 @@
       "import": "./dist/index.js"
     }
   },
-  "bin": {
-    "ai-merge-safety": "./dist/bin/merge-safety.js"
-  },
   "files": [
     "dist"
   ],
@@ -27,7 +24,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@rmartz/agent-runtime": "workspace:^",
     "@rmartz/github": "workspace:^"
   },
   "devDependencies": {

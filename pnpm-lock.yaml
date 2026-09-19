@@ -107,9 +107,6 @@ importers:
 
   packages/pr-review:
     dependencies:
-      '@rmartz/agent-runtime':
-        specifier: workspace:^
-        version: link:../agent-runtime
       '@rmartz/github':
         specifier: workspace:^
         version: link:../github
