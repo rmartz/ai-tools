@@ -13,9 +13,11 @@ Releases are **automated with [release-please](https://github.com/googleapis/rel
 
 1. You merge normal `feat` / `fix` / `feat!` PRs (Conventional-Commit titles, already enforced).
 2. On each push to `main`, the **Release** workflow (`.github/workflows/release.yml`) runs `release-please`, which maintains a single aggregated **release PR** (`chore(main): release …`). It bumps each changed package's `version` in `package.json` and appends to its `CHANGELOG.md`, derived from the commits that touched that package's path.
-3. When you (or the coordinator) merge the release PR, release-please creates the GitHub releases + tags, and the workflow's `publish` job builds and runs `pnpm -r publish` — which skips versions already on the registry, so only the bumped packages publish to GitHub Packages.
+3. The release PR **auto-merges once its required checks are green** — no human click (#236). `.github/workflows/bot-automerge.yml` calls the `rmartz/bot-automerge` reusable workflow, which recognizes the release PR and enables GitHub-native auto-merge on it. Merging re-fires `release.yml` (`on: push`): release-please creates the GitHub releases + tags, and the workflow's `publish` job builds and runs `pnpm -r publish` — which skips versions already on the registry, so only the bumped packages publish to GitHub Packages.
 
 Installed CLIs then pick the new versions up via `install:clis` / the SessionStart hook (see [`install-clis`](install-clis.md)).
+
+So the steady state is **continuous delivery**: merging a `feat`/`fix` PR eventually publishes with no manual release step. release-please still _aggregates_, so a burst of merges may batch into one release PR rather than one version per merge.
 
 ## Config
 
@@ -29,4 +31,5 @@ Per package, from the Conventional-Commit type of the commits touching its files
 ## Notes
 
 - **CI on the release PR**: GitHub's built-in token can't trigger workflows on the PRs it creates, so by default the mechanical release PR carries no CI. Add a `RELEASE_PLEASE_PAT` repo secret — a fine-grained PAT with **Contents: write** + **Pull requests: write** on this repo (or a classic PAT with the `repo` scope) — and the workflow uses it (`secrets.RELEASE_PLEASE_PAT || github.token`) so CI runs on the release PR. It needs neither `workflow` scope (release-please never edits `.github/workflows/`) nor `packages` (publishing uses the built-in `GITHUB_TOKEN`).
+- **Why the release-PR auto-merge uses the PAT**: merging the release PR is what re-triggers `release.yml` (`on: push` to `main`), whose `publish` job ships the packages. A merge enabled/performed via `GITHUB_TOKEN` is attributed to `github-actions[bot]`, and `GITHUB_TOKEN` pushes do **not** trigger workflows — so `release.yml` would never re-fire and nothing would publish. `bot-automerge` (>= v0.1.1) therefore enables the release-PR merge via the inherited `RELEASE_PLEASE_PAT` (the same secret above), falling back to `github.token`. This is why `bot-automerge.yml` passes `secrets: inherit`. So the one `RELEASE_PLEASE_PAT` secret does double duty: CI on the release PR **and** the publish-triggering auto-merge.
 - **Manual path retired**: the old `v*`-tag-triggered publish is replaced; don't hand-tag releases.
