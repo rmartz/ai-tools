@@ -112,17 +112,22 @@ updates:
         dependency-type: production
 `;
 
-// Generic repo-hygiene CI, consumer shape — a thin CALLER of the
-// rmartz/repo-hygiene reusable workflow rather than a hand-rolled CLI install.
-// The reusable workflow is SHA-pinned with a version comment, so Dependabot's
-// github-actions ecosystem bumps the pin (and the CLI version it installs, which
-// tracks the release in lockstep) via reviewable PRs — updates, including
-// newly-added universally-safe checks, propagate with no per-repo YAML edit and
-// no bootstrap re-manage. Passing no `checks:` input runs the package's
-// registry-derived default-on set (the universally-safe checks); a repo opts into
-// repo-specific checks (e.g. `okf`, `docs-links`) by adding a `checks:` input to
-// its own copy. `push` fires on `main`; permissions live on the job so they reach
-// the reusable workflow (effective perms = caller ∩ workflow-declared).
+// Generic repo-hygiene CI, consumer shape — a thin consumer of the
+// rmartz/repo-hygiene-action COMPOSITE ACTION (a step-level `- uses:`), replacing
+// the earlier reusable-workflow caller (#278). SHA-pinned with a version comment,
+// so Dependabot's github-actions ecosystem bumps the pin (and the CLI version the
+// action ships in its own lockfile, in lockstep) via reviewable PRs — updates,
+// including newly-added universally-safe checks, propagate with no per-repo YAML
+// edit and no bootstrap re-manage. The job MUST run `actions/checkout` before the
+// action step — the action scans `$GITHUB_WORKSPACE` and never checks out itself —
+// and a *plain shallow* checkout suffices: the checks are tree-based, so no
+// `fetch-depth: 0` (unlike merge-safety). Passing no `checks:` input runs the
+// package's registry-derived default-on set (the universally-safe checks); a repo
+// opts into repo-specific checks (e.g. `okf`, `docs-links`) and points `config:` at
+// its `.repo-hygiene.yml` by adding those inputs to its own copy. Only
+// `packages: read` is needed at runtime — the action reads the public
+// @rmartz/repo-hygiene from GitHub Packages via the default `github.token`, so no
+// Dependabot PAT (that is only for repos holding @rmartz/* as an npm dep).
 export const REPO_HYGIENE = `name: repo-hygiene
 
 on:
@@ -132,10 +137,13 @@ on:
 
 jobs:
   hygiene:
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: read
-    uses: rmartz/repo-hygiene/.github/workflows/hygiene.yml@f1dcbeb51e68dec2f2064aca4620bd052d455a8f # v1.0.1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: rmartz/repo-hygiene-action@66118369122afacf29241703137f60cbfa0315f0 # v1.0.0
 `;
 
 // Post-merge conventional-commit tripwire. A `push: [main]` alert (it can't gate

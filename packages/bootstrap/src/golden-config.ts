@@ -136,11 +136,11 @@ export interface GoldenWorkflowFile {
    *   edits on every bootstrap would be wrong.
    *
    * **The per-file rule (the seed-vs-manage principle):** a file is `seed` once it
-   * is a **self-updating reference** — a Dependabot-bumpable pin or a
-   * reusable-workflow caller (`repo-hygiene.yml`; `bot-automerge.yml` (#264);
-   * `merge-safety.yml` once #247 makes it a caller). Dependabot then owns updates,
-   * so a `manage` re-sync would fight it over the pin. A file whose **logic is
-   * embedded inline** (`commit-convention.yml`) stays `manage` — it has no
+   * is a **self-updating reference** — a Dependabot-bumpable pin, whether a
+   * reusable-workflow caller (`bot-automerge.yml` (#264); `merge-safety.yml` (#247))
+   * or a composite-action consumer (`repo-hygiene.yml` (#278)). Dependabot then owns
+   * updates, so a `manage` re-sync would fight it over the pin. A file whose **logic
+   * is embedded inline** (`commit-convention.yml`) stays `manage` — it has no
    * Dependabot channel, so its logic must keep propagating via golden-sync
    * (#233). golden-sync composes with `seed`: being write-if-absent, it never
    * clobbers an existing (bumped / hand-tuned) reference, yet still propagates
@@ -173,12 +173,14 @@ export interface GoldenWorkflowFile {
  *   file depends on rather than consuming one.
  * - `.github/dependabot.yml` (`seed`) — a starting Dependabot config the repo then
  *   owns; bootstrap writes it only if absent and never overwrites local edits.
- * - `repo-hygiene.yml` (**`seed`**) — a thin caller of the SHA-pinned
- *   `rmartz/repo-hygiene` reusable workflow (Dependabot bumps the pin, and the CLI
- *   version it installs, in lockstep). `seed` (write-if-absent) because it is now a
- *   self-updating reference: bootstrap seeds it once and Dependabot owns the pin
- *   thereafter, so a re-seed / golden-sync run never reverts a bumped or hand-tuned
- *   caller. Advisory; `gateChecks: []`. (See the seed-vs-manage principle below.)
+ * - `repo-hygiene.yml` (**`seed`**) — a thin consumer of the SHA-pinned
+ *   `rmartz/repo-hygiene-action` **composite action** (#278; a job that
+ *   `actions/checkout`s then `- uses:` the action), replacing the earlier
+ *   `rmartz/repo-hygiene` reusable-workflow caller. Dependabot bumps the pin (and the
+ *   CLI version the action ships in its lockfile, in lockstep). `seed` (write-if-absent)
+ *   because it is a self-updating reference: bootstrap seeds it once and Dependabot
+ *   owns the pin thereafter, so a re-seed / golden-sync run never reverts a bumped or
+ *   hand-tuned copy. Advisory; `gateChecks: []`. (See the seed-vs-manage principle below.)
  * - `commit-convention.yml` (`manage`) — post-merge `push: [main]` tripwire that
  *   fails when a non-conventional subject reaches the default branch. Alerts (the
  *   commit is already merged), so `gateChecks: []`.

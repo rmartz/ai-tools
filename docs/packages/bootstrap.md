@@ -101,11 +101,12 @@ a block spliced into user content.
   once; ongoing conformance lives in the reusable workflow + Dependabot + golden-sync,
   **never a manual `/bootstrap` re-run**. So the policy is chosen per file:
   - A file becomes **`seed`** once it is a **self-updating reference** — a
-    Dependabot-bumpable pin or a reusable-workflow caller (`repo-hygiene.yml` and
-    `merge-safety.yml` both call their respective `rmartz/*` reusable workflows).
-    Dependabot then owns updates, so a `manage` re-sync would fight it over the pin
-    (and clobber a hand-tuned caller). `.github/dependabot.yml` is `seed` for the
-    same "repo then owns it" reason.
+    Dependabot-bumpable pin, whether a reusable-workflow caller (`bot-automerge.yml`
+    and `merge-safety.yml` call their respective `rmartz/*` reusable workflows) or a
+    composite-action consumer (`repo-hygiene.yml` `- uses:` the
+    `rmartz/repo-hygiene-action` composite action). Dependabot then owns updates, so
+    a `manage` re-sync would fight it over the pin (and clobber a hand-tuned copy).
+    `.github/dependabot.yml` is `seed` for the same "repo then owns it" reason.
   - A file stays **`manage`** while its **logic is embedded inline**
     (`commit-convention.yml`) — it has no Dependabot channel, so its logic must keep
     propagating via golden-sync.
@@ -174,20 +175,26 @@ a block spliced into user content.
     action SHAs, including the `bot-automerge` caller's reusable-workflow pin, fresh)
     plus the `npm` ecosystem (the ideal for the JS repos this toolkit targets), both
     grouped. Written only if absent; a repo then owns and tailors it.
-  - `repo-hygiene.yml` (**`seed`**): a thin **caller** of the SHA-pinned
-    `rmartz/repo-hygiene` reusable workflow
-    (`uses: rmartz/repo-hygiene/.github/workflows/hygiene.yml@<sha> # vX.Y.Z`),
-    replacing the old hand-rolled `npm install -g @rmartz/repo-hygiene@<env-pin>` +
-    `action-pins` run. Dependabot's `github-actions` ecosystem bumps the pin — and
-    the CLI version the reusable workflow installs, which tracks the release in
-    lockstep — via reviewable PRs, so updates (including newly-added
-    universally-safe checks) propagate with **no per-repo YAML edit**. Passing no
-    `checks:` input runs the package's registry-derived **default-on** set (the
-    universally-safe checks); a repo opts into repo-specific checks (`okf`,
-    `docs-links`) by adding a `checks:` input to its own copy. It is **`seed`**, not
-    `manage`, precisely because it is now a self-updating reference: bootstrap
-    writes it once and Dependabot owns the pin thereafter, so a re-seed / golden-sync
-    run never reverts a bumped or hand-tuned caller. Advisory; `gateChecks: []`.
+  - `repo-hygiene.yml` (**`seed`**): a thin consumer of the SHA-pinned
+    `rmartz/repo-hygiene-action` **composite action** (#278) — a `hygiene` job that
+    `actions/checkout`s then `- uses: rmartz/repo-hygiene-action@<sha> # vX.Y.Z`,
+    replacing the earlier `rmartz/repo-hygiene` reusable-workflow caller (which in
+    turn replaced the hand-rolled `npm install -g @rmartz/repo-hygiene@<env-pin>` +
+    `action-pins` run). The checkout must precede the action step — the action scans
+    `$GITHUB_WORKSPACE` and never checks out itself — and a **plain shallow** checkout
+    is enough: the checks are tree-based, so no `fetch-depth: 0`. Dependabot's
+    `github-actions` ecosystem bumps the pin — and the CLI version the action ships
+    in its lockfile, in lockstep — via reviewable PRs, so updates (including
+    newly-added universally-safe checks) propagate with **no per-repo YAML edit**.
+    Passing no `checks:` input runs the package's registry-derived **default-on** set
+    (the universally-safe checks); a repo opts into repo-specific checks (`okf`,
+    `docs-links`) and points `config:` at its `.repo-hygiene.yml` by adding those
+    inputs to its own copy. Only `packages: read` is needed at runtime (the action
+    reads the public `@rmartz/repo-hygiene` from GitHub Packages via the default
+    `github.token`) — no Dependabot PAT. It is **`seed`**, not `manage`, because it
+    is a self-updating reference: bootstrap writes it once and Dependabot owns the pin
+    thereafter, so a re-seed / golden-sync run never reverts a bumped or hand-tuned
+    copy. Advisory; `gateChecks: []`.
   - `commit-convention.yml` (**`manage`**): the **post-merge conventional-commit
     tripwire** — a `push: [main]` job that fails when a subject reaches the default
     branch without a valid conventional-commit prefix. It is the counterpart of
