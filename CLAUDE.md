@@ -53,13 +53,18 @@ library so PR Shepherd and the harness share one implementation.
 
 - Favor type inference; explicit type parameterization is a smell.
 - **Pin every dependency to a full `[major].[minor].[patch]` version** in each
-  `package.json`. Keep the range operator (`^` / `~`) — pin the _base_, e.g.
-  `^3.8.3`, never an abbreviated `^3` or `^3.8`. A bare-major (or major-minor) pin
-  lets Dependabot upgrade the dependency through a `pnpm-lock.yaml`-only change
-  with **no `package.json` diff**, hiding the bump from review — the canonical
-  failure is a minor `prettier` bump that silently reformats the tree and only
-  surfaces as a red CI run. The full base makes every upgrade an explicit,
-  reviewable `package.json` change. (CI enforcement is tracked in #63.)
+  `package.json` — never an abbreviated `^3` or `^3.8`. **A published library keeps
+  the range operator** (pin the base, `^3.8.3` / `~3.8.3`) so consumers dedupe; **a
+  deployed app pins _exact_** (`3.8.3`). This monorepo publishes libraries, so keep
+  the caret base here. A bare-major (or major-minor) pin lets Dependabot upgrade the
+  dependency through a `pnpm-lock.yaml`-only change with **no `package.json` diff**,
+  hiding the bump from review — the canonical failure is a minor `prettier` bump that
+  silently reformats the tree and only surfaces as a red CI run. The full base makes
+  every upgrade an explicit, reviewable `package.json` change; on an **app**, an
+  exact pin goes further — each within-range bump becomes its own reviewed, CI'd
+  Dependabot PR (the per-patch churn now absorbed by bot-automerge) instead of
+  slipping in via an unrelated PR's lockfile regen. (CI enforcement is tracked in
+  #63.)
 - **Pin every GitHub Action to a full commit SHA** with a **full `major.minor.patch`**
   version comment (`uses: owner/repo@<40-char-sha> # v7.0.0`), never a mutable tag —
   a tag can be force-moved by a compromised upstream to run code with our token. The
