@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.11.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.10.0...bootstrap-v0.11.0) (2026-09-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* **bootstrap:** migrate golden repo-hygiene.yml to the rmartz/repo-hygiene-action composite action ([#279](https://github.com/rmartz/ai-tools/issues/279))
+
+### Features
+
+* **bootstrap:** migrate golden repo-hygiene.yml to the rmartz/repo-hygiene-action composite action ([#279](https://github.com/rmartz/ai-tools/issues/279)) ([5fdb124](https://github.com/rmartz/ai-tools/commit/5fdb1240b3724c350e6b94c5cb0ec02487163db8))
+
 ## [0.10.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.9.0...bootstrap-v0.10.0) (2026-09-19)
 
 
