@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.0](https://github.com/rmartz/ai-tools/compare/pr-review-v0.6.0...pr-review-v0.7.0) (2026-09-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* **merge-safety:** consume rmartz/merge-safety reusable workflow, retire the in-repo copy ([#268](https://github.com/rmartz/ai-tools/issues/268))
+
+### Features
+
+* **merge-safety:** consume rmartz/merge-safety reusable workflow, retire the in-repo copy ([#268](https://github.com/rmartz/ai-tools/issues/268)) ([8b35f65](https://github.com/rmartz/ai-tools/commit/8b35f6536eaf9cb9149d4662e78f1dd37b49328c))
+
 ## [0.6.0](https://github.com/rmartz/ai-tools/compare/pr-review-v0.5.0...pr-review-v0.6.0) (2026-09-15)
 
 
