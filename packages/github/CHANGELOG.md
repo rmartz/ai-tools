@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/rmartz/ai-tools/compare/github-v0.4.2...github-v0.5.0) (2026-09-21)
+
+
+### Features
+
+* **github:** stamp agent origin repo onto agent-created PRs and issues ([#284](https://github.com/rmartz/ai-tools/issues/284)) ([0a1e954](https://github.com/rmartz/ai-tools/commit/0a1e9541f19058332b949ac07dcb3bf05a7205b0))
+
 ## [0.4.2](https://github.com/rmartz/ai-tools/compare/github-v0.4.1...github-v0.4.2) (2026-09-15)
 
 
