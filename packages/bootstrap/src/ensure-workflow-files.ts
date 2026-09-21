@@ -1,70 +1,34 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import {
-  goldenWorkflowFiles,
-  WORKFLOW_MANAGED_HEADER,
-  WORKFLOW_MANAGED_MARKER,
-  type GoldenWorkflowFile,
-} from './golden-config.js';
+import { goldenWorkflowFiles, type GoldenWorkflowFile } from './golden-config.js';
 
 /**
- * Whole managed-file half of `ensure-project-config`, for GitHub Actions workflow
- * files that are identical across every repo. Distinct from the block-splice
- * strategy in `ensure-project-config.ts`: a workflow is not user content with a
- * managed region inside it, it *is* the managed artifact — so the semantics are
- * write-if-absent / overwrite-if-drifted, guarded by a managed header so a
- * user-authored file at the same path is never clobbered.
+ * Whole-file half of `ensure-project-config`, for GitHub Actions workflow files that
+ * are identical across every repo. Distinct from the block-splice strategy in
+ * `ensure-project-config.ts`: a workflow is not user content with a managed region
+ * inside it, it *is* the whole artifact — so the semantics are **write-if-absent**
+ * and nothing more. Bootstrap seeds a new repo once and the repo owns the file
+ * thereafter; an existing file is never overwritten, whoever authored it. Keeping an
+ * *existing* repo's workflows current is the repository checklist's job (audit +
+ * self-manage), not bootstrap's — bootstrap is a new-repo initializer, not an
+ * ongoing manager.
  *
- * Like its sibling, this is pure fs — no subprocess, no network. It stays
- * hermetic even while enforcing the auto-merge gate: it does not *check* the gate
- * (that network read lives in `verify-automerge-gate.ts` / `gate-satisfaction.ts`)
- * — it receives the already-resolved `satisfiedGateChecks` set as data and
- * **withholds** the creation of a workflow whose declared `gateChecks` are not in
- * it. This closes the hazard that a `gh pr merge --auto` workflow seeded with no
- * required checks auto-merges every green bump immediately (#239): the default
+ * Like its sibling, this is pure fs — no subprocess, no network. It stays hermetic
+ * even while enforcing the auto-merge gate: it does not *check* the gate (that
+ * network read lives in `verify-automerge-gate.ts` / `gate-satisfaction.ts`) — it
+ * receives the already-resolved `satisfiedGateChecks` set as data and **withholds**
+ * the creation of a workflow whose declared `gateChecks` are not in it. This closes
+ * the hazard that a `gh pr merge --auto` workflow seeded with no required checks
+ * auto-merges every green bump immediately (#239): the default
  * (`satisfiedGateChecks: []`) withholds the gated auto-merge workflow, so even a
- * direct writer call never lands it ungated. Withholding blocks **creation only**
- * — an existing file is managed normally, since an empty set may just mean "the
- * caller did not check the gate", and deleting on that would be wrong.
+ * direct writer call never lands it ungated.
  */
 
-export type WorkflowAction =
-  'created' | 'updated' | 'unchanged' | 'skipped' | 'withheld' | 'removed';
+export type WorkflowAction = 'created' | 'unchanged' | 'withheld';
 
 export interface WorkflowOutcome {
   filename: string;
   action: WorkflowAction;
-}
-
-/** Full golden text of a managed workflow file: the managed header plus its body. */
-export function renderManagedWorkflow(file: GoldenWorkflowFile): string {
-  const body = file.content.endsWith('\n') ? file.content : `${file.content}\n`;
-  return `${WORKFLOW_MANAGED_HEADER}\n\n${body}`;
-}
-
-/** A file we previously wrote carries the managed marker; anything else is user-authored. */
-function isBootstrapManaged(text: string): boolean {
-  return text.includes(WORKFLOW_MANAGED_MARKER);
-}
-
-/**
- * Retire a golden workflow file we no longer distribute: delete the copy *we* wrote
- * (it carries {@link WORKFLOW_MANAGED_MARKER}) so a stale duplicate is not left
- * running, and never touch a user-authored file at the same path (no marker → left
- * intact). The whole-file analogue of `ensure-project-config`'s `retireFile` for
- * managed-block ignore files. Absent file → `unchanged`. Used to sweep up
- * `dependabot-auto-merge.yml` after #264 renamed the golden auto-merge file to
- * `bot-automerge.yml`, so an already-bootstrapped repo does not run two auto-merge
- * workflows.
- */
-export function retireWorkflowFile(root: string, filename: string): WorkflowOutcome {
-  const path = join(root, filename);
-  if (!existsSync(path)) return { filename, action: 'unchanged' };
-  const current = readFileSync(path, 'utf8');
-  // Only remove a file we manage; a user-authored file (no marker) is left alone.
-  if (!isBootstrapManaged(current)) return { filename, action: 'skipped' };
-  rmSync(path);
-  return { filename, action: 'removed' };
 }
 
 /** True when every gate check a workflow declares is in the satisfied set. */
@@ -72,7 +36,7 @@ function gateSatisfied(file: GoldenWorkflowFile, satisfiedGateChecks: readonly s
   return file.gateChecks.every((c) => satisfiedGateChecks.includes(c));
 }
 
-/** Ensure one golden file is present and current, per its {@link GoldenWorkflowFile.policy}. */
+/** Seed one golden file: write it if absent (gate permitting), else leave it be. */
 function ensureWorkflowFile(
   root: string,
   file: GoldenWorkflowFile,
@@ -80,37 +44,19 @@ function ensureWorkflowFile(
 ): WorkflowOutcome {
   const path = join(root, file.filename);
 
-  // Withhold *creating* a gated workflow whose gate is not satisfied — never seed
-  // an ungated auto-merge workflow (#239). Creation only: an existing file is left
-  // to the normal management path below, since `[]` may mean "gate not checked".
-  if (!existsSync(path) && !gateSatisfied(file, satisfiedGateChecks)) {
+  // An existing file is the repo's own — never overwritten.
+  if (existsSync(path)) return { filename: file.filename, action: 'unchanged' };
+
+  // Withhold *creating* a gated workflow whose gate is not satisfied — never seed an
+  // ungated auto-merge workflow (#239).
+  if (!gateSatisfied(file, satisfiedGateChecks)) {
     return { filename: file.filename, action: 'withheld' };
   }
 
-  // `seed`: write the plain content once (no managed header — the repo owns it
-  // thereafter) and never touch it again once present, whoever authored it.
-  if ((file.policy ?? 'manage') === 'seed') {
-    if (existsSync(path)) return { filename: file.filename, action: 'unchanged' };
-    mkdirSync(dirname(path), { recursive: true });
-    const body = file.content.endsWith('\n') ? file.content : `${file.content}\n`;
-    writeFileSync(path, body, 'utf8');
-    return { filename: file.filename, action: 'created' };
-  }
-
-  // `manage` (default): bootstrap owns the file — write if absent, overwrite if a
-  // previously-managed file has drifted, and leave a user-authored file untouched.
-  const golden = renderManagedWorkflow(file);
-  if (!existsSync(path)) {
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, golden, 'utf8');
-    return { filename: file.filename, action: 'created' };
-  }
-  const current = readFileSync(path, 'utf8');
-  // A file without our header is user-authored — leave it untouched, don't overwrite.
-  if (!isBootstrapManaged(current)) return { filename: file.filename, action: 'skipped' };
-  if (current === golden) return { filename: file.filename, action: 'unchanged' };
-  writeFileSync(path, golden, 'utf8');
-  return { filename: file.filename, action: 'updated' };
+  mkdirSync(dirname(path), { recursive: true });
+  const body = file.content.endsWith('\n') ? file.content : `${file.content}\n`;
+  writeFileSync(path, body, 'utf8');
+  return { filename: file.filename, action: 'created' };
 }
 
 export interface EnsureWorkflowFilesOptions {
@@ -118,18 +64,17 @@ export interface EnsureWorkflowFilesOptions {
   workflows?: readonly GoldenWorkflowFile[];
   /**
    * Gate checks known to be satisfied on the target repo. A golden workflow whose
-   * `gateChecks` are not all present here is **withheld** (not created), so a
-   * gated auto-merge workflow never lands before its gate. Defaults to `[]` — the
-   * safe direction: absent proof of the gate, the gated workflow is withheld.
+   * `gateChecks` are not all present here is **withheld** (not created), so a gated
+   * auto-merge workflow never lands before its gate. Defaults to `[]` — the safe
+   * direction: absent proof of the gate, the gated workflow is withheld.
    */
   satisfiedGateChecks?: readonly string[];
 }
 
 /**
- * Ensure every golden workflow file under `root` is written and current. Returns a
- * per-file outcome list; `skipped` marks a path where a user-authored file already
- * lives (no managed header), which we never overwrite; `withheld` marks a gated
- * workflow not created because its gate is not in `satisfiedGateChecks`.
+ * Seed every golden workflow file under `root` that is not already present. Returns
+ * a per-file outcome list; `withheld` marks a gated workflow not created because its
+ * gate is not in `satisfiedGateChecks`, `unchanged` a file the repo already owns.
  */
 export function ensureWorkflowFiles(
   root: string,

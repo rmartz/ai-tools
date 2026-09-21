@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { renderManagedWorkflow } from '../src/ensure-workflow-files.js';
 
 // Pure fs — still deny network by mocking the runtime to a hard failure, proving
 // ensure-project-config never shells out.
@@ -107,7 +106,6 @@ describe('ensureProjectConfig', () => {
     const res = ensureProjectConfig(dir, {
       files: [{ filename: '.customignore', entries: ['foo/'] }],
       retired: [],
-      retiredWorkflows: [],
       workflows: [],
     });
     expect(res.outcomes).toEqual([{ filename: '.customignore', action: 'created' }]);
@@ -145,8 +143,8 @@ describe('ensureProjectConfig', () => {
 });
 
 // #253 — actively retire the stale `.eslintignore` bootstrap used to seed, so an
-// already-bootstrapped repo (via the next ai-ensure-project-config / golden-sync
-// run) sheds the ESLint-10 warning rather than keeping the inert file forever.
+// already-bootstrapped repo sheds the ESLint-10 warning on its next
+// ai-ensure-project-config run rather than keeping the inert file forever.
 describe('ensureProjectConfig — retiring `.eslintignore`', () => {
   const retire = ['.eslintignore'] as const;
 
@@ -182,37 +180,5 @@ describe('ensureProjectConfig — retiring `.eslintignore`', () => {
     const res = ensureProjectConfig(dir, { retired: retire });
     expect(res.outcomes.find((o) => o.filename === '.eslintignore')?.action).toBe('unchanged');
     expect(existsSync(join(dir, '.eslintignore'))).toBe(false);
-  });
-});
-
-// #264 — ensureProjectConfig retires the old inline dependabot-auto-merge.yml
-// (renamed to the bot-automerge.yml reusable-workflow caller) via the default
-// retiredWorkflowFiles, so an already-bootstrapped repo does not run two auto-merge
-// workflows. A user-authored file at that path is left untouched.
-describe('ensureProjectConfig — retiring the old dependabot-auto-merge.yml (#264)', () => {
-  const oldFile = '.github/workflows/dependabot-auto-merge.yml';
-
-  it('removes a bootstrap-managed copy of the old auto-merge workflow', () => {
-    mkdirSync(join(dir, '.github/workflows'), { recursive: true });
-    writeFileSync(
-      join(dir, oldFile),
-      renderManagedWorkflow({
-        filename: oldFile,
-        content: 'name: Old Auto-merge\non: pull_request_target\n',
-        gateChecks: [],
-      }),
-    );
-    const res = ensureProjectConfig(dir);
-    expect(res.outcomes.find((o) => o.filename === oldFile)?.action).toBe('removed');
-    expect(existsSync(join(dir, oldFile))).toBe(false);
-  });
-
-  it('leaves a user-authored dependabot-auto-merge.yml untouched', () => {
-    mkdirSync(join(dir, '.github/workflows'), { recursive: true });
-    const userContent = 'name: My Own Auto-merge\non: pull_request_target\n';
-    writeFileSync(join(dir, oldFile), userContent);
-    const res = ensureProjectConfig(dir);
-    expect(res.outcomes.find((o) => o.filename === oldFile)?.action).toBe('skipped');
-    expect(read(oldFile)).toBe(userContent);
   });
 });

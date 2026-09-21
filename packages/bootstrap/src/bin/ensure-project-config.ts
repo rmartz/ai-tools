@@ -84,9 +84,6 @@ async function main(): Promise<void> {
   for (const o of result.outcomes.filter((o) => o.action === 'removed')) {
     console.log(`Note: ${o.filename} removed (retired golden file — no longer seeded).`);
   }
-  for (const o of result.outcomes.filter((o) => o.action === 'skipped')) {
-    console.log(`Note: ${o.filename} left untouched (user-authored; no managed header).`);
-  }
   for (const o of result.outcomes.filter((o) => o.action === 'withheld')) {
     console.log(
       `Note: ${o.filename} withheld — its auto-merge gate is not satisfied. Run ` +

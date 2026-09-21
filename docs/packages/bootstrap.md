@@ -8,10 +8,16 @@ tags: [tooling, bootstrap, labels, config, ignore-files]
 
 # @rmartz/bootstrap
 
-One-time (idempotent) repository setup, layer-1. It composes `@rmartz/github`
-(label CRUD) and `@rmartz/agent-runtime` (`boundedRun`, for the bins' git
-shell-out) and nothing else internal. It knows nothing about PR Shepherd's
-gate/verdict labels — the roster here is the cross-cutting + meta set only.
+One-time (idempotent) **new-repo initializer**, layer-1 — not an ongoing manager.
+It seeds a fresh repo to a checklist-conformant starting state (labels, ignore
+blocks, golden workflow files) and then stops; keeping an _existing_ repo
+conformant is the job of the [repository conformance
+checklist](https://github.com/rmartz/ai/blob/main/docs/guidance/repository-checklist.md),
+the single source of truth, applied by audit + self-manage rather than by bootstrap
+re-asserting golden files (#263). It composes `@rmartz/github` (label CRUD) and
+`@rmartz/agent-runtime` (`boundedRun`, for the bins' git shell-out) and nothing else
+internal. It knows nothing about PR Shepherd's gate/verdict labels — the roster here
+is the cross-cutting + meta set only.
 
 ## Surface
 
@@ -61,61 +67,40 @@ gate/verdict labels — the roster here is the cross-cutting + meta set only.
   our block) untouched. `.eslintignore` is the first entry — ESLint 10 (flat
   config) no longer reads it and warns on its presence, so it is retired rather
   than seeded, and an already-bootstrapped repo sheds the inert file on its next
-  `ai-ensure-project-config` / golden-sync run. A flat config's own `ignores`
-  array carries the equivalent artifact list.
-- `retiredWorkflowFiles` — the **whole-file** analogue for workflows bootstrap used
-  to distribute but no longer does (#264): `retireWorkflowFile` deletes the copy
-  _we_ wrote (it carries the managed marker) and leaves a user-authored file at the
-  same path untouched (`removed` / `skipped` / `unchanged` outcomes). Unlike a
-  retired ignore file (a managed _block_ spliced into possibly user-authored
-  content), a workflow is a whole managed file, so retirement is a delete-if-ours
-  rather than a strip-the-block. `.github/workflows/dependabot-auto-merge.yml` is the
-  first entry — #264 renamed the golden auto-merge file to `bot-automerge.yml` (a
-  reusable-workflow caller that also covers release-please PRs), so an
-  already-bootstrapped repo drops the old inline copy on its next run instead of
-  running two auto-merge workflows.
+  `ai-ensure-project-config` run. A flat config's own `ignores` array carries the
+  equivalent artifact list. (Ignore files keep a spliced managed _block_ — the
+  endorsed "lesser case" — unlike whole workflow files, which are pure
+  write-if-absent seeds with no bootstrap-tended region.)
+
+  Retiring a stale **workflow** from an existing repo (e.g. the old
+  `dependabot-auto-merge.yml` superseded by `bot-automerge.yml`, or a leftover
+  `golden-sync.yml`) is **not** bootstrap's job — that is an ongoing-manager behavior
+  it no longer performs. Sweeping such files is a repository-checklist conformance
+  item (the checklist asserts their absence); an agent auditing an existing repo
+  removes them.
 
 ### Whole workflow files (`ensure-workflow-files.ts`, `golden-config.ts`)
 
 A **second golden category**, distinct from the fenced-block ignores: whole
 GitHub Actions workflow files that are byte-identical across every repo. A
 workflow with zero project-specific logic is a copy-distribution candidate — the
-win is drift control, not code reuse — so it is managed as a **whole file**, not
-a block spliced into user content.
+win is a conformant starting point, not code reuse — so it is seeded as a **whole
+file**, not a block spliced into user content.
 
-- `ensureWorkflowFiles(root, { workflows?, satisfiedGateChecks? })` — pure fs. Two
-  per-file idempotency policies (`GoldenWorkflowFile.policy`):
-  - **`manage`** (default) — a bootstrap-owned file: **write if absent**,
-    **overwrite if drifted** from the golden template, report **unchanged** if
-    identical, and **skip** if a _user-authored_ file (one lacking the managed
-    header) already sits at that path. The managed header (`WORKFLOW_MANAGED_HEADER`,
-    carrying `WORKFLOW_MANAGED_MARKER`) distinguishes "a file we own and may
-    overwrite" from "leave it alone" — so a hand-written workflow of the same name
-    is never clobbered.
-  - **`seed`** — a starting point the repo then owns: write the plain content (no
-    managed header) **only if absent**, and never touch it again once present. For
-    files repos are expected to customize (`.github/dependabot.yml`), where
-    overwriting local edits on every bootstrap would be wrong.
-
-  **The per-file rule (seed vs. manage).** Bootstrap seeds a good _starting_ state
-  once; ongoing conformance lives in the reusable workflow + Dependabot + golden-sync,
-  **never a manual `/bootstrap` re-run**. So the policy is chosen per file:
-  - A file becomes **`seed`** once it is a **self-updating reference** — a
-    Dependabot-bumpable pin, whether a reusable-workflow caller (`bot-automerge.yml`
-    and `merge-safety.yml` call their respective `rmartz/*` reusable workflows) or a
-    composite-action consumer (`repo-hygiene.yml` `- uses:` the
-    `rmartz/repo-hygiene-action` composite action). Dependabot then owns updates, so
-    a `manage` re-sync would fight it over the pin (and clobber a hand-tuned copy).
-    `.github/dependabot.yml` is `seed` for the same "repo then owns it" reason.
-  - A file stays **`manage`** while its **logic is embedded inline**
-    (`commit-convention.yml`) — it has no Dependabot channel, so its logic must keep
-    propagating via golden-sync.
-  - **golden-sync (#233) composes with `seed`, it doesn't fight it.** Being
-    write-if-absent, golden-sync never clobbers an existing bumped/hand-tuned
-    reference, yet still propagates _newly-added_ golden files to existing repos and
-    keeps the ignore blocks conformant. A repo that fully self-manages its `.github`
-    (e.g. the `rmartz/repo-hygiene` tooling-source repo itself) simply doesn't seed
-    `golden-sync.yml` at all — that is its opt-out.
+- `ensureWorkflowFiles(root, { workflows?, satisfiedGateChecks? })` — pure fs.
+  **Write-if-absent seeding, nothing more:** each golden workflow is written to a new
+  repo exactly once (verbatim, no managed header), and an existing file at that path
+  is left untouched (`unchanged`), whoever authored it. Bootstrap gives a new repo a
+  checklist-conformant starting point; keeping an _existing_ repo's workflows current
+  is the repository checklist's job (audit + self-manage), **not** bootstrap's — it is
+  a new-repo initializer, not an ongoing manager. Every golden workflow is either a
+  **self-updating reference** (a SHA-pinned reusable-workflow caller or
+  composite-action consumer Dependabot bumps — `bot-automerge.yml`, `merge-safety.yml`,
+  `repo-hygiene.yml`) or a **starting config** the repo tailors (`dependabot.yml`), or
+  an **inline-logic** file seeded once and re-propagated by the checklist audit rather
+  than a cron (`commit-convention.yml`). In every case there is nothing for a re-run
+  to overwrite, which is why the old `manage`/overwrite-on-drift policy and its
+  `golden-sync.yml` loop are gone (#263).
 
   `ensureProjectConfig` composes this after the ignore blocks, returning one
   combined outcome list.
@@ -124,27 +109,28 @@ a block spliced into user content.
   seeded into a repo with **no** required checks auto-merges every green bump
   _immediately_ — so the writer **withholds** the creation of any workflow whose
   declared `gateChecks` are not all in the passed-in `satisfiedGateChecks` set
-  (a fifth outcome, `withheld`). The default is `[]`, so a plain call **never**
+  (the `withheld` outcome). The default is `[]`, so a plain call **never**
   lands the gated auto-merge workflow — even a direct `ai-ensure-project-config`
   run, not just the `/bootstrap` skill. The writer stays **hermetic**: it does not
   read the gate itself; it receives the resolved satisfied set. Withholding blocks
-  **creation only** — an existing file is managed normally (an empty set may just
-  mean "the caller did not check the gate", so deleting on it would be wrong),
+  **creation only** — an existing file is left as the repo's own (an empty set may
+  just mean "the caller did not check the gate", so deleting on it would be wrong),
   which keeps the coupling **order-independent**: seed-then-gate and gate-then-seed
   both converge to "present iff the gate is satisfied". The **network** read that
   produces the satisfied set is `resolveSatisfiedGateChecks` (below).
 
-- `goldenWorkflowFiles` — seeded with two `manage` workflows and four `seed` files:
-  - `bot-automerge.yml` (**`seed`**, #264): a thin **caller** of the SHA-pinned
+- `goldenWorkflowFiles` — the whole files a new repo is seeded with, each
+  write-if-absent then repo-owned:
+  - `bot-automerge.yml` (#264): a thin **caller** of the SHA-pinned
     `rmartz/bot-automerge` reusable workflow
     (`uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha> # vX.Y.Z`).
     It enables GitHub-native auto-merge for trustworthy **bot** PRs — green
     `semver-patch` / `semver-minor` Dependabot bumps (majors stay manual) **and**
     release-please release PRs — replacing the old inline Dependabot-only
-    `dependabot-auto-merge.yml` (now retired via `retiredWorkflowFiles`). Dependabot's
-    `github-actions` ecosystem bumps the pin (and the CLI version the reusable
-    workflow installs, in lockstep), so it is `seed`, not `manage`. The trigger is
-    `pull_request_target` (required, not `pull_request`, so Dependabot's
+    `dependabot-auto-merge.yml` (no longer shipped; a stale copy is swept by the
+    checklist audit, not by bootstrap). Dependabot's `github-actions` ecosystem bumps
+    the pin (and the CLI version the reusable workflow installs, in lockstep). The
+    trigger is `pull_request_target` (required, not `pull_request`, so Dependabot's
     read-only-token PRs get base-context write) and it `secrets: inherit`s. It stays
     **gated**: it keeps `gateChecks: ['merge-safety']`, so the writer **withholds** its
     creation until `merge-safety` is a satisfied required check (an ungated
@@ -152,7 +138,7 @@ a block spliced into user content.
     **release-please** CD additionally needs a real-actor merge so the merge
     re-triggers the publish workflow — tracked by #236 / rmartz/bot-automerge#8; the
     Dependabot path is unaffected.)_
-  - `merge-safety.yml` (**`seed`**): a thin **caller** of the SHA-pinned
+  - `merge-safety.yml`: a thin **caller** of the SHA-pinned
     `rmartz/merge-safety` reusable workflow
     (`uses: rmartz/merge-safety/.github/workflows/merge-safety.yml@<sha> # vX.Y.Z`),
     which posts the advisory `merge-safety` check (the coordinator's "must this PR
@@ -167,15 +153,14 @@ a block spliced into user content.
     evaluate-vs-invalidate branch + the label-narrowing. Seeding it makes the check
     **run**; making it a **required gate** is the separate per-repo curation step
     (it is `gateChecks: []` — it _provides_ the check the auto-merge file depends
-    on, it doesn't consume one). It is **`seed`** for the same self-updating-reference
-    reason as `repo-hygiene.yml`. Its `update required` / `merge conflict` labels
+    on, it doesn't consume one). Its `update required` / `merge conflict` labels
     are seeded by the label roster above.
-  - `.github/dependabot.yml` (**`seed`**): a starting Dependabot config — the
+  - `.github/dependabot.yml`: a starting Dependabot config — the
     `github-actions` ecosystem (the minimum every repo wants; it keeps pinned
     action SHAs, including the `bot-automerge` caller's reusable-workflow pin, fresh)
     plus the `npm` ecosystem (the ideal for the JS repos this toolkit targets), both
     grouped. Written only if absent; a repo then owns and tailors it.
-  - `repo-hygiene.yml` (**`seed`**): a thin consumer of the SHA-pinned
+  - `repo-hygiene.yml`: a thin consumer of the SHA-pinned
     `rmartz/repo-hygiene-action` **composite action** (#278) — a `hygiene` job that
     `actions/checkout`s then `- uses: rmartz/repo-hygiene-action@<sha> # vX.Y.Z`,
     replacing the earlier `rmartz/repo-hygiene` reusable-workflow caller (which in
@@ -191,11 +176,10 @@ a block spliced into user content.
     `docs-links`) and points `config:` at its `.repo-hygiene.yml` by adding those
     inputs to its own copy. Only `packages: read` is needed at runtime (the action
     reads the public `@rmartz/repo-hygiene` from GitHub Packages via the default
-    `github.token`) — no Dependabot PAT. It is **`seed`**, not `manage`, because it
-    is a self-updating reference: bootstrap writes it once and Dependabot owns the pin
-    thereafter, so a re-seed / golden-sync run never reverts a bumped or hand-tuned
-    copy. Advisory; `gateChecks: []`.
-  - `commit-convention.yml` (**`manage`**): the **post-merge conventional-commit
+    `github.token`) — no Dependabot PAT. A self-updating reference: bootstrap writes
+    it once and Dependabot owns the pin thereafter, so it is never overwritten.
+    Advisory; `gateChecks: []`.
+  - `commit-convention.yml`: the **post-merge conventional-commit
     tripwire** — a `push: [main]` job that fails when a subject reaches the default
     branch without a valid conventional-commit prefix. It is the counterpart of
     `pr-title-lint` (which validates titles _pre-merge_ but can't see whether the
@@ -203,26 +187,19 @@ a block spliced into user content.
     commit message instead of the PR title, a direct push, or a squash that dropped
     the prefix — any of which makes release-please **silently skip** the release
     (the failure that dropped `@rmartz/github`'s release, #214–#217). It **alerts,
-    it does not gate** (the commit is already merged), so `gateChecks: []`. Pure —
-    no CLI install, no build — so its golden body is byte-identical to any repo's
-    own copy. It validates the **first-parent chain** of the pushed range, so a
-    squash merge is its single new commit, a stray merge commit is flagged, and a
-    merged branch's internal (deliberately plain) commits are not re-litigated.
-  - `golden-sync.yml` (**`manage`**): the **self-update loop** that keeps an
-    already-bootstrapped repo current **without a manual `/bootstrap` re-run**
-    (#233). A scheduled job (weekly + `workflow_dispatch`) installs the _latest_
-    published `@rmartz/bootstrap`, re-runs `ai-ensure-project-config` to rewrite any
-    drifted managed file back to golden, and opens a PR **only when something
-    actually changed** (staged-diff guard) — so it is not the "blind periodic
-    overwrite" a naive re-bootstrap cron would be, and it stays quiet once a repo is
-    current. It needs only the default `GITHUB_TOKEN` (`contents` + `pull-requests`
-    write, `packages` read) — **no per-repo secret and no consumer manifest /
-    devDependency change** — so it is genuinely hands-off. Being a `manage` file it
-    **self-propagates**: a change to this very workflow reaches every repo through
-    the next sync. The CLI is deliberately **unpinned** (latest) — unlike the
-    runtime check CLIs whose versions are pinned for reproducibility (#247), the
-    sync tool is a maintenance bot that should always apply the newest golden state.
-    Advisory; `gateChecks: []`.
+    it does not gate** (the commit is already merged), so `gateChecks: []`. Its logic
+    is **embedded inline** — no CLI install, no build, no Dependabot channel — so it
+    is the one golden workflow that is not a self-updating reference: bootstrap seeds
+    it once, the repo owns it, and a later revision reaches existing repos through the
+    checklist audit (an agent re-seeding it), **not** an automated cron. It validates
+    the **first-parent chain** of the pushed range, so a squash merge is its single
+    new commit, a stray merge commit is flagged, and a merged branch's internal
+    (deliberately plain) commits are not re-litigated.
+
+  There is no longer a `golden-sync.yml` self-update loop or a `manage`/overwrite
+  policy: bootstrap seeds a new repo and stops, and the [repository conformance
+  checklist](https://github.com/rmartz/ai/blob/main/docs/guidance/repository-checklist.md)
+  is the single source of truth that keeps _existing_ repos conformant (#263).
 
   `goldenGateChecks` is the union of every entry's `gateChecks` — the cross-repo
   **floor** of the gate.
@@ -349,9 +326,9 @@ Thin `bin/` wrappers; all logic stays in the library:
   Prints a per-label outcome summary; exits non-zero if any label failed.
 - `ai-ensure-project-config [-C <dir>] [--with-gate [--repo <owner/repo>] [--check <ctx>]...]`
   — detect the repo root (`git rev-parse --show-toplevel`, run in `-C`/`--cwd <dir>`
-  when given) and ensure the golden ignore blocks **and** golden workflow files.
-  Prints a per-file outcome summary; a `skipped` line flags any user-authored
-  workflow left untouched, a `withheld` line the gated auto-merge workflow held
+  when given) and ensure the golden ignore blocks **and** seed the golden workflow
+  files. Prints a per-file outcome summary; an existing workflow is left untouched
+  (`unchanged`), and a `withheld` line flags the gated auto-merge workflow held
   back until its gate is satisfied. **By default the gated auto-merge workflow is
   withheld** (never seeded ungated). `--with-gate` reads the repo's real auto-merge
   gate (read-only, via `resolveSatisfiedGateChecks`) and seeds the gated workflow

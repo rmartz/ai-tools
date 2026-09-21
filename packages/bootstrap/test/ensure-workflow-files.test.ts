@@ -3,16 +3,8 @@ import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, mkdirSync
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 
-import {
-  ensureWorkflowFiles,
-  renderManagedWorkflow,
-  retireWorkflowFile,
-} from '../src/ensure-workflow-files.js';
-import {
-  goldenWorkflowFiles,
-  WORKFLOW_MANAGED_MARKER,
-  type GoldenWorkflowFile,
-} from '../src/golden-config.js';
+import { ensureWorkflowFiles } from '../src/ensure-workflow-files.js';
+import { goldenWorkflowFiles, type GoldenWorkflowFile } from '../src/golden-config.js';
 
 let dir: string;
 beforeEach(() => {
@@ -27,8 +19,8 @@ const writeAt = (name: string, text: string) => {
   writeFileSync(path, text, 'utf8');
 };
 
-// Ungated: the whole-file-management tests exercise create/update/skip, not the
-// gate. A gated fixture is used by the withhold tests further down.
+// Ungated: the write-if-absent tests exercise create/unchanged, not the gate. A
+// gated fixture is used by the withhold tests further down.
 const fixture: GoldenWorkflowFile = {
   filename: '.github/workflows/demo.yml',
   content: 'name: Demo\non: push\n',
@@ -41,22 +33,18 @@ const gatedFixture: GoldenWorkflowFile = {
   gateChecks: ['demo-check'],
 };
 
-// Criterion A1 — a "managed whole-file" category: write if absent, overwrite if
-// drifted, leave user-authored files alone.
-describe('ensureWorkflowFiles — whole-file management', () => {
+// Bootstrap is a new-repo initializer: seed a whole file write-if-absent, verbatim,
+// then leave the repo to own it. An existing file is never overwritten.
+describe('ensureWorkflowFiles — write-if-absent seeding', () => {
   it('creates the file (and its parent dirs) when absent', () => {
     const [outcome] = ensureWorkflowFiles(dir, { workflows: [fixture] });
     expect(outcome).toEqual({ filename: fixture.filename, action: 'created' });
     expect(existsSync(join(dir, fixture.filename))).toBe(true);
   });
 
-  it('prepends the managed header carrying the marker', () => {
+  it('writes the golden body verbatim — no managed header prepended', () => {
     ensureWorkflowFiles(dir, { workflows: [fixture] });
-    const text = read(fixture.filename);
-    expect(text).toContain(WORKFLOW_MANAGED_MARKER);
-    expect(text).toContain('name: Demo');
-    // Header precedes the body.
-    expect(text.indexOf(WORKFLOW_MANAGED_MARKER)).toBeLessThan(text.indexOf('name: Demo'));
+    expect(read(fixture.filename)).toBe(fixture.content);
   });
 
   it('reports unchanged on a second run and does not rewrite', () => {
@@ -67,24 +55,14 @@ describe('ensureWorkflowFiles — whole-file management', () => {
     expect(read(fixture.filename)).toBe(first);
   });
 
-  it('overwrites a drifted managed file back to golden', () => {
-    // A previously-managed file (carries the marker) that a user edited.
-    writeAt(
-      fixture.filename,
-      renderManagedWorkflow(fixture).replace('on: push', 'on: pull_request'),
-    );
+  it('never overwrites an existing file — leaves the repo-owned copy intact', () => {
+    // A repo that has drifted from (or customized) the golden body keeps its copy;
+    // bootstrap no longer manages/overwrites it — that is the checklist audit's job.
+    const local = 'name: Demo\non: pull_request\n# customized by the repo\n';
+    writeAt(fixture.filename, local);
     const [outcome] = ensureWorkflowFiles(dir, { workflows: [fixture] });
-    expect(outcome?.action).toBe('updated');
-    expect(read(fixture.filename)).toBe(renderManagedWorkflow(fixture));
-    expect(read(fixture.filename)).toContain('on: push');
-  });
-
-  it('skips a user-authored file with no managed header — never clobbers it', () => {
-    const userContent = 'name: My Own Workflow\non: schedule\n';
-    writeAt(fixture.filename, userContent);
-    const [outcome] = ensureWorkflowFiles(dir, { workflows: [fixture] });
-    expect(outcome?.action).toBe('skipped');
-    expect(read(fixture.filename)).toBe(userContent);
+    expect(outcome?.action).toBe('unchanged');
+    expect(read(fixture.filename)).toBe(local);
   });
 });
 
@@ -118,7 +96,7 @@ describe('ensureWorkflowFiles — gate-before-go-live', () => {
   it('does not touch an already-present gated workflow even with an empty satisfied set', () => {
     // seed-then-gate ordering: once the file exists, an unproven gate must not
     // delete it — withholding blocks creation only.
-    writeAt(gatedFixture.filename, renderManagedWorkflow(gatedFixture));
+    writeAt(gatedFixture.filename, gatedFixture.content);
     const [outcome] = ensureWorkflowFiles(dir, { workflows: [gatedFixture] });
     expect(outcome?.action).toBe('unchanged');
     expect(existsSync(join(dir, gatedFixture.filename))).toBe(true);
@@ -131,18 +109,16 @@ describe('ensureWorkflowFiles — gate-before-go-live', () => {
 });
 
 // #264 — the seeded bot-automerge workflow is a thin caller of the
-// rmartz/bot-automerge reusable workflow (SHA-pinned, Dependabot-bumped), seeded
-// once and thereafter repo-owned (`seed`). Expanded from the old inline
-// Dependabot-only `dependabot-auto-merge.yml` to also cover release-please PRs; the
-// old file is retired via `retiredWorkflowFiles`. Still gated on `merge-safety`.
+// rmartz/bot-automerge reusable workflow (SHA-pinned, Dependabot-bumped), seeded once
+// and thereafter repo-owned. Covers Dependabot patch/minor bumps and release-please
+// PRs; the old inline `dependabot-auto-merge.yml` is gone. Still gated on merge-safety.
 describe('goldenWorkflowFiles — the seeded bot-automerge reusable-workflow caller', () => {
   const botAutomerge = goldenWorkflowFiles.find(
     (w) => w.filename === '.github/workflows/bot-automerge.yml',
   );
 
-  it('is present with the seed policy', () => {
+  it('is present in the golden set', () => {
     expect(botAutomerge).toBeDefined();
-    expect(botAutomerge?.policy).toBe('seed');
   });
 
   it('calls the rmartz/bot-automerge reusable workflow, SHA-pinned with a version comment', () => {
@@ -178,49 +154,17 @@ describe('goldenWorkflowFiles — the seeded bot-automerge reusable-workflow cal
   });
 });
 
-// #264 — retireWorkflowFile: delete the copy *we* wrote (managed marker), leave a
-// user-authored file at the same path untouched, no-op when absent. The whole-file
-// analogue of ensure-project-config's retireFile for managed-block ignore files.
-describe('retireWorkflowFile', () => {
-  const retired: GoldenWorkflowFile = {
-    filename: '.github/workflows/dependabot-auto-merge.yml',
-    content: 'name: Old Auto-merge\non: pull_request_target\n',
-    gateChecks: [],
-  };
-
-  it('removes a file we previously wrote (carries the managed marker)', () => {
-    writeAt(retired.filename, renderManagedWorkflow(retired));
-    const outcome = retireWorkflowFile(dir, retired.filename);
-    expect(outcome).toEqual({ filename: retired.filename, action: 'removed' });
-    expect(existsSync(join(dir, retired.filename))).toBe(false);
-  });
-
-  it('leaves a user-authored file (no managed marker) untouched', () => {
-    const userContent = 'name: My Own Auto-merge\non: pull_request_target\n';
-    writeAt(retired.filename, userContent);
-    const outcome = retireWorkflowFile(dir, retired.filename);
-    expect(outcome).toEqual({ filename: retired.filename, action: 'skipped' });
-    expect(read(retired.filename)).toBe(userContent);
-  });
-
-  it('reports unchanged when the file is absent', () => {
-    const outcome = retireWorkflowFile(dir, retired.filename);
-    expect(outcome).toEqual({ filename: retired.filename, action: 'unchanged' });
-  });
-});
-
-// #247 — the seeded merge-safety CI is now a thin caller of the rmartz/merge-safety
+// #247 — the seeded merge-safety CI is a thin caller of the rmartz/merge-safety
 // reusable workflow (SHA-pinned, Dependabot-bumped), seeded once and thereafter
-// repo-owned (`seed`), like repo-hygiene.yml. The evaluate/invalidate logic + the
-// label-narrowing live inside the reusable workflow now, not the caller.
+// repo-owned. The evaluate/invalidate logic + the label-narrowing live inside the
+// reusable workflow now, not the caller.
 describe('goldenWorkflowFiles — the seeded merge-safety reusable-workflow caller', () => {
   const mergeSafety = goldenWorkflowFiles.find(
     (w) => w.filename === '.github/workflows/merge-safety.yml',
   );
 
-  it('is present with the seed policy and no gate check of its own', () => {
+  it('is present with no gate check of its own', () => {
     expect(mergeSafety).toBeDefined();
-    expect(mergeSafety?.policy).toBe('seed');
     expect(mergeSafety?.gateChecks).toEqual([]);
   });
 
@@ -249,38 +193,12 @@ describe('goldenWorkflowFiles — the seeded merge-safety reusable-workflow call
   });
 });
 
-// #209 — the `seed` policy: write-if-absent, repo-owned thereafter.
-describe('ensureWorkflowFiles — seed policy', () => {
-  const seed: GoldenWorkflowFile = {
-    filename: '.github/dependabot.yml',
-    content: 'version: 2\n',
-    gateChecks: [],
-    policy: 'seed',
-  };
-
-  it('writes plain content (no managed header) when absent', () => {
-    const [outcome] = ensureWorkflowFiles(dir, { workflows: [seed] });
-    expect(outcome).toEqual({ filename: seed.filename, action: 'created' });
-    const text = read(seed.filename);
-    expect(text).toBe('version: 2\n');
-    expect(text).not.toContain(WORKFLOW_MANAGED_MARKER);
-  });
-
-  it('never overwrites an existing file — leaves the repo-owned edits intact', () => {
-    const local = 'version: 2\n# customized by the repo\n';
-    writeAt(seed.filename, local);
-    const [outcome] = ensureWorkflowFiles(dir, { workflows: [seed] });
-    expect(outcome?.action).toBe('unchanged');
-    expect(read(seed.filename)).toBe(local);
-  });
-});
-
 // #209 — the seeded Dependabot config.
 describe('goldenWorkflowFiles — the seeded Dependabot config', () => {
   const dependabotConfig = goldenWorkflowFiles.find((w) => w.filename === '.github/dependabot.yml');
 
-  it('is present with the seed policy', () => {
-    expect(dependabotConfig?.policy).toBe('seed');
+  it('is present in the golden set', () => {
+    expect(dependabotConfig).toBeDefined();
   });
 
   it('covers github-actions (minimum) and npm (ideal) ecosystems', () => {
@@ -292,16 +210,15 @@ describe('goldenWorkflowFiles — the seeded Dependabot config', () => {
 
 // #278 — the seeded repo-hygiene CI is a thin consumer of the rmartz/repo-hygiene-action
 // COMPOSITE ACTION (a step-level `- uses:` after actions/checkout), SHA-pinned +
-// Dependabot-bumped, seeded once and thereafter repo-owned (`seed`). Replaces the
-// earlier rmartz/repo-hygiene reusable-workflow caller (#251).
+// Dependabot-bumped, seeded once and thereafter repo-owned. Replaces the earlier
+// rmartz/repo-hygiene reusable-workflow caller (#251).
 describe('goldenWorkflowFiles — the seeded repo-hygiene composite-action consumer', () => {
   const repoHygiene = goldenWorkflowFiles.find(
     (w) => w.filename === '.github/workflows/repo-hygiene.yml',
   );
 
-  it('is present with the seed policy and no gate check of its own', () => {
+  it('is present with no gate check of its own', () => {
     expect(repoHygiene).toBeDefined();
-    expect(repoHygiene?.policy).toBe('seed');
     expect(repoHygiene?.gateChecks).toEqual([]);
   });
 
@@ -330,10 +247,11 @@ describe('goldenWorkflowFiles — the seeded repo-hygiene composite-action consu
   });
 });
 
-// #219 — the post-merge conventional-commit tripwire: a push:[main] alert that
-// fails loudly when a commit subject reaches the default branch without a valid
+// #219 — the post-merge conventional-commit tripwire: a push:[main] alert that fails
+// loudly when a commit subject reaches the default branch without a valid
 // conventional-commit prefix (the silent release-please skip pre-merge title-lint
-// can't see).
+// can't see). Its logic is inline, so it is seeded once and the repo owns it; the
+// checklist audit re-propagates a later revision (there is no golden-sync loop).
 describe('goldenWorkflowFiles — the commit-convention tripwire', () => {
   const tripwire = goldenWorkflowFiles.find(
     (w) => w.filename === '.github/workflows/commit-convention.yml',
@@ -373,52 +291,14 @@ describe('goldenWorkflowFiles — the commit-convention tripwire', () => {
   });
 });
 
-// #233 — the seeded self-sync workflow: it re-runs `ai-ensure-project-config`
-// against the latest published @rmartz/bootstrap on a schedule and opens a
-// golden-refresh PR only when a managed file drifted — so golden-config updates
-// reach the fleet automatically, with no per-repo manual `/bootstrap` re-run and
-// no per-repo secret. Being a `manage` file, it also self-propagates: a change to
-// its own definition reaches every repo through the next sync.
-describe('goldenWorkflowFiles — the golden-sync self-update workflow', () => {
-  const goldenSync = goldenWorkflowFiles.find(
-    (w) => w.filename === '.github/workflows/golden-sync.yml',
-  );
-
-  it('is present as a managed (self-propagating) file with no gate check of its own', () => {
-    expect(goldenSync).toBeDefined();
-    expect(goldenSync?.policy ?? 'manage').toBe('manage');
-    expect(goldenSync?.gateChecks).toEqual([]);
-  });
-
-  it('runs automatically on a schedule and manual dispatch — never on pull_request', () => {
-    const content = goldenSync?.content ?? '';
-    expect(content).toContain('schedule:');
-    expect(content).toContain('cron:');
-    expect(content).toContain('workflow_dispatch:');
-    expect(content).not.toContain('pull_request');
-  });
-
-  it('installs the latest published @rmartz/bootstrap (unpinned) and re-runs ai-ensure-project-config', () => {
-    const content = goldenSync?.content ?? '';
-    expect(content).toContain('npm install -g "@rmartz/bootstrap"');
-    expect(content).toContain('ai-ensure-project-config');
-  });
-
-  it('opens a PR only when golden files actually changed — not a blind overwrite', () => {
-    const content = goldenSync?.content ?? '';
-    // Staged-diff guard catches both modified and newly-created managed files.
-    expect(content).toContain('git diff --cached --quiet');
-    expect(content).toContain('gh pr create');
-  });
-
-  it('needs only the default token — contents + pull-requests write, packages read', () => {
-    const content = goldenSync?.content ?? '';
-    expect(content).toContain('contents: write');
-    expect(content).toContain('pull-requests: write');
-    expect(content).toContain('packages: read');
-  });
-
-  it('pins actions/checkout to a full 40-char SHA with a major.minor.patch comment', () => {
-    expect(goldenSync?.content).toMatch(/actions\/checkout@[0-9a-f]{40} # v\d+\.\d+\.\d+/);
+// #263 — bootstrap is a new-repo initializer, not an ongoing manager: the golden set
+// no longer ships the golden-sync self-update loop (its removal is what makes
+// bootstrap init-only). Keeping an existing repo current is the repository
+// checklist's job.
+describe('goldenWorkflowFiles — no ongoing-manager machinery', () => {
+  it('no longer ships the golden-sync self-update workflow', () => {
+    expect(
+      goldenWorkflowFiles.find((w) => w.filename === '.github/workflows/golden-sync.yml'),
+    ).toBeUndefined();
   });
 });
