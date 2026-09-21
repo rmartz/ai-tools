@@ -17,11 +17,7 @@ export type {
   ConfigAction,
 } from './ensure-project-config.js';
 
-export {
-  ensureWorkflowFiles,
-  renderManagedWorkflow,
-  retireWorkflowFile,
-} from './ensure-workflow-files.js';
+export { ensureWorkflowFiles } from './ensure-workflow-files.js';
 export type {
   EnsureWorkflowFilesOptions,
   WorkflowOutcome,
@@ -55,12 +51,9 @@ export type {
 export {
   goldenIgnoreFiles,
   retiredIgnoreFiles,
-  retiredWorkflowFiles,
   goldenWorkflowFiles,
   goldenGateChecks,
   BLOCK_BEGIN,
   BLOCK_END,
-  WORKFLOW_MANAGED_HEADER,
-  WORKFLOW_MANAGED_MARKER,
 } from './golden-config.js';
 export type { GoldenIgnoreFile, GoldenWorkflowFile } from './golden-config.js';

@@ -3,13 +3,12 @@ import { join } from 'node:path';
 import {
   goldenIgnoreFiles,
   retiredIgnoreFiles,
-  retiredWorkflowFiles,
   BLOCK_BEGIN,
   BLOCK_END,
   type GoldenIgnoreFile,
   type GoldenWorkflowFile,
 } from './golden-config.js';
-import { ensureWorkflowFiles, retireWorkflowFile } from './ensure-workflow-files.js';
+import { ensureWorkflowFiles } from './ensure-workflow-files.js';
 
 export { BLOCK_BEGIN, BLOCK_END } from './golden-config.js';
 
@@ -22,18 +21,17 @@ export { BLOCK_BEGIN, BLOCK_END } from './golden-config.js';
  *    preserve any user-authored lines outside it — "ensure block present, don't
  *    clobber user content". A **retired** ignore file (`.eslintignore`, #253) runs
  *    the inverse: strip our block, and delete the file if it held only that block.
- * 2. **Whole workflow files** (`.github/workflows/*.yml`) are managed as whole
- *    files (write-if-absent / overwrite-if-drifted), delegated to
- *    `ensure-workflow-files.ts`. A **retired** workflow file
- *    (`dependabot-auto-merge.yml`, #264) is deleted if we wrote it (carries the
- *    managed marker) and left alone if user-authored — the whole-file analogue of a
- *    retired ignore file.
+ * 2. **Whole workflow files** (`.github/workflows/*.yml`) are seeded as whole files
+ *    (write-if-absent, then repo-owned), delegated to `ensure-workflow-files.ts`.
+ *    Bootstrap seeds a new repo once; an existing workflow is never overwritten, and
+ *    sweeping a stale/retired workflow from an existing repo is the repository
+ *    checklist's job (audit), not bootstrap's.
  *
  * Pure fs — no subprocess, no network. The target directory is a parameter so
  * tests can point at a tmpdir.
  */
 
-export type ConfigAction = 'created' | 'updated' | 'unchanged' | 'skipped' | 'withheld' | 'removed';
+export type ConfigAction = 'created' | 'updated' | 'unchanged' | 'withheld' | 'removed';
 
 export interface ConfigOutcome {
   filename: string;
@@ -119,8 +117,6 @@ export interface EnsureProjectConfigOptions {
   files?: readonly GoldenIgnoreFile[];
   /** Override the retired ignore-file set (tests). Defaults to `retiredIgnoreFiles`. */
   retired?: readonly string[];
-  /** Override the retired workflow-file set (tests). Defaults to `retiredWorkflowFiles`. */
-  retiredWorkflows?: readonly string[];
   /** Override the golden workflow-file set (tests). Defaults to `goldenWorkflowFiles`. */
   workflows?: readonly GoldenWorkflowFile[];
   /**
@@ -133,11 +129,11 @@ export interface EnsureProjectConfigOptions {
 }
 
 /**
- * Ensure every golden ignore file's managed block and every golden workflow file
- * under `root` are present and current, and retire any formerly-seeded ignore or
- * workflow file. Pure fs — no subprocess, no network. Returns a combined per-file
- * outcome list (golden ignore files, retired ignore files, retired workflow files,
- * then golden workflows).
+ * Ensure every golden ignore file's managed block is present and current, retire any
+ * formerly-seeded ignore file, and seed every golden workflow file under `root` that
+ * is not already present. Pure fs — no subprocess, no network. Returns a combined
+ * per-file outcome list (golden ignore files, retired ignore files, then golden
+ * workflows).
  */
 export function ensureProjectConfig(
   root: string,
@@ -145,23 +141,14 @@ export function ensureProjectConfig(
 ): EnsureProjectConfigResult {
   const files = opts.files ?? goldenIgnoreFiles;
   const retired = opts.retired ?? retiredIgnoreFiles;
-  const retiredWorkflows = opts.retiredWorkflows ?? retiredWorkflowFiles;
   const ignoreOutcomes = files.map((file) => ensureFile(root, file));
   const retiredOutcomes = retired.map((filename) => retireFile(root, filename));
-  const retiredWorkflowOutcomes = retiredWorkflows.map((filename) =>
-    retireWorkflowFile(root, filename),
-  );
   const workflowOutcomes = ensureWorkflowFiles(root, {
     workflows: opts.workflows,
     satisfiedGateChecks: opts.satisfiedGateChecks,
   });
   return {
     root,
-    outcomes: [
-      ...ignoreOutcomes,
-      ...retiredOutcomes,
-      ...retiredWorkflowOutcomes,
-      ...workflowOutcomes,
-    ],
+    outcomes: [...ignoreOutcomes, ...retiredOutcomes, ...workflowOutcomes],
   };
 }
