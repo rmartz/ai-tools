@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.12.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.11.0...bootstrap-v0.12.0) (2026-09-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **bootstrap:** make bootstrap new-repo-init-only — delete golden-sync and the manage policy ([#285](https://github.com/rmartz/ai-tools/issues/285))
+
+### Code Refactoring
+
+* **bootstrap:** make bootstrap new-repo-init-only — delete golden-sync and the manage policy ([#285](https://github.com/rmartz/ai-tools/issues/285)) ([c760d00](https://github.com/rmartz/ai-tools/commit/c760d00d8259b75903745b1f92cc4f7c7c40e6fb))
+
 ## [0.11.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.10.0...bootstrap-v0.11.0) (2026-09-19)
 
 
