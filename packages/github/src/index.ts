@@ -81,3 +81,20 @@ export type { CommentSignature, DiscussionTarget } from './discuss-helpers.js';
 
 export { resolveSignatureContext } from './discuss-signature.js';
 export type { SignatureFlags } from './discuss-signature.js';
+
+export {
+  parseHookPayload,
+  extractCreatedNumber,
+  renderStamp,
+  hasOriginMarker,
+  applyStamp,
+  resolveOriginRepo,
+  stampOriginRepo,
+} from './origin-stamp.js';
+export type {
+  CreatedArtifactKind,
+  StampContext,
+  StampOutcome,
+  StampRender,
+  OriginStampOptions,
+} from './origin-stamp.js';
