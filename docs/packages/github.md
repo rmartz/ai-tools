@@ -124,6 +124,33 @@ in `gh-call.ts`.
   idempotency, re-validation) is PR Shepherd's; this is only the primitive it
   composes. All three are thin, label-free, gate-free client wrappers.
 
+### Origin-repo provenance stamp (`origin-stamp.ts`)
+
+Stamps the agent's **origin repo** (the repository its session is anchored to)
+onto a PR or issue it just created, so a cross-repo create — an agent working in
+repo A opening an artifact in repo B — is visible on the artifact itself. Runs as
+a Claude Code `PostToolUse` hook _behind_ MCP creation (`mcp__github__create_pull_request`,
+`mcp__github__issue_write`), not as a create-wrapper, because agents create through
+the GitHub MCP tools (which the desktop app watches to relate merged PRs back to
+their session) — a wrapper would be bypassed exactly when it matters.
+
+- `parseHookPayload(raw)` — a `PostToolUse` payload → `StampContext`
+  (`{ kind, targetRepo, number }`), or `null` when it is not a handled create (wrong
+  tool, an `issue_write` update, a failed create, or a missing target repo).
+- `extractCreatedNumber(toolResponse)` — the created number across the shapes the
+  response can take: a structured object, an MCP `{ content: [{ text }] }` envelope, or
+  a raw string carrying a `/pull|issues/N` URL.
+- `resolveOriginRepo({ projectDir?, env? })` — the origin `owner/repo` from
+  `CLAUDE_PROJECT_DIR` (populated in hook execution, pinned to the session origin) →
+  `git -C <dir> remote get-url origin` → normalized slug; `null` when unknown.
+- `renderStamp` / `applyStamp` — the visible origin footer (every create) plus a
+  cross-repo warning banner (when origin ≠ target). `applyStamp` returns `null` when
+  the body already carries the hidden `<!-- agent-origin: … -->` marker, so a
+  re-fired hook never double-stamps.
+- `stampOriginRepo(rawPayload)` — the end-to-end orchestrator the CLI calls:
+  parse → resolve → fetch body → apply → edit. **Soft-fails** to a `skipped`/`error`
+  outcome and never throws, so the hook always exits 0 and never blocks creation.
+
 ### Discussions (`discussions.ts`)
 
 The GraphQL Discussions client (no REST / `gh` equivalent), targeting `rmartz/ai`
@@ -171,6 +198,14 @@ Thin `bin/` wrappers; all logic stays in the library:
 `ai-post-json-marker [--repo <owner/repo>] <pr> <kind> <json-file-or-literal>` (post
 a record as a hidden marker), `ai-read-json-marker [--repo <owner/repo>]
 [--match-pr-head <sha>] <pr> <kind>` (print the latest such record, exit 1 if none).
+
+`ai-origin-stamp` is the odd one out — not an interactive command but a
+`PostToolUse` **hook** entrypoint. It reads the hook payload as JSON on stdin,
+resolves the origin repo from `CLAUDE_PROJECT_DIR`, and edits the just-created
+PR/issue to stamp its origin (and warn on a cross-repo create). It takes no args,
+writes only a one-line status to stderr, and always exits 0. Wire it in the
+harness `settings.json` as a `PostToolUse` hook matched on
+`mcp__github__create_pull_request` and `mcp__github__issue_write`.
 
 Every repo-scoped CLI here resolves its target through `resolveRepoTarget`
 (explicit `--repo`/positional `owner/repo` → `GH_REPO` → cwd `gh repo view`), so a
