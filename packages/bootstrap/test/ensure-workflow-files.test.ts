@@ -248,6 +248,16 @@ describe('goldenWorkflowFiles — the seeded repo-hygiene composite-action consu
     expect(content).not.toContain('npm install -g');
     expect(content).not.toContain('REPO_HYGIENE_VERSION');
   });
+
+  // #299 — the shared-product half of the check-name convention. The job sets no
+  // `name:`, so the check posts under the bare job id, `hygiene`. Renaming it would
+  // block every consumer's PRs against a context that can never post, so this pins
+  // the name a well-meaning "Hygiene" edit would otherwise change silently.
+  it('posts as the lowercase shared-product context `hygiene` (the job sets no name:)', () => {
+    const content = repoHygiene?.content ?? '';
+    expect(content).toContain('jobs:\n  hygiene:\n');
+    expect(content.slice(content.indexOf('jobs:'))).not.toMatch(/^\s+name:/m);
+  });
 });
 
 // #219 — the post-merge conventional-commit tripwire: a push:[main] alert that fails
@@ -291,6 +301,13 @@ describe('goldenWorkflowFiles — the commit-convention tripwire', () => {
 
   it('needs no gate check of its own (it alerts, it does not gate)', () => {
     expect(tripwire?.gateChecks).toEqual([]);
+  });
+
+  // #299 — the repo's-own-job half of the check-name convention: a job the repo
+  // defines itself carries an explicit Title Case `name:`, unlike a shared-product
+  // check such as `hygiene`, which stays lowercase-kebab.
+  it('names its job in Title Case, as a job the repo defines itself', () => {
+    expect(tripwire?.content).toContain('name: Validate commit subjects on main');
   });
 });
 

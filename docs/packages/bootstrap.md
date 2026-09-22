@@ -197,6 +197,24 @@ file**, not a block spliced into user content.
     new commit, a stray merge commit is flagged, and a merged branch's internal
     (deliberately plain) commits are not re-litigated.
 
+  **Check-name convention (#299).** The check names these templates produce follow
+  one fleet-wide rule, and the casing encodes _who owns the check_: a check supplied
+  by a **shared CI product** is lowercase-kebab (`hygiene`, `merge-safety`,
+  `bot-automerge`), while a job a **repo defines itself** is Title Case and
+  human-readable (`Build`, `Format`, `Lint`, `Test`, `Typecheck`,
+  `Validate PR title`, `Validate commit subjects on main`). That is why
+  `repo-hygiene.yml`'s job sets no `name:` — the check posts under the bare job id,
+  `hygiene` — while `commit-convention.yml` sets an explicit
+  `name: Validate commit subjects on main`. The #278 composite-action migration
+  shortened the hygiene context from `hygiene / Repo hygiene` to plain `hygiene`
+  without moving it across the rule; the supplier is still the shared product.
+  **A check's name _is_ its required-status-check context**, so renaming one blocks
+  every consumer's PRs against a context that can never post until each repo's
+  ruleset is updated in the same rollout — the failure that left four migration PRs
+  stuck at `BLOCKED`. Treat a rename as a fleet-wide, lockstep change.
+  (`rmartz/group-picks` is a known outlier: internally consistent on `Hygiene`, but
+  divergent from the other consumers.)
+
   There is no longer a `golden-sync.yml` self-update loop or a `manage`/overwrite
   policy: bootstrap seeds a new repo and stops, and the [repository conformance
   checklist](https://github.com/rmartz/ai/blob/main/docs/guidance/repository-checklist.md)
