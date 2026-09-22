@@ -1,24 +1,34 @@
 name: bot-automerge
 
 # Enables GitHub-native auto-merge for trustworthy bot PRs by calling the
-# rmartz/bot-automerge reusable workflow (SHA-pinned, Dependabot-bumped). Two
-# consumers in this repo:
+# rmartz/bot-automerge-action composite Action (SHA-pinned, Dependabot-bumped).
+# Two consumers in this repo:
 #   - release-please release PRs → hands-off continuous delivery (#236): the
-#     release PR auto-merges once its required checks are green. Crucially,
-#     bot-automerge (>= v0.1.1) enables that merge via RELEASE_PLEASE_PAT, not
-#     GITHUB_TOKEN — so the merge push RE-TRIGGERS release.yml (`on: push`) and its
-#     publish/tag job runs. A GITHUB_TOKEN-attributed merge is github-actions[bot],
-#     and GITHUB_TOKEN pushes do NOT trigger workflows, so nothing would publish
-#     (the gap that was rmartz/bot-automerge#8).
+#     release PR auto-merges once its required checks are green. Crucially, that
+#     merge is enabled via RELEASE_PLEASE_PAT, not GITHUB_TOKEN — so the merge push
+#     RE-TRIGGERS release.yml (`on: push`) and its publish/tag job runs. A
+#     GITHUB_TOKEN-attributed merge is github-actions[bot], and GITHUB_TOKEN pushes
+#     do NOT trigger workflows, so nothing would publish (the gap that was
+#     rmartz/bot-automerge#8).
 #   - green Dependabot patch/minor bumps → auto-merge (majors stay manual).
 #
-# `secrets: inherit` passes RELEASE_PLEASE_PAT through to the reusable workflow;
-# absent that secret the release-PR path falls back to github.token (auto-merge
-# still enabled, but the publish re-trigger would not fire). Native auto-merge
-# waits on the branch ruleset's required checks (Test / Format / Typecheck /
-# Build), so it never merges ahead of CI. `pull_request_target` (not
+# Migrated from the @rmartz/bot-automerge reusable workflow to its successor, the
+# composite Action. Two things change shape and one behaviour goes away:
+#   - `secrets: inherit` is not available to a composite action, so
+#     RELEASE_PLEASE_PAT is now passed as the EXPLICIT `release-please-token`
+#     input. Dropping it would leave the release-PR path on github.token and
+#     silently break the publish re-trigger described above.
+#   - the caller now owns `runs-on` + `steps` (with a checkout).
+#   - the reusable workflow's per-PR `concurrency` group is gone. GitHub permits
+#     only one PENDING run per group and cancels any it supersedes, so a burst of
+#     pull_request_target events (opening a PR and labelling it fires one each)
+#     left `cancelled` check-runs on the PR — a conclusion our automation reads as
+#     failing. Without a group nothing queues, so nothing is cancelled.
+#
+# Native auto-merge waits on the branch ruleset's required checks (Test / Format /
+# Typecheck / Build), so it never merges ahead of CI. `pull_request_target` (not
 # `pull_request`) is required so Dependabot's read-only-token PRs get base-context
-# write. The reusable workflow derives the PR from the event context, so no `with:`.
+# write.
 
 on:
   pull_request_target:
@@ -31,5 +41,26 @@ permissions:
 
 jobs:
   bot-automerge:
-    uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@139f4ce609c2dfe65f1e090c00f17204bfce1b3e # v0.1.1
-    secrets: inherit
+    # Skip the job outright on PRs the CLI could never trust, so a human PR shows a
+    # free `skipped` instead of installing the CLI just to no-op. The three
+    # conditions mirror the CLI's own detectBotPrType exactly — Dependabot by
+    # author, release-please by branch prefix OR pending label — so nothing
+    # eligible is skipped.
+    #
+    # Do NOT collapse this to an author test such as
+    # endsWith(user.login, '[bot]'). Because release-please runs here under
+    # RELEASE_PLEASE_PAT, its release PRs are authored by that real user (rmartz),
+    # not a [bot] account — an author-only guard would skip every release PR and
+    # silently halt continuous delivery.
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]'
+      || startsWith(github.event.pull_request.head.ref, 'release-please--')
+      || contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: rmartz/bot-automerge-action@c71f5dfdeb4e275ee80b8b0c92de817f2edb68e0 # v1.0.2
+        with:
+          pr: ${{ github.event.pull_request.number }}
+          release-please-token: ${{ secrets.RELEASE_PLEASE_PAT }}
