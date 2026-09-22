@@ -140,6 +140,26 @@ updates:
 // `packages: read` is needed at runtime — the action reads the public
 // @rmartz/repo-hygiene from GitHub Packages via the default `github.token`, so no
 // Dependabot PAT (that is only for repos holding @rmartz/* as an npm dep).
+//
+// CHECK-NAME CONVENTION (fleet-wide, #299) — the `hygiene` job deliberately sets no
+// `name:`, so GitHub posts the check under the bare job id, `hygiene`. That is the
+// rule, not an omission: a check supplied by one of the SHARED CI PRODUCTS is
+// lowercase-kebab (`hygiene`, `merge-safety`, `bot-automerge`), while a job a repo
+// DEFINES ITSELF is Title Case and human-readable (`Build`, `Format`, `Lint`,
+// `Test`, `Typecheck`, `Validate PR title`, and COMMIT_CONVENTION's
+// `Validate commit subjects on main` below — which sets an explicit `name:` for
+// exactly that reason). The casing encodes *who owns the check*, which is why the
+// #278 reusable-workflow → composite-action migration shortened the context from
+// `hygiene / Repo hygiene` to plain `hygiene` without moving it across the rule:
+// the supplier is still the shared repo-hygiene product. Do not "correct" this to
+// `Hygiene`.
+// BLAST RADIUS: a check's name *is* its required-status-check context. Renaming it
+// blocks every consumer's PRs against a context that can never post, until each
+// repo's ruleset is updated in the SAME rollout — that is what left four migration
+// PRs stuck at BLOCKED (rmartz/repo-hygiene#65 and siblings). Treat any rename as a
+// fleet-wide, lockstep change, never a local edit. (One known outlier, internally
+// consistent but divergent: rmartz/group-picks names its job `Hygiene` and requires
+// that context.)
 export const REPO_HYGIENE = `name: repo-hygiene
 
 on:
@@ -169,6 +189,8 @@ jobs:
 // merged branch's internal plain commits are not re-litigated). `actions/checkout`
 // is pinned by full SHA + `major.minor.patch` comment per the Actions-pinning
 // convention; `push` fires on `main` (a non-`main` repo adjusts that one literal).
+// Its job carries an explicit Title Case `name:` — this is a job the repo defines
+// itself, the other half of the check-name convention written out at REPO_HYGIENE.
 export const COMMIT_CONVENTION = `name: Conventional Commits (main)
 
 on:
