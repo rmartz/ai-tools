@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@rmartz/repo-hygiene": "^1.0.0",
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.6.1",
     "@typescript-eslint/eslint-plugin": "^8.69.0",
     "@typescript-eslint/parser": "^8.69.0",
     "eslint": "^10.10.0",
