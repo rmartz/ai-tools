@@ -47,13 +47,17 @@ title/description replacement or an obvious code fix).
    duplicated functionality, conventions (ai-tools' layer boundaries,
    library-first, file-size, hermetic tests, OKF docs), correctness, coverage, an
    **adversarial second pass** (the classic missed-bug patterns), file/naming
-   coherence, tombstone specs, CI-loosening, obviation, and the visual gate
-   (`extractScreenshotUrls`).
+   coherence, tombstone specs, CI-change composition (typing and isolation — the
+   tightening/loosening classification itself belongs to `ci-change-guard`),
+   obviation, and the visual gate (`extractScreenshotUrls`).
 3. **Emit the findings** — express them as declarative data (an empty record when
    nothing was found), with the diff scope, for `synthesize-review` to consume.
 
 ## See also
 
 - [`synthesize-review`](synthesize-review.md) — consumes these findings.
+- [`@rmartz/ci-change-guard`](https://github.com/rmartz/ci-change-guard) — owns the
+  tightening/loosening verdict and the `CI approval needed` label this skill no
+  longer derives (#302).
 - `@rmartz/pr-review` library — `docs/packages/pr-review.md`.
 - The delegation contract — `docs/pr-shepherd-handoff.md`.
