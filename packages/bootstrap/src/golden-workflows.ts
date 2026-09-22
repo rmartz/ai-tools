@@ -48,10 +48,20 @@ jobs:
 // ecosystem bumps it, and the CLI version it installs tracks the release in
 // lockstep). merge-safety now ships from its own repo (extracted from
 // @rmartz/pr-review, #247). The caller carries the real triggers
-// (pull_request/push/workflow_dispatch) and the write scopes, threads the dispatch
-// `pr` input via `with:`, and `secrets: inherit`; the reusable side is
-// `on: workflow_call` and owns the evaluate-vs-invalidate branch + the
-// label-narrowing logic. Advisory by default: seeding it makes the `merge-safety`
+// (pull_request_target/push/check_suite/workflow_dispatch) and the write scopes,
+// threads the dispatch `pr` input via `with:`, and `secrets: inherit`; the reusable
+// side is `on: workflow_call` and owns the evaluate-vs-invalidate branch + the
+// label-narrowing logic.
+// The PR trigger is `pull_request_target` (NOT `pull_request`) — GitHub does not
+// dispatch `pull_request` runs for an unmergeable PR (it cannot build the
+// `refs/pull/N/merge` commit those runs check out), so a required `merge-safety`
+// check would sit "Expected — waiting for status" forever on exactly the conflicting
+// PR where the verdict matters most (#272). `pull_request_target` fires in base
+// context with no merge commit; it is safe here because the reusable `evaluate` job
+// checks out the base ref, fetches the PR head only as git data, and runs the
+// published CLI — never PR-authored code. `check_suite: [completed]` re-holds/releases
+// open PRs when the base branch's own CI flips red/green.
+// Advisory by default: seeding it makes the `merge-safety`
 // check *run*; making it a required gate is the separate per-repo curation step.
 // It is a `seed` file (see the per-file seed-vs-manage principle in
 // golden-config.ts) — a self-updating reference, so bootstrap seeds it once and
@@ -59,10 +69,12 @@ jobs:
 export const MERGE_SAFETY = `name: merge-safety
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened, edited, labeled, unlabeled]
   push:
     branches: [main]
+  check_suite:
+    types: [completed]
   workflow_dispatch:
     inputs:
       pr:

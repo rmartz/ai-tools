@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.12.0...bootstrap-v0.12.1) (2026-09-22)
+
+
+### Bug Fixes
+
+* **bootstrap:** seed the merge-safety caller on pull_request_target + check_suite ([#288](https://github.com/rmartz/ai-tools/issues/288)) ([04900ea](https://github.com/rmartz/ai-tools/commit/04900eac16d2d498deb2a79ec927bed63ab1c96c))
+
 ## [0.12.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.11.0...bootstrap-v0.12.0) (2026-09-21)
 
 

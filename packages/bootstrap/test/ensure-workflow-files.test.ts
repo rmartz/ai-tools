@@ -176,7 +176,10 @@ describe('goldenWorkflowFiles — the seeded merge-safety reusable-workflow call
 
   it('carries the triggers + write scopes the reusable workflow needs, threads pr, inherits secrets', () => {
     const content = mergeSafety?.content ?? '';
-    expect(content).toContain('pull_request:');
+    // pull_request_target (NOT pull_request) so the check fires on unmergeable PRs (#272);
+    // check_suite re-holds/releases PRs when the base branch's CI flips.
+    expect(content).toContain('pull_request_target:');
+    expect(content).toContain('check_suite:');
     expect(content).toContain('push:');
     expect(content).toContain('workflow_dispatch:');
     expect(content).toContain('checks: write');
