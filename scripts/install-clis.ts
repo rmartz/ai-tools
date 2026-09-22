@@ -22,12 +22,24 @@
  * Packages auth. `~/.npmrc` sources the token from `${GITHUB_PACKAGES_TOKEN}`; that
  * env var is only exported in interactive shells, so — for non-interactive callers
  * (the SessionStart hook, agent shells) — we self-source it from `gh auth token`.
+ *
+ * Because this script is itself run through `pnpm run`, the npm child's env is
+ * sanitised (`withoutInheritedPrefix`) and the install is **verified** against
+ * npm's global root afterwards — see `npm-global.ts` for why both are load-bearing.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import {
+  findVersionMismatches,
+  installedVersion,
+  npmGlobalRoot,
+  PREFIX_HINT,
+  withoutInheritedPrefix,
+} from './npm-global.js';
 
 function hasBin(bin: unknown): boolean {
   if (typeof bin === 'string') return bin.length > 0;
@@ -165,7 +177,7 @@ function main(): void {
     process.exit(1);
   }
 
-  const env = withPackagesToken(process.env, ghAuthToken());
+  const env = withoutInheritedPrefix(withPackagesToken(process.env, ghAuthToken()));
   const pairs = resolveLatestVersions(names, (name) => npmViewVersions(name, env));
   const resolvedNames = new Set(pairs.map(([name]) => name));
   const failed = names.filter((n) => !resolvedNames.has(n));
@@ -190,8 +202,30 @@ function main(): void {
     console.error(`\n${AUTH_HINT}`);
     process.exit(1);
   }
+
+  // npm exiting 0 only proves it installed *somewhere*. Verify the packages are
+  // actually at the intended version under the prefix this machine resolves its
+  // CLIs from, so a misdirected install can never again report success.
+  const globalRoot = npmGlobalRoot(env);
+  if (!globalRoot) {
+    console.error(`\nerror: could not resolve npm's global root to verify the install`);
+    process.exit(1);
+  }
+  const mismatches = findVersionMismatches(pairs, (name) => installedVersion(globalRoot, name));
+  if (mismatches.length > 0) {
+    console.error(
+      `\nerror: npm reported success, but ${mismatches.length} package(s) are not at the ` +
+        `intended version under ${globalRoot}:\n` +
+        mismatches
+          .map((m) => `  ${m.name}: expected ${m.expected}, found ${m.actual ?? '(absent)'}`)
+          .join('\n') +
+        `\n\n${PREFIX_HINT}`,
+    );
+    process.exit(1);
+  }
+
   console.log(
-    `\nInstalled/updated ${pairs.length} CLI package(s) globally:\n` +
+    `\nInstalled/updated ${pairs.length} CLI package(s) globally in ${globalRoot}:\n` +
       pairs.map(([name, version]) => `  ${name}@${version}`).join('\n'),
   );
 }

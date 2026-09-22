@@ -94,5 +94,46 @@ resolved `[name, version]` pairs), and `withPackagesToken(env, ghToken)` (inject
 the token for non-interactive callers, never overwriting an already-set one).
 `main()` runs the install from a neutral cwd (`$HOME`) so it reads the user-level
 `~/.npmrc` and exits non-zero if any package's version cannot be resolved.
+
+`npm-global.ts` holds the two guards that keep the install honest —
+`withoutInheritedPrefix(env)` and `findVersionMismatches(pairs, readVersion)` —
+see [the prefix hazard](#the-prefix-hazard) below.
+
 Markdown **skills** are a separate channel — see
 [`install-skills`](install-skills.md).
+
+## The prefix hazard
+
+`pnpm run` (and `npm run`) export **`npm_config_prefix=<project dir>`** into every
+script's environment, and npm honours that as its **global prefix**. A child
+`npm install -g` that inherits it therefore installs into `<repo>/lib/node_modules`
+
+- `<repo>/bin` — not the prefix on your `PATH` — and still exits 0. The CLIs never
+  move, and nothing says so.
+
+That is exactly how this script silently no-op'd for months: the `SessionStart`
+hook above invokes it as `pnpm -C /path/to/ai-tools run install:clis`, so every
+run was redirected into the checkout while reporting
+`Installed/updated N CLI package(s) globally`. A months-stale `ai-new-worktree`
+was then reported as missing a flag it had shipped with for weeks
+([#289](https://github.com/rmartz/ai-tools/issues/289) →
+[#290](https://github.com/rmartz/ai-tools/issues/290)).
+
+Two guards close it, both in `scripts/npm-global.ts`:
+
+- **`withoutInheritedPrefix(env)`** strips `npm_config_prefix` /
+  `npm_config_global_prefix` from the env handed to npm, so `install -g` resolves
+  the real global prefix. Other inherited `npm_config_*` (registry, proxy) are the
+  user's and are left alone. Note `cwd: $HOME` does **not** help here — the prefix
+  comes from the environment, not the working directory.
+- **`findVersionMismatches(pairs, readVersion)`** re-reads each package's
+  `package.json` under `npm root -g` after the install and fails loudly (exit 1,
+  listing expected vs. found) if anything is missing or at the wrong version. A
+  misdirected install can no longer read as success.
+
+If you hit the failure, the diagnosis is two commands:
+
+```bash
+npm root -g
+env | grep npm_config_prefix
+```
