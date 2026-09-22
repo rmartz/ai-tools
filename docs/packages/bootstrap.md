@@ -147,7 +147,8 @@ file**, not a block spliced into user content.
     repo (extracted from `@rmartz/pr-review`, #247); Dependabot's `github-actions`
     ecosystem bumps the pin — and the CLI version the reusable workflow installs,
     which tracks the release in lockstep. The caller carries the triggers
-    (`pull_request` / `push` / `workflow_dispatch`) and the write scopes
+    (`pull_request_target` — not `pull_request`, so the check still fires on an
+    unmergeable PR, #272 — / `push` / `check_suite` / `workflow_dispatch`) and the write scopes
     (`checks` / `pull-requests` / `actions`), threads the dispatch `pr` via `with:`,
     and `secrets: inherit`; the reusable side is `on: workflow_call` and owns the
     evaluate-vs-invalidate branch + the label-narrowing. Seeding it makes the check
