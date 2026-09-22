@@ -10,16 +10,10 @@ name: merge-safety
 # the release in lockstep.
 
 on:
-  # pull_request_target (not pull_request) so the check still fires on an unmergeable
-  # PR — GitHub cannot build the refs/pull/N/merge commit a pull_request run checks
-  # out, so a required merge-safety check would hang forever on a conflicting PR (#272).
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize, reopened, edited, labeled, unlabeled]
   push:
     branches: [main]
-  # Re-hold / release open PRs when the base branch's own CI flips red/green.
-  check_suite:
-    types: [completed]
   workflow_dispatch:
     inputs:
       pr:
