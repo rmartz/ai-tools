@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.14.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.13.0...bootstrap-v0.14.0) (2026-09-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **bootstrap:** seed bot-automerge.yml as a bot-automerge-action composite-action consumer ([#309](https://github.com/rmartz/ai-tools/issues/309))
+
+### Features
+
+* **bootstrap:** seed bot-automerge.yml as a bot-automerge-action composite-action consumer ([#309](https://github.com/rmartz/ai-tools/issues/309)) ([1dffbb2](https://github.com/rmartz/ai-tools/commit/1dffbb28d1f3f17d9bcd693f4fd01489e2886a1c))
+
+
+### Bug Fixes
+
+* **bootstrap:** stop seeding the ci-change-guard golden workflow ([#317](https://github.com/rmartz/ai-tools/issues/317)) ([9372588](https://github.com/rmartz/ai-tools/commit/93725883fc7bd5ea7c5bac6d3395106a292497e8))
+
 ## [0.13.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.12.1...bootstrap-v0.13.0) (2026-09-23)
 
 
