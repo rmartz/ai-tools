@@ -96,7 +96,7 @@ file**, not a block spliced into user content.
   a new-repo initializer, not an ongoing manager. Every golden workflow is either a
   **self-updating reference** (a SHA-pinned reusable-workflow caller or
   composite-action consumer Dependabot bumps — `bot-automerge.yml`, `merge-safety.yml`,
-  `repo-hygiene.yml`, `ci-change-guard.yml`) or a **starting config** the repo tailors
+  `repo-hygiene.yml`) or a **starting config** the repo tailors
   (`dependabot.yml`), or
   an **inline-logic** file seeded once and re-propagated by the checklist audit rather
   than a cron (`commit-convention.yml`). In every case there is nothing for a re-run
@@ -122,23 +122,30 @@ file**, not a block spliced into user content.
 
 - `goldenWorkflowFiles` — the whole files a new repo is seeded with, each
   write-if-absent then repo-owned:
-  - `bot-automerge.yml` (#264): a thin **caller** of the SHA-pinned
-    `rmartz/bot-automerge` reusable workflow
-    (`uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha> # vX.Y.Z`).
-    It enables GitHub-native auto-merge for trustworthy **bot** PRs — green
-    `semver-patch` / `semver-minor` Dependabot bumps (majors stay manual) **and**
-    release-please release PRs — replacing the old inline Dependabot-only
-    `dependabot-auto-merge.yml` (no longer shipped; a stale copy is swept by the
-    checklist audit, not by bootstrap). Dependabot's `github-actions` ecosystem bumps
-    the pin (and the CLI version the reusable workflow installs, in lockstep). The
-    trigger is `pull_request_target` (required, not `pull_request`, so Dependabot's
-    read-only-token PRs get base-context write) and it `secrets: inherit`s. It stays
-    **gated**: it keeps `gateChecks: ['merge-safety']`, so the writer **withholds** its
-    creation until `merge-safety` is a satisfied required check (an ungated
-    `gh pr merge --auto` merges immediately). _(Adopting this for a repo's own
-    **release-please** CD additionally needs a real-actor merge so the merge
-    re-triggers the publish workflow — tracked by #236 / rmartz/bot-automerge#8; the
-    Dependabot path is unaffected.)_
+  - `bot-automerge.yml` (#264): a thin consumer of the SHA-pinned
+    `rmartz/bot-automerge-action` **composite action** (#282) — a `bot-automerge` job
+    whose single step is `- uses: rmartz/bot-automerge-action@<sha> # vX.Y.Z`,
+    replacing the earlier `rmartz/bot-automerge` reusable-workflow caller. It enables
+    GitHub-native auto-merge for trustworthy **bot** PRs — green `semver-patch` /
+    `semver-minor` Dependabot bumps (majors stay manual) **and** release-please
+    release PRs — replacing the old inline Dependabot-only `dependabot-auto-merge.yml`
+    (no longer shipped; a stale copy is swept by the checklist audit, not by
+    bootstrap). Dependabot's `github-actions` ecosystem bumps the pin (and the CLI
+    version the action ships in its lockfile, in lockstep). The trigger is
+    `pull_request_target` (required, not `pull_request`, so Dependabot's
+    read-only-token PRs get base-context write). No checkout is needed — the action
+    installs its CLI into its own directory and acts on the PR via the API. It passes
+    two inputs: the required `pr: ${{ github.event.pull_request.number }}`, and
+    `release-please-token: ${{ secrets.RELEASE_PLEASE_PAT }}`. A composite action
+    cannot `secrets: inherit`, so the PAT must be explicit: a release-PR merge enabled
+    via `GITHUB_TOKEN` never re-triggers the publish workflow (#236 /
+    rmartz/bot-automerge#8). It is passed unconditionally — empty where the secret is
+    unset, in which case the action falls back to `github.token` (the Dependabot path
+    is unaffected). It stays **gated**: it keeps `gateChecks: ['merge-safety']`, so
+    the writer **withholds** its creation until `merge-safety` is a satisfied required
+    check (an ungated `gh pr merge --auto` merges immediately). Like `repo-hygiene.yml`,
+    it kept its filename, so an **already-seeded** repo is not migrated by a re-run
+    (write-if-absent leaves it untouched) — existing consumers move deliberately.
   - `merge-safety.yml`: a thin **caller** of the SHA-pinned
     `rmartz/merge-safety` reusable workflow
     (`uses: rmartz/merge-safety/.github/workflows/merge-safety.yml@<sha> # vX.Y.Z`),
@@ -159,7 +166,7 @@ file**, not a block spliced into user content.
     are seeded by the label roster above.
   - `.github/dependabot.yml`: a starting Dependabot config — the
     `github-actions` ecosystem (the minimum every repo wants; it keeps pinned
-    action SHAs, including the `bot-automerge` caller's reusable-workflow pin, fresh)
+    action SHAs, including the `bot-automerge` consumer's composite-action pin, fresh)
     plus the `npm` ecosystem (the ideal for the JS repos this toolkit targets), both
     grouped. Written only if absent; a repo then owns and tailors it.
   - `repo-hygiene.yml`: a thin consumer of the SHA-pinned
@@ -181,35 +188,6 @@ file**, not a block spliced into user content.
     `github.token`) — no Dependabot PAT. A self-updating reference: bootstrap writes
     it once and Dependabot owns the pin thereafter, so it is never overwritten.
     Advisory; `gateChecks: []`.
-  - `ci-change-guard.yml`: a thin **caller** of the SHA-pinned
-    `rmartz/ci-change-guard` reusable workflow
-    (`uses: rmartz/ci-change-guard/.github/workflows/ci-change-guard.yml@<sha> # vX.Y.Z`).
-    It classifies a PR's `.github/workflows/**` diff as **tightening** or
-    **loosening**, posts the `ci-change-guard` check-run, and reconciles the
-    `CI approval needed` merge-gate label; a human clears the gate by applying
-    `CI change approved`, which the guard never applies itself. Extracted from
-    `review.md` Step 5 (#302) — the gate was already structural, but its producer was
-    an LLM review step, so a PR that was never reviewed skipped the gate entirely.
-    The trigger is `pull_request_target` (**not** `pull_request`): a fork PR and
-    _every_ Dependabot PR get a read-only token under `pull_request`, so the guard
-    could post neither the check-run nor the label on precisely the PRs that most
-    often touch workflow files (Dependabot's own action bumps). It is safe because
-    the reusable workflow never checks out or executes PR code — it reads the
-    workflow blobs through the API. `labeled`/`unlabeled` are **load-bearing**
-    trigger types (applying `CI change approved` arrives as a label event) and
-    `synchronize` keeps the label tracking the head while nobody has signed off. It
-    needs `checks: write` (the check-run), `pull-requests: write` (the label),
-    `contents: read` (the workflow blobs at the merge base and at head) and
-    `packages: read` (install the CLI from GitHub Packages). Dependabot's
-    `github-actions` ecosystem bumps the pin — and the CLI version, resolved from the
-    release tag at that same commit, in lockstep — and the full `major.minor.patch`
-    version comment is what keeps the `action-pins` hygiene check green. It is
-    **ungated** (`gateChecks: []`): the check-run is `neutral` and never fails, and
-    the gate is enforced at the **merge queue** by the label, so unlike
-    `bot-automerge.yml` there is no merges-immediately hazard to withhold against.
-    _(The `CI approval needed` / `CI change approved` labels are PR Shepherd gate
-    labels and are deliberately **not** in this package's roster — seeding the
-    workflow is in scope; knowing the gate labels is not.)_
   - `commit-convention.yml`: the **post-merge conventional-commit
     tripwire** — a `push: [main]` job that fails when a subject reaches the default
     branch without a valid conventional-commit prefix. It is the counterpart of
@@ -230,7 +208,7 @@ file**, not a block spliced into user content.
   **Check-name convention (#299).** The check names these templates produce follow
   one fleet-wide rule, and the casing encodes _who owns the check_: a check supplied
   by a **shared CI product** is lowercase-kebab (`hygiene`, `merge-safety`,
-  `bot-automerge`, `ci-change-guard`), while a job a **repo defines itself** is Title Case and
+  `bot-automerge`), while a job a **repo defines itself** is Title Case and
   human-readable (`Build`, `Format`, `Lint`, `Test`, `Typecheck`,
   `Validate PR title`, `Validate commit subjects on main`). That is why
   `repo-hygiene.yml`'s job sets no `name:` — the check posts under the bare job id,

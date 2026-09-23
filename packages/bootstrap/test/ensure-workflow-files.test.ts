@@ -108,11 +108,12 @@ describe('ensureWorkflowFiles — gate-before-go-live', () => {
   });
 });
 
-// #264 — the seeded bot-automerge workflow is a thin caller of the
-// rmartz/bot-automerge reusable workflow (SHA-pinned, Dependabot-bumped), seeded once
-// and thereafter repo-owned. Covers Dependabot patch/minor bumps and release-please
-// PRs; the old inline `dependabot-auto-merge.yml` is gone. Still gated on merge-safety.
-describe('goldenWorkflowFiles — the seeded bot-automerge reusable-workflow caller', () => {
+// #264 / #282 — the seeded bot-automerge workflow is a thin consumer of the
+// rmartz/bot-automerge-action composite action (SHA-pinned, Dependabot-bumped), seeded
+// once and thereafter repo-owned. Covers Dependabot patch/minor bumps and
+// release-please PRs; the old inline `dependabot-auto-merge.yml` is gone. Still gated
+// on merge-safety.
+describe('goldenWorkflowFiles — the seeded bot-automerge composite-action consumer', () => {
   const botAutomerge = goldenWorkflowFiles.find(
     (w) => w.filename === '.github/workflows/bot-automerge.yml',
   );
@@ -121,19 +122,37 @@ describe('goldenWorkflowFiles — the seeded bot-automerge reusable-workflow cal
     expect(botAutomerge).toBeDefined();
   });
 
-  it('calls the rmartz/bot-automerge reusable workflow, SHA-pinned with a version comment', () => {
+  it('uses the rmartz/bot-automerge-action composite action, SHA-pinned with a version comment', () => {
     expect(botAutomerge?.content).toMatch(
-      /uses: rmartz\/bot-automerge\/\.github\/workflows\/bot-automerge\.yml@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
+      /- uses: rmartz\/bot-automerge-action@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
     );
   });
 
-  it('triggers on pull_request_target (not pull_request) and inherits secrets', () => {
-    const content = botAutomerge?.content ?? '';
-    expect(content).toContain('pull_request_target:');
-    expect(content).toContain('secrets: inherit');
+  it('no longer calls the rmartz/bot-automerge reusable workflow', () => {
+    expect(botAutomerge?.content).not.toContain('rmartz/bot-automerge/.github/workflows/');
   });
 
-  it('grants packages: read so the reusable workflow can install from GitHub Packages', () => {
+  it('triggers on pull_request_target (not pull_request)', () => {
+    expect(botAutomerge?.content).toContain('pull_request_target:');
+  });
+
+  it('passes the required pr input from the pull_request event', () => {
+    expect(botAutomerge?.content).toContain('pr: ${{ github.event.pull_request.number }}');
+  });
+
+  // A composite action cannot `secrets: inherit`, so the release-please PAT must be an
+  // explicit input — without it a release-PR merge never re-triggers release CD (#236).
+  it('passes RELEASE_PLEASE_PAT as the explicit release-please-token input', () => {
+    expect(botAutomerge?.content).toContain(
+      'release-please-token: ${{ secrets.RELEASE_PLEASE_PAT }}',
+    );
+  });
+
+  it('drops secrets: inherit, which a composite-action consumer cannot use', () => {
+    expect(botAutomerge?.content).not.toContain('secrets: inherit');
+  });
+
+  it('grants packages: read so the action can install its CLI from GitHub Packages', () => {
     expect(botAutomerge?.content).toContain('packages: read');
   });
 
@@ -257,62 +276,6 @@ describe('goldenWorkflowFiles — the seeded repo-hygiene composite-action consu
     const content = repoHygiene?.content ?? '';
     expect(content).toContain('jobs:\n  hygiene:\n');
     expect(content.slice(content.indexOf('jobs:'))).not.toMatch(/^\s+name:/m);
-  });
-});
-
-// #302 — the seeded ci-change-guard CI is a thin caller of the rmartz/ci-change-guard
-// reusable workflow (SHA-pinned, Dependabot-bumped), seeded once and thereafter
-// repo-owned. It classifies a PR's `.github/workflows/**` diff as tightening or
-// loosening, posts the `ci-change-guard` check-run, and reconciles the
-// `CI approval needed` merge-gate label; the classification used to live in an LLM
-// review step, so a PR that was never reviewed skipped the gate entirely.
-describe('goldenWorkflowFiles — the seeded ci-change-guard reusable-workflow caller', () => {
-  const ciChangeGuard = goldenWorkflowFiles.find(
-    (w) => w.filename === '.github/workflows/ci-change-guard.yml',
-  );
-
-  it('is present in the golden set', () => {
-    expect(ciChangeGuard).toBeDefined();
-  });
-
-  it('calls the rmartz/ci-change-guard reusable workflow, SHA-pinned with a version comment', () => {
-    expect(ciChangeGuard?.content).toMatch(
-      /uses: rmartz\/ci-change-guard\/\.github\/workflows\/ci-change-guard\.yml@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
-    );
-  });
-
-  // A fork PR and every Dependabot PR get a read-only token under `pull_request` —
-  // and Dependabot's own action bumps are exactly the PRs that touch workflow files.
-  it('triggers on pull_request_target (not bare pull_request), threads pr, inherits secrets', () => {
-    const content = ciChangeGuard?.content ?? '';
-    expect(content).toContain('pull_request_target:');
-    expect(content).not.toMatch(/^ {2}pull_request:/m);
-    expect(content).toContain('workflow_dispatch:');
-    expect(content).toContain('pr: ${{ inputs.pr }}');
-    expect(content).toContain('secrets: inherit');
-  });
-
-  // `labeled`/`unlabeled` are load-bearing: applying `CI change approved` is the act
-  // that clears the gate, and it arrives as a label event.
-  it('listens for the label events that clear the gate', () => {
-    expect(ciChangeGuard?.content).toContain(
-      'types: [opened, synchronize, reopened, labeled, unlabeled]',
-    );
-  });
-
-  it('grants the scopes the guard needs to post its check-run and reconcile the label', () => {
-    const content = ciChangeGuard?.content ?? '';
-    expect(content).toMatch(/^ {2}checks: write/m);
-    expect(content).toMatch(/^ {2}pull-requests: write/m);
-    expect(content).toMatch(/^ {2}contents: read/m);
-    expect(content).toMatch(/^ {2}packages: read/m);
-  });
-
-  // The check-run is `neutral` and never fails; the gate is enforced at the merge
-  // queue by the `CI approval needed` label, so there is no merges-immediately
-  // hazard for the hermetic writer to withhold against (unlike bot-automerge).
-  it('needs no gate check of its own (it posts a neutral check, it does not auto-merge)', () => {
-    expect(ciChangeGuard?.gateChecks).toEqual([]);
   });
 });
 

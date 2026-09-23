@@ -32,7 +32,6 @@ import {
   MERGE_SAFETY,
   DEPENDABOT_CONFIG,
   REPO_HYGIENE,
-  CI_CHANGE_GUARD,
 } from './golden-workflows.js';
 import { COMMIT_CONVENTION } from './golden-commit-convention.js';
 
@@ -106,10 +105,12 @@ export interface GoldenWorkflowFile {
  * caller or composite-action consumer that Dependabot bumps) or a starting config
  * the repo tailors — so re-seeding never has anything to overwrite.
  *
- * - `bot-automerge.yml` — a thin caller of the SHA-pinned `rmartz/bot-automerge`
- *   reusable workflow (Dependabot bumps the pin, and the CLI version it installs, in
- *   lockstep). GitHub-native auto-merge for trustworthy bot PRs: green patch/minor
- *   Dependabot bumps *and* release-please release PRs (#264). Still **gated**: keeps
+ * - `bot-automerge.yml` — a thin consumer of the SHA-pinned
+ *   `rmartz/bot-automerge-action` **composite action** (#282; Dependabot bumps the
+ *   pin, and the CLI version the action ships, in lockstep). GitHub-native auto-merge
+ *   for trustworthy bot PRs: green patch/minor Dependabot bumps *and* release-please
+ *   release PRs (#264). It passes `pr` and an explicit `release-please-token` (a
+ *   composite action cannot `secrets: inherit`). Still **gated**: keeps
  *   `gateChecks: ['merge-safety']` so the writer withholds its creation until
  *   merge-safety is a satisfied required check — an ungated `gh pr merge --auto`
  *   merges *immediately*, so it must never land without the gate.
@@ -124,13 +125,6 @@ export interface GoldenWorkflowFile {
  *   `actions/checkout`s then `- uses:` the action). Dependabot bumps the pin (and the
  *   CLI version the action ships in its lockfile, in lockstep), so updates propagate
  *   with no per-repo edit. Advisory; `gateChecks: []`.
- * - `ci-change-guard.yml` — a thin caller of the SHA-pinned `rmartz/ci-change-guard`
- *   reusable workflow (#302). It classifies a PR's `.github/workflows/**` diff as
- *   tightening or loosening, posts the `ci-change-guard` check-run, and reconciles the
- *   `CI approval needed` merge-gate label. No `gateChecks` of its own: the check-run is
- *   `neutral` and never fails, and the gate it raises is enforced at the merge queue by
- *   the label, so there is no merges-immediately hazard to withhold against — it
- *   *provides* a signal rather than consuming a check.
  * - `commit-convention.yml` — post-merge `push: [main]` tripwire that fails when a
  *   non-conventional subject reaches the default branch. Its logic is embedded inline
  *   (no Dependabot channel), so it is seeded once and the repo owns it thereafter;
@@ -156,11 +150,6 @@ export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
   {
     filename: '.github/workflows/repo-hygiene.yml',
     content: REPO_HYGIENE,
-    gateChecks: [],
-  },
-  {
-    filename: '.github/workflows/ci-change-guard.yml',
-    content: CI_CHANGE_GUARD,
     gateChecks: [],
   },
   {
