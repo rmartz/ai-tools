@@ -114,11 +114,25 @@ real assertions.
 Materially over the project max (480 src / 720 test, ~240 target) without a clean
 extraction is a finding; the answer is **extraction**, never terseness.
 
-**CI workflow changes** (`.github/workflows/*.yml`) — a change that **loosens** CI
-(a removed step/job, `continue-on-error`, a narrowed trigger, a reduced matrix, an
-extended timeout, or any ambiguous change) is a **needs-human-input** finding:
-state plainly that it loosens CI. A change that only **tightens** coverage reviews
-normally.
+**CI workflow changes** (`.github/workflows/*.yml`) — **do not classify the diff as
+tightening or loosening, and do not apply `CI approval needed`.**
+[`@rmartz/ci-change-guard`](https://github.com/rmartz/ci-change-guard) decides that
+statically on every PR and owns the label, the same way the coordinator honors
+merge-safety's verdict rather than re-deriving it. Two producers could disagree, and
+a reviewer expecting a second opinion skims the first. Read the `ci-change-guard`
+check-run if you want to know what it found.
+
+What still belongs to you, because neither is derivable from the workflow diff:
+
+- **Conventional-commit typing** — a CI change must be `ci`-typed, or bundled onto
+  a functional type (`feat`/`fix`/`perf`/`revert`) and labelled `breaking change`.
+  One of the two is mandatory: each is what forces sibling branches to re-test.
+  Neither present → a `convention` finding.
+- **Isolation** — a CI **loosening** must always stand alone, with no
+  compelling-reason exception; bundled with anything else, it is a `ci-loosening`
+  finding that the loosening be extracted into its own PR. A **tightening** may
+  carry the fixes its new check surfaces, and should otherwise be the PR's primary
+  focus.
 
 **Obviation check** — has a commit on `main` or a closed linked issue already
 solved this PR's problem a different way? If so it is a **needs-human-input**
