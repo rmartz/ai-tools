@@ -122,23 +122,30 @@ file**, not a block spliced into user content.
 
 - `goldenWorkflowFiles` — the whole files a new repo is seeded with, each
   write-if-absent then repo-owned:
-  - `bot-automerge.yml` (#264): a thin **caller** of the SHA-pinned
-    `rmartz/bot-automerge` reusable workflow
-    (`uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@<sha> # vX.Y.Z`).
-    It enables GitHub-native auto-merge for trustworthy **bot** PRs — green
-    `semver-patch` / `semver-minor` Dependabot bumps (majors stay manual) **and**
-    release-please release PRs — replacing the old inline Dependabot-only
-    `dependabot-auto-merge.yml` (no longer shipped; a stale copy is swept by the
-    checklist audit, not by bootstrap). Dependabot's `github-actions` ecosystem bumps
-    the pin (and the CLI version the reusable workflow installs, in lockstep). The
-    trigger is `pull_request_target` (required, not `pull_request`, so Dependabot's
-    read-only-token PRs get base-context write) and it `secrets: inherit`s. It stays
-    **gated**: it keeps `gateChecks: ['merge-safety']`, so the writer **withholds** its
-    creation until `merge-safety` is a satisfied required check (an ungated
-    `gh pr merge --auto` merges immediately). _(Adopting this for a repo's own
-    **release-please** CD additionally needs a real-actor merge so the merge
-    re-triggers the publish workflow — tracked by #236 / rmartz/bot-automerge#8; the
-    Dependabot path is unaffected.)_
+  - `bot-automerge.yml` (#264): a thin consumer of the SHA-pinned
+    `rmartz/bot-automerge-action` **composite action** (#282) — a `bot-automerge` job
+    whose single step is `- uses: rmartz/bot-automerge-action@<sha> # vX.Y.Z`,
+    replacing the earlier `rmartz/bot-automerge` reusable-workflow caller. It enables
+    GitHub-native auto-merge for trustworthy **bot** PRs — green `semver-patch` /
+    `semver-minor` Dependabot bumps (majors stay manual) **and** release-please
+    release PRs — replacing the old inline Dependabot-only `dependabot-auto-merge.yml`
+    (no longer shipped; a stale copy is swept by the checklist audit, not by
+    bootstrap). Dependabot's `github-actions` ecosystem bumps the pin (and the CLI
+    version the action ships in its lockfile, in lockstep). The trigger is
+    `pull_request_target` (required, not `pull_request`, so Dependabot's
+    read-only-token PRs get base-context write). No checkout is needed — the action
+    installs its CLI into its own directory and acts on the PR via the API. It passes
+    two inputs: the required `pr: ${{ github.event.pull_request.number }}`, and
+    `release-please-token: ${{ secrets.RELEASE_PLEASE_PAT }}`. A composite action
+    cannot `secrets: inherit`, so the PAT must be explicit: a release-PR merge enabled
+    via `GITHUB_TOKEN` never re-triggers the publish workflow (#236 /
+    rmartz/bot-automerge#8). It is passed unconditionally — empty where the secret is
+    unset, in which case the action falls back to `github.token` (the Dependabot path
+    is unaffected). It stays **gated**: it keeps `gateChecks: ['merge-safety']`, so
+    the writer **withholds** its creation until `merge-safety` is a satisfied required
+    check (an ungated `gh pr merge --auto` merges immediately). Like `repo-hygiene.yml`,
+    it kept its filename, so an **already-seeded** repo is not migrated by a re-run
+    (write-if-absent leaves it untouched) — existing consumers move deliberately.
   - `merge-safety.yml`: a thin **caller** of the SHA-pinned
     `rmartz/merge-safety` reusable workflow
     (`uses: rmartz/merge-safety/.github/workflows/merge-safety.yml@<sha> # vX.Y.Z`),
@@ -159,7 +166,7 @@ file**, not a block spliced into user content.
     are seeded by the label roster above.
   - `.github/dependabot.yml`: a starting Dependabot config — the
     `github-actions` ecosystem (the minimum every repo wants; it keeps pinned
-    action SHAs, including the `bot-automerge` caller's reusable-workflow pin, fresh)
+    action SHAs, including the `bot-automerge` consumer's composite-action pin, fresh)
     plus the `npm` ecosystem (the ideal for the JS repos this toolkit targets), both
     grouped. Written only if absent; a repo then owns and tailors it.
   - `repo-hygiene.yml`: a thin consumer of the SHA-pinned
