@@ -12,20 +12,26 @@
  * behaviour is implemented *inline* lives in `golden-commit-convention.ts`.
  */
 
-// Consumer-shape `bot-automerge` workflow — a thin CALLER of the
-// rmartz/bot-automerge reusable workflow (SHA-pinned + version comment, so
-// Dependabot's github-actions ecosystem bumps the pin, and the CLI version it
-// installs tracks the release in lockstep). bot-automerge ships from its own repo
-// (#264), *expanded* from the old inline Dependabot-only auto-merge to also cover
-// release-please release PRs: it enables GitHub-native auto-merge for trustworthy
-// bot PRs (green Dependabot patch/minor bumps — majors stay manual — plus
-// release-please release PRs), and the reusable side (`on: workflow_call`) owns the
-// bot-detection + update-type/PR-type classification + `gh pr merge --auto`
-// enablement. The caller carries the real trigger and the write scopes and
-// `secrets: inherit`; the reusable workflow derives the PR from the event context,
-// so no `with:` input is needed. The trigger is `pull_request_target` (NOT
-// `pull_request`) — required so Dependabot's read-only-token PRs get base-context
-// write. It stays **gated**: its `goldenWorkflowFiles` entry keeps
+// Consumer-shape `bot-automerge` workflow — a thin CONSUMER of the
+// rmartz/bot-automerge-action composite action (SHA-pinned + version comment, so
+// Dependabot's github-actions ecosystem bumps the pin, and the CLI version the
+// action installs tracks its release in lockstep). bot-automerge ships from its own
+// repo (#264), *expanded* from the old inline Dependabot-only auto-merge to also
+// cover release-please release PRs: it enables GitHub-native auto-merge for
+// trustworthy bot PRs (green Dependabot patch/minor bumps — majors stay manual —
+// plus release-please release PRs), and the action owns the bot-detection +
+// update-type/PR-type classification + `gh pr merge --auto` enablement. It
+// superseded the reusable-workflow caller form (#282). The consumer carries the
+// real trigger and the write scopes and passes two inputs: `pr` (required — unlike
+// the reusable workflow, the action does not derive it from the event), and
+// `release-please-token`. A composite action cannot `secrets: inherit`, so the
+// release-please PAT must be passed explicitly: a release-PR merge enabled via
+// GITHUB_TOKEN never re-triggers the consumer's release CD (#236). It is passed
+// unconditionally — where the secret is unset it is empty and the action falls back
+// to `github.token`. No checkout is needed: the action installs its CLI into its own
+// directory and acts on the PR via the API. The trigger is `pull_request_target`
+// (NOT `pull_request`) — required so Dependabot's read-only-token PRs get
+// base-context write. It stays **gated**: its `goldenWorkflowFiles` entry keeps
 // `gateChecks: ['merge-safety']`, so the hermetic writer withholds its *creation*
 // until merge-safety is a satisfied required check (an ungated `gh pr merge --auto`
 // merges immediately). It is a `seed` file (see the per-file seed-vs-manage
@@ -44,8 +50,12 @@ permissions:
 
 jobs:
   bot-automerge:
-    uses: rmartz/bot-automerge/.github/workflows/bot-automerge.yml@139f4ce609c2dfe65f1e090c00f17204bfce1b3e # v0.1.1
-    secrets: inherit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rmartz/bot-automerge-action@c71f5dfdeb4e275ee80b8b0c92de817f2edb68e0 # v1.0.2
+        with:
+          pr: \${{ github.event.pull_request.number }}
+          release-please-token: \${{ secrets.RELEASE_PLEASE_PAT }}
 `;
 
 // Consumer-shape `merge-safety` workflow — a thin CALLER of the rmartz/merge-safety
@@ -103,7 +113,7 @@ jobs:
 
 // Generic Dependabot config, seeded (write-if-absent) as a starting point repos
 // then own. github-actions is the minimum every repo wants (it keeps pinned
-// action SHAs — including the bot-automerge caller's reusable-workflow pin — fresh);
+// action SHAs — including the bot-automerge consumer's composite-action pin — fresh);
 // the npm ecosystem is the ideal for the JS repos this toolkit targets (it also
 // feeds the native auto-merge path). Both are grouped so related bumps land as one PR.
 // A repo without an npm manifest, or wanting other ecosystems, edits its copy —
