@@ -1,0 +1,48 @@
+name: ci-change-guard
+
+# Calls the rmartz/ci-change-guard reusable workflow, which classifies this PR's
+# `.github/workflows/**` diff as tightening or loosening, posts the
+# `ci-change-guard` check-run, and reconciles the `CI approval needed` merge-gate
+# label. A human clears the gate by applying `CI change approved`; the guard never
+# applies that label itself.
+#
+# Extracted from `review.md` Step 5 per #302: the gate was already structural, but
+# its producer was an LLM review step, so a PR that was never reviewed skipped the
+# gate entirely. `review.md` now defers the classification here.
+#
+# The reusable workflow is SHA-pinned with a version comment so Dependabot's
+# github-actions ecosystem keeps it current, and the CLI version it installs is
+# resolved from the release tag at that same pinned commit — so the two move in
+# lockstep and nothing writes a version into this file.
+
+on:
+  # pull_request_target (not pull_request) because a fork PR and EVERY Dependabot
+  # PR get a read-only token under `pull_request` — the guard could post neither
+  # the check-run nor the label on precisely the PRs that most often touch
+  # workflow files (Dependabot's own action bumps). The reusable workflow never
+  # checks out or executes PR code; it reads the workflow blobs through the API,
+  # so the elevated token never meets untrusted code.
+  pull_request_target:
+    # `labeled`/`unlabeled` are load-bearing: applying `CI change approved` is the
+    # human act that clears the gate, and it arrives as a label event.
+    # `synchronize` is what makes the label track the head while nobody has signed
+    # off — a push that removes the loosening removes the label with it.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: PR number to evaluate
+        required: true
+
+permissions:
+  checks: write # post the ci-change-guard check-run
+  pull-requests: write # reconcile the `CI approval needed` merge-gate label
+  contents: read # read the workflow blobs at the merge base and at head
+  packages: read # install @rmartz/ci-change-guard from GitHub Packages
+
+jobs:
+  ci-change-guard:
+    uses: rmartz/ci-change-guard/.github/workflows/ci-change-guard.yml@f88d32d70864d0db202a99a37fb6ae66d539bb7b # v0.1.0
+    with:
+      pr: ${{ inputs.pr }}
+    secrets: inherit
