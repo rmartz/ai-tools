@@ -149,9 +149,8 @@ updates:
 // CHECK-NAME CONVENTION (fleet-wide, #299) — the `hygiene` job deliberately sets no
 // `name:`, so GitHub posts the check under the bare job id, `hygiene`. That is the
 // rule, not an omission: a check supplied by one of the SHARED CI PRODUCTS is
-// lowercase-kebab (`hygiene`, `merge-safety`, `bot-automerge`, `ci-change-guard`),
-// while a job a repo
-// DEFINES ITSELF is Title Case and human-readable (`Build`, `Format`, `Lint`,
+// lowercase-kebab (`hygiene`, `merge-safety`, `bot-automerge`), while a job a
+// repo DEFINES ITSELF is Title Case and human-readable (`Build`, `Format`, `Lint`,
 // `Test`, `Typecheck`, `Validate PR title`, and COMMIT_CONVENTION's
 // `Validate commit subjects on main` in `golden-commit-convention.ts` — which sets
 // an explicit `name:` for exactly that reason). The casing encodes *who owns the check*, which is why the
@@ -182,67 +181,4 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: rmartz/repo-hygiene-action@66118369122afacf29241703137f60cbfa0315f0 # v1.0.0
-`;
-
-// Consumer-shape `ci-change-guard` workflow — a thin CALLER of the
-// rmartz/ci-change-guard reusable workflow (SHA-pinned + version comment, so
-// Dependabot's github-actions ecosystem bumps the pin and the `action-pins` hygiene
-// check passes; the CLI version it installs is resolved from the release tag at that
-// same pinned commit, so the two move in lockstep and nothing writes a version into
-// this file). The guard classifies a PR's `.github/workflows/**` diff as *tightening*
-// or *loosening*, posts the `ci-change-guard` check-run, and reconciles the
-// `CI approval needed` merge-gate label; a human clears the gate by applying
-// `CI change approved`, which the guard never applies itself. Extracted from
-// `review.md` Step 5 (#302): the gate was already structural, but its producer was an
-// LLM review step, so a PR that was never reviewed skipped the gate entirely.
-//
-// The trigger is `pull_request_target` (NOT `pull_request`) — a fork PR and *every*
-// Dependabot PR get a read-only token under `pull_request`, so the guard could post
-// neither the check-run nor the label on precisely the PRs that most often touch
-// workflow files (Dependabot's own action bumps). It is safe here because the
-// reusable workflow never checks out or executes PR code: it reads the workflow blobs
-// through the API, so the elevated token never meets untrusted code.
-// `labeled`/`unlabeled` are load-bearing trigger types — applying `CI change approved`
-// is the human act that clears the gate, and it arrives as a label event — and
-// `synchronize` is what keeps the label tracking the head while nobody has signed off.
-//
-// It is **ungated** (`gateChecks: []`, see golden-config.ts): the guard posts a
-// `neutral`, never-failing check-run and enforces at the merge queue via the
-// `CI approval needed` label, so unlike the auto-merge caller there is no
-// merges-immediately hazard for the hermetic writer to withhold against. Like its
-// siblings it is a `seed` file — a self-updating reference, so bootstrap seeds it once
-// and Dependabot owns the pin thereafter.
-export const CI_CHANGE_GUARD = `name: ci-change-guard
-
-on:
-  # pull_request_target (not pull_request) because a fork PR and EVERY Dependabot
-  # PR get a read-only token under \`pull_request\` — the guard could post neither
-  # the check-run nor the label on precisely the PRs that most often touch
-  # workflow files (Dependabot's own action bumps). The reusable workflow never
-  # checks out or executes PR code; it reads the workflow blobs through the API,
-  # so the elevated token never meets untrusted code.
-  pull_request_target:
-    # \`labeled\`/\`unlabeled\` are load-bearing: applying \`CI change approved\` is the
-    # human act that clears the gate, and it arrives as a label event.
-    # \`synchronize\` is what makes the label track the head while nobody has signed
-    # off — a push that removes the loosening removes the label with it.
-    types: [opened, synchronize, reopened, labeled, unlabeled]
-  workflow_dispatch:
-    inputs:
-      pr:
-        description: PR number to evaluate
-        required: true
-
-permissions:
-  checks: write # post the ci-change-guard check-run
-  pull-requests: write # reconcile the \`CI approval needed\` merge-gate label
-  contents: read # read the workflow blobs at the merge base and at head
-  packages: read # install @rmartz/ci-change-guard from GitHub Packages
-
-jobs:
-  ci-change-guard:
-    uses: rmartz/ci-change-guard/.github/workflows/ci-change-guard.yml@f88d32d70864d0db202a99a37fb6ae66d539bb7b # v0.1.0
-    with:
-      pr: \${{ inputs.pr }}
-    secrets: inherit
 `;

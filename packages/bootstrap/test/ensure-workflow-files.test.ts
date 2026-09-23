@@ -260,62 +260,6 @@ describe('goldenWorkflowFiles — the seeded repo-hygiene composite-action consu
   });
 });
 
-// #302 — the seeded ci-change-guard CI is a thin caller of the rmartz/ci-change-guard
-// reusable workflow (SHA-pinned, Dependabot-bumped), seeded once and thereafter
-// repo-owned. It classifies a PR's `.github/workflows/**` diff as tightening or
-// loosening, posts the `ci-change-guard` check-run, and reconciles the
-// `CI approval needed` merge-gate label; the classification used to live in an LLM
-// review step, so a PR that was never reviewed skipped the gate entirely.
-describe('goldenWorkflowFiles — the seeded ci-change-guard reusable-workflow caller', () => {
-  const ciChangeGuard = goldenWorkflowFiles.find(
-    (w) => w.filename === '.github/workflows/ci-change-guard.yml',
-  );
-
-  it('is present in the golden set', () => {
-    expect(ciChangeGuard).toBeDefined();
-  });
-
-  it('calls the rmartz/ci-change-guard reusable workflow, SHA-pinned with a version comment', () => {
-    expect(ciChangeGuard?.content).toMatch(
-      /uses: rmartz\/ci-change-guard\/\.github\/workflows\/ci-change-guard\.yml@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
-    );
-  });
-
-  // A fork PR and every Dependabot PR get a read-only token under `pull_request` —
-  // and Dependabot's own action bumps are exactly the PRs that touch workflow files.
-  it('triggers on pull_request_target (not bare pull_request), threads pr, inherits secrets', () => {
-    const content = ciChangeGuard?.content ?? '';
-    expect(content).toContain('pull_request_target:');
-    expect(content).not.toMatch(/^ {2}pull_request:/m);
-    expect(content).toContain('workflow_dispatch:');
-    expect(content).toContain('pr: ${{ inputs.pr }}');
-    expect(content).toContain('secrets: inherit');
-  });
-
-  // `labeled`/`unlabeled` are load-bearing: applying `CI change approved` is the act
-  // that clears the gate, and it arrives as a label event.
-  it('listens for the label events that clear the gate', () => {
-    expect(ciChangeGuard?.content).toContain(
-      'types: [opened, synchronize, reopened, labeled, unlabeled]',
-    );
-  });
-
-  it('grants the scopes the guard needs to post its check-run and reconcile the label', () => {
-    const content = ciChangeGuard?.content ?? '';
-    expect(content).toMatch(/^ {2}checks: write/m);
-    expect(content).toMatch(/^ {2}pull-requests: write/m);
-    expect(content).toMatch(/^ {2}contents: read/m);
-    expect(content).toMatch(/^ {2}packages: read/m);
-  });
-
-  // The check-run is `neutral` and never fails; the gate is enforced at the merge
-  // queue by the `CI approval needed` label, so there is no merges-immediately
-  // hazard for the hermetic writer to withhold against (unlike bot-automerge).
-  it('needs no gate check of its own (it posts a neutral check, it does not auto-merge)', () => {
-    expect(ciChangeGuard?.gateChecks).toEqual([]);
-  });
-});
-
 // #219 — the post-merge conventional-commit tripwire: a push:[main] alert that fails
 // loudly when a commit subject reaches the default branch without a valid
 // conventional-commit prefix (the silent release-please skip pre-merge title-lint
