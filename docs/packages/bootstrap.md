@@ -195,7 +195,13 @@ file**, not a block spliced into user content.
     checklist audit (an agent re-seeding it), **not** an automated cron. It validates
     the **first-parent chain** of the pushed range, so a squash merge is its single
     new commit, a stray merge commit is flagged, and a merged branch's internal
-    (deliberately plain) commits are not re-litigated.
+    (deliberately plain) commits are not re-litigated. Two pushes give it no usable
+    range — a branch's **first push** (`github.event.before` is all-zeros) and a
+    **force-push** that rewrote the branch (`before` names a commit the rewrite
+    orphaned, so `git rev-list` exits 128 and the step dies on `set -e`, #303). Both
+    fall back to validating just the **pushed tip**, announced in the log: the
+    tripwire narrows its scope and still fails on a bad subject, rather than skipping
+    silently.
 
   **Check-name convention (#299).** The check names these templates produce follow
   one fleet-wide rule, and the casing encodes _who owns the check_: a check supplied

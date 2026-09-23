@@ -186,7 +186,11 @@ jobs:
 // a squash that dropped the prefix — any of which makes release-please silently
 // skip the release. Validates the first-parent chain of the pushed range (so a
 // squash merge is its single new commit, a stray merge commit is flagged, and a
-// merged branch's internal plain commits are not re-litigated). `actions/checkout`
+// merged branch's internal plain commits are not re-litigated). Two pushes have no
+// usable range: a branch's first push (`before` is all-zeros) and a force-push that
+// rewrote the branch (`before` names a commit the rewrite orphaned, so the range
+// would exit 128 — #303). Both narrow to validating the pushed tip, and say so in
+// the log; neither skips the check. `actions/checkout`
 // is pinned by full SHA + `major.minor.patch` comment per the Actions-pinning
 // convention; `push` fires on `main` (a non-`main` repo adjusts that one literal).
 // Its job carries an explicit Title Case `name:` — this is a job the repo defines
@@ -217,8 +221,17 @@ jobs:
           set -euo pipefail
           # Conventional-commit subject grammar — mirrors pr-title-lint.yml.
           pattern='^(feat|fix|docs|chore|refactor|test|style|perf|ci|build|revert)(\\([^)]+\\))?!?: [^[:space:]].*$'
-          # On a branch's first push BEFORE is all-zeros; validate just the tip.
+          # BEFORE is an unusable range endpoint in two cases: a branch's first
+          # push (all-zeros), and a force-push that rewrote the branch, where the
+          # old tip is no longer reachable and the range would exit 128. Both cases
+          # fall back to validating just the pushed tip — announced in the log, so
+          # the tripwire narrows its scope rather than silently skipping.
           if printf '%s' "$BEFORE" | grep -qE '^0+$'; then
+            echo "note: BEFORE is all-zeros (first push); validating the pushed tip only."
+            revs="$AFTER"
+          elif ! git cat-file -e "\${BEFORE}^{commit}" 2>/dev/null; then
+            echo "note: BEFORE ($BEFORE) is unreachable, so \${GITHUB_REF_NAME:-main} was"
+            echo "      rewritten (force-push); validating the pushed tip only."
             revs="$AFTER"
           else
             revs="$(git rev-list --first-parent "\${BEFORE}..\${AFTER}")"
