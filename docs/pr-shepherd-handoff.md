@@ -17,7 +17,7 @@ ported into `ai-tools`). Source-of-truth pointers are at the bottom.
 - **One-way arrow: PR Shepherd → ai-tools.** PR Shepherd imports `ai-tools`
   packages; **nothing in `ai-tools` imports PR Shepherd.**
 - **No `ai-tools` package knows PR Shepherd's gate/verdict labels** (`approved`,
-  `changes requested`, `ready for UAT`, `UAT pending`, `no UAT needed`, `tested`,
+  `changes requested`, `UAT ready`, `UAT pending`, `no UAT needed`, `UAT passed`,
   …). Those live in PR Shepherd. The `@rmartz/bootstrap` label roster deliberately
   excludes them.
 - **Layers** (enforced by `eslint-plugin-boundaries`): 0 foundation, 1 tooling,
