@@ -96,7 +96,8 @@ file**, not a block spliced into user content.
   a new-repo initializer, not an ongoing manager. Every golden workflow is either a
   **self-updating reference** (a SHA-pinned reusable-workflow caller or
   composite-action consumer Dependabot bumps — `bot-automerge.yml`, `merge-safety.yml`,
-  `repo-hygiene.yml`) or a **starting config** the repo tailors (`dependabot.yml`), or
+  `repo-hygiene.yml`, `ci-change-guard.yml`) or a **starting config** the repo tailors
+  (`dependabot.yml`), or
   an **inline-logic** file seeded once and re-propagated by the checklist audit rather
   than a cron (`commit-convention.yml`). In every case there is nothing for a re-run
   to overwrite, which is why the old `manage`/overwrite-on-drift policy and its
@@ -180,6 +181,35 @@ file**, not a block spliced into user content.
     `github.token`) — no Dependabot PAT. A self-updating reference: bootstrap writes
     it once and Dependabot owns the pin thereafter, so it is never overwritten.
     Advisory; `gateChecks: []`.
+  - `ci-change-guard.yml`: a thin **caller** of the SHA-pinned
+    `rmartz/ci-change-guard` reusable workflow
+    (`uses: rmartz/ci-change-guard/.github/workflows/ci-change-guard.yml@<sha> # vX.Y.Z`).
+    It classifies a PR's `.github/workflows/**` diff as **tightening** or
+    **loosening**, posts the `ci-change-guard` check-run, and reconciles the
+    `CI approval needed` merge-gate label; a human clears the gate by applying
+    `CI change approved`, which the guard never applies itself. Extracted from
+    `review.md` Step 5 (#302) — the gate was already structural, but its producer was
+    an LLM review step, so a PR that was never reviewed skipped the gate entirely.
+    The trigger is `pull_request_target` (**not** `pull_request`): a fork PR and
+    _every_ Dependabot PR get a read-only token under `pull_request`, so the guard
+    could post neither the check-run nor the label on precisely the PRs that most
+    often touch workflow files (Dependabot's own action bumps). It is safe because
+    the reusable workflow never checks out or executes PR code — it reads the
+    workflow blobs through the API. `labeled`/`unlabeled` are **load-bearing**
+    trigger types (applying `CI change approved` arrives as a label event) and
+    `synchronize` keeps the label tracking the head while nobody has signed off. It
+    needs `checks: write` (the check-run), `pull-requests: write` (the label),
+    `contents: read` (the workflow blobs at the merge base and at head) and
+    `packages: read` (install the CLI from GitHub Packages). Dependabot's
+    `github-actions` ecosystem bumps the pin — and the CLI version, resolved from the
+    release tag at that same commit, in lockstep — and the full `major.minor.patch`
+    version comment is what keeps the `action-pins` hygiene check green. It is
+    **ungated** (`gateChecks: []`): the check-run is `neutral` and never fails, and
+    the gate is enforced at the **merge queue** by the label, so unlike
+    `bot-automerge.yml` there is no merges-immediately hazard to withhold against.
+    _(The `CI approval needed` / `CI change approved` labels are PR Shepherd gate
+    labels and are deliberately **not** in this package's roster — seeding the
+    workflow is in scope; knowing the gate labels is not.)_
   - `commit-convention.yml`: the **post-merge conventional-commit
     tripwire** — a `push: [main]` job that fails when a subject reaches the default
     branch without a valid conventional-commit prefix. It is the counterpart of
@@ -206,7 +236,7 @@ file**, not a block spliced into user content.
   **Check-name convention (#299).** The check names these templates produce follow
   one fleet-wide rule, and the casing encodes _who owns the check_: a check supplied
   by a **shared CI product** is lowercase-kebab (`hygiene`, `merge-safety`,
-  `bot-automerge`), while a job a **repo defines itself** is Title Case and
+  `bot-automerge`, `ci-change-guard`), while a job a **repo defines itself** is Title Case and
   human-readable (`Build`, `Format`, `Lint`, `Test`, `Typecheck`,
   `Validate PR title`, `Validate commit subjects on main`). That is why
   `repo-hygiene.yml`'s job sets no `name:` — the check posts under the bare job id,

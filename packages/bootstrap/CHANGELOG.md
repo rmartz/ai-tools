@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.12.1...bootstrap-v0.13.0) (2026-09-23)
+
+
+### Features
+
+* **bootstrap:** seed a ci-change-guard golden workflow ([#305](https://github.com/rmartz/ai-tools/issues/305)) ([b1f9efc](https://github.com/rmartz/ai-tools/commit/b1f9efcd8e508b651c4c83191d21312395d959f4))
+
 ## [0.12.1](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.12.0...bootstrap-v0.12.1) (2026-09-22)
 
 
