@@ -328,6 +328,33 @@ describe('goldenWorkflowFiles — the commit-convention tripwire', () => {
   it('names its job in Title Case, as a job the repo defines itself', () => {
     expect(tripwire?.content).toContain('name: Validate commit subjects on main');
   });
+
+  // #303 — a force-push to the default branch leaves `github.event.before` pointing
+  // at a commit the rewrite orphaned, so the `BEFORE..AFTER` range exits 128 and the
+  // tripwire dies on `set -e` instead of validating anything. Guard the range by
+  // checking BEFORE is a reachable commit first, and fall back to the pushed tip —
+  // the same narrowed scope the all-zeros first-push case already takes.
+  it('guards the range on a reachable BEFORE before computing it', () => {
+    const content = tripwire?.content ?? '';
+    const guard = content.indexOf('git cat-file -e "${BEFORE}^{commit}"');
+    expect(guard).toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(content.indexOf('git rev-list --first-parent'));
+  });
+
+  it('keeps the all-zeros first-push branch alongside the unreachable-BEFORE one', () => {
+    const content = tripwire?.content ?? '';
+    expect(content).toContain(`grep -qE '^0+$'`);
+    // Both degraded cases narrow to the pushed tip rather than skipping.
+    expect(content.match(/revs="\$AFTER"/g)).toHaveLength(2);
+  });
+
+  // A silently-skipped tripwire is worse than a red one: each fallback says in the
+  // log that it validated the tip only, and still exits 1 on a bad subject.
+  it('announces a narrowed scope instead of skipping silently', () => {
+    const content = tripwire?.content ?? '';
+    expect(content).toContain('validating the pushed tip only');
+    expect(content).toContain('exit 1');
+  });
 });
 
 // #263 — bootstrap is a new-repo initializer, not an ongoing manager: the golden set
