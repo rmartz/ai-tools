@@ -1,4 +1,17 @@
 version: 2
+
+# @rmartz/repo-hygiene is an npm dependency published to GitHub Packages, so
+# Dependabot needs registry auth to see new versions of it. Without this block it
+# resolves only the public-npm deps and silently never opens a PR for the @rmartz
+# scope — which is how this repo sat on repo-hygiene 1.0.0 while the CLI reached
+# 7.0.1. The DEPENDABOT_PACKAGES_TOKEN Dependabot secret (a classic PAT with
+# `read:packages`) already exists on this repo; it was simply never wired up.
+registries:
+  github-packages:
+    type: npm-registry
+    url: https://npm.pkg.github.com
+    token: ${{secrets.DEPENDABOT_PACKAGES_TOKEN}}
+
 updates:
   - package-ecosystem: npm
     # Monorepo: scan the root manifest and every workspace package so per-package
@@ -6,6 +19,9 @@ updates:
     directories:
       - '/'
       - '/packages/*'
+    # Grants this ecosystem access to the GitHub Packages registry declared above.
+    registries:
+      - github-packages
     schedule:
       interval: weekly
     # Let new releases age 7 days before opening update PRs, reducing exposure
