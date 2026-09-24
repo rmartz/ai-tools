@@ -42,7 +42,9 @@ Protocol consumes (`docs/pr-shepherd-handoff.md`): `approve` / `soft_reject` /
    out-of-scope→defer (file a tracking issue), inaccurate→dismiss (with a reply),
    already-fixed / tracked-elsewhere→resolve, duplicate→merge. Copilot threads are
    triaged the same way but never drive scope. Applies the may-defer / never-defer
-   rules that are the arbiter's core judgment.
+   rules that are the arbiter's core judgment. Coordination notes in the PR
+   description are never-defer: clean the body via `titleDescriptionEdits` and
+   have `fix-review` repost the notes as a PR comment.
 4. **Verdict** — fold the triage into exactly one outcome; `approve` requires every
    thread resolved and no surviving `blocking` / `needs-human-input` finding.
 5. **Emit** — one record: the `verdict`, per-thread `threadDispositions`, the

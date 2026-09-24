@@ -253,7 +253,10 @@ summarizing the change and a body (written to a file) stating the purpose, the
 reuse/extend/new decision from Step 3b, which criteria pass, and the issue it
 closes. Prefer `mcp__github__create_pull_request` in this agent turn (the
 desktop app attaches the PR chip); fall back to `ai-create-pr` when the MCP
-tool is unavailable. You reached this step because the
+tool is unavailable. The body becomes the squash-commit message, so keep
+process status out of it: when the PR is stacked on another PR or waits on an
+external dependency, say so in a signed **PR comment**
+(`mcp__github__add_issue_comment`) posted right after opening, not in the body. You reached this step because the
 implementation is done, so the PR is immediately ready for another agent to pick
 up for review → fix-review → merge — there is no separate "mark ready" step to
 remember.

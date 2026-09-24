@@ -97,8 +97,12 @@ one about untouched code is **defer**; a misread is **dismiss**.
   known-buggy/known-limited helper** (new risk, not "pre-existing"); materially
   better/safer/simpler patterns; docs gaps this PR introduced; any code-quality or
   project-defined-convention violation appearing in this PR's own diff;
-  low-hanging-fruit optimizations in code the PR touches; and overlapping/
-  duplicated functionality this PR introduces.
+  low-hanging-fruit optimizations in code the PR touches; overlapping/
+  duplicated functionality this PR introduces; and **coordination notes in the
+  PR description** (stacking, external-dependency, or other process status the
+  squash-commit message would carry). For the last, emit `titleDescriptionEdits`
+  with the cleaned body plus a `requiredChanges` entry telling `fix-review` to post
+  the removed notes as a signed PR comment first, so the timeline keeps them.
 
 ## Step 4 — Reach the one routing verdict
 

@@ -31,7 +31,8 @@ based on its dep's branch) is expressed; the runner orders the merges.
    (already has a PR → skip), blocked (a dep neither closed nor in-flight). A dep
    is "clear" when closed **or** in-flight, so children stack on open dep PRs
    without waiting for a merge. Recover stale actionable worktrees (push + open a
-   PR against the ancestry-resolved base).
+   PR against the ancestry-resolved base). A stacked PR's stacking status goes in
+   a signed PR comment, never the description (which becomes the squash commit).
 3. **Loop** — pick lowest-numbered actionable → `/implement` → re-run
    `ai-repo-status` and promote newly-unblocked issues → repeat (safety cap 60).
 4. **Report** — group by outcome (opened / stuck / failed / skipped / blocked) and
