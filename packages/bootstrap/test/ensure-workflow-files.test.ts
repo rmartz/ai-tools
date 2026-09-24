@@ -128,6 +128,22 @@ describe('goldenWorkflowFiles — the seeded bot-automerge composite-action cons
     );
   });
 
+  // GHSA-39fm-72q5-676g: v1.1.1 is the first action release that rejects fork PRs.
+  it('pins bot-automerge-action at v1.1.1 or later', () => {
+    const version = /rmartz\/bot-automerge-action@[0-9a-f]{40} # v(\d+)\.(\d+)\.(\d+)/.exec(
+      botAutomerge?.content ?? '',
+    );
+    const [major, minor, patch] = (version?.slice(1) ?? []).map(Number);
+    expect(version).not.toBeNull();
+    expect(major * 1e6 + minor * 1e3 + patch).toBeGreaterThanOrEqual(1_001_001);
+  });
+
+  it('skips fork PRs at the job level', () => {
+    expect(botAutomerge?.content).toContain(
+      'if: github.event.pull_request.head.repo.full_name == github.repository',
+    );
+  });
+
   it('no longer calls the rmartz/bot-automerge reusable workflow', () => {
     expect(botAutomerge?.content).not.toContain('rmartz/bot-automerge/.github/workflows/');
   });
@@ -327,6 +343,33 @@ describe('goldenWorkflowFiles — the commit-convention tripwire', () => {
   // check such as `hygiene`, which stays lowercase-kebab.
   it('names its job in Title Case, as a job the repo defines itself', () => {
     expect(tripwire?.content).toContain('name: Validate commit subjects on main');
+  });
+
+  // #303 — a force-push to the default branch leaves `github.event.before` pointing
+  // at a commit the rewrite orphaned, so the `BEFORE..AFTER` range exits 128 and the
+  // tripwire dies on `set -e` instead of validating anything. Guard the range by
+  // checking BEFORE is a reachable commit first, and fall back to the pushed tip —
+  // the same narrowed scope the all-zeros first-push case already takes.
+  it('guards the range on a reachable BEFORE before computing it', () => {
+    const content = tripwire?.content ?? '';
+    const guard = content.indexOf('git cat-file -e "${BEFORE}^{commit}"');
+    expect(guard).toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(content.indexOf('git rev-list --first-parent'));
+  });
+
+  it('keeps the all-zeros first-push branch alongside the unreachable-BEFORE one', () => {
+    const content = tripwire?.content ?? '';
+    expect(content).toContain(`grep -qE '^0+$'`);
+    // Both degraded cases narrow to the pushed tip rather than skipping.
+    expect(content.match(/revs="\$AFTER"/g)).toHaveLength(2);
+  });
+
+  // A silently-skipped tripwire is worse than a red one: each fallback says in the
+  // log that it validated the tip only, and still exits 1 on a bad subject.
+  it('announces a narrowed scope instead of skipping silently', () => {
+    const content = tripwire?.content ?? '';
+    expect(content).toContain('validating the pushed tip only');
+    expect(content).toContain('exit 1');
   });
 });
 
