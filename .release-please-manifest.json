@@ -1,6 +1,6 @@
 {
   "packages/agent-runtime": "0.1.1",
-  "packages/bootstrap": "0.14.0",
+  "packages/bootstrap": "0.14.1",
   "packages/github": "0.5.0",
   "packages/issues": "0.2.1",
   "packages/pr-review": "0.7.0",
