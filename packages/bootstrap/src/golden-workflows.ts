@@ -36,7 +36,11 @@
 // until merge-safety is a satisfied required check (an ungated `gh pr merge --auto`
 // merges immediately). It is a `seed` file (see the per-file seed-vs-manage
 // principle in golden-config.ts) — a self-updating reference, so bootstrap seeds it
-// once and Dependabot owns the pin thereafter.
+// once and Dependabot owns the pin thereafter. The job skips fork PRs
+// (GHSA-39fm-72q5-676g): a fork picks its own branch name, so it could pose as a
+// release-please PR under this write-token trigger. The action rejects forks
+// itself from v1.1.1, so this pin must stay at v1.1.1 or later; the job-level
+// guard is a second layer in case an older pin comes back.
 export const BOT_AUTOMERGE = `name: bot-automerge
 
 on:
@@ -50,9 +54,10 @@ permissions:
 
 jobs:
   bot-automerge:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - uses: rmartz/bot-automerge-action@c71f5dfdeb4e275ee80b8b0c92de817f2edb68e0 # v1.0.2
+      - uses: rmartz/bot-automerge-action@a46eafc1396993ffc04918f452b3d1c0e3c80f4f # v1.1.1
         with:
           pr: \${{ github.event.pull_request.number }}
           release-please-token: \${{ secrets.RELEASE_PLEASE_PAT }}

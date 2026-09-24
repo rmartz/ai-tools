@@ -128,6 +128,22 @@ describe('goldenWorkflowFiles — the seeded bot-automerge composite-action cons
     );
   });
 
+  // GHSA-39fm-72q5-676g: v1.1.1 is the first action release that rejects fork PRs.
+  it('pins bot-automerge-action at v1.1.1 or later', () => {
+    const version = /rmartz\/bot-automerge-action@[0-9a-f]{40} # v(\d+)\.(\d+)\.(\d+)/.exec(
+      botAutomerge?.content ?? '',
+    );
+    const [major, minor, patch] = (version?.slice(1) ?? []).map(Number);
+    expect(version).not.toBeNull();
+    expect(major * 1e6 + minor * 1e3 + patch).toBeGreaterThanOrEqual(1_001_001);
+  });
+
+  it('skips fork PRs at the job level', () => {
+    expect(botAutomerge?.content).toContain(
+      'if: github.event.pull_request.head.repo.full_name == github.repository',
+    );
+  });
+
   it('no longer calls the rmartz/bot-automerge reusable workflow', () => {
     expect(botAutomerge?.content).not.toContain('rmartz/bot-automerge/.github/workflows/');
   });
