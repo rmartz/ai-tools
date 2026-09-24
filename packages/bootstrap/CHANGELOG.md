@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.14.0...bootstrap-v0.14.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **bootstrap:** seed bot-automerge at action v1.1.1 with a fork-PR skip ([#320](https://github.com/rmartz/ai-tools/issues/320)) ([1f4b400](https://github.com/rmartz/ai-tools/commit/1f4b400788952f8028b24bddb68e2290edb520c9))
+
 ## [0.14.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.13.0...bootstrap-v0.14.0) (2026-09-23)
 
 
