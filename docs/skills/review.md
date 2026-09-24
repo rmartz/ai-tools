@@ -42,7 +42,8 @@ title/description replacement or an obvious code fix).
    `listPrReviews` + `lastAuthoritativeReview` (Copilot reviews are informational),
    and pick a full or incremental diff via `ai-pr-diff`. Branch-immutable
    throughout.
-2. **Review the diff** — title/description vs. the diff (as a `suggestedText`
+2. **Review the diff** — coordination notes (stacking / dependency status) in the
+   description are a `blocking` finding; title/description vs. the diff (as a `suggestedText`
    finding, not an inline edit), acceptance criteria, an overlap search for
    duplicated functionality, conventions (ai-tools' layer boundaries,
    library-first, file-size, hermetic tests, OKF docs), correctness, coverage, an

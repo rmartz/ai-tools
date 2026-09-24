@@ -71,6 +71,14 @@ Analyze the diff and form findings covering:
   checklist-only, or placeholder, emit a finding with the **suggested replacement
   text** — do not call `gh pr edit`; the rewrite is applied downstream. A genuine
   _design_ disagreement is a separate, higher-severity finding.
+- **Coordination notes in the description.** The description becomes the
+  squash-commit message, so process status unrelated to the change — "stacked on
+  #N", "waiting on an upstream release", "blocked by #N", "rebased onto main" — is a
+  `blocking` `title-description` finding. `suggestedText` is the body with the
+  notes removed; the `summary` quotes the notes, says whether each blocker is still
+  active or has cleared, and states they belong in a PR comment. Permanent context
+  (`Closes #N`, a sentence on design lineage from #M) is not a finding — the test is
+  whether the line stays true and useful after merge.
 - **Linked-issue acceptance criteria** — for each `Closes/Fixes/Resolves #N`,
   read the issue and check every criterion is implemented or explicitly scoped
   out. A neither-implemented-nor-discussed criterion is a finding.

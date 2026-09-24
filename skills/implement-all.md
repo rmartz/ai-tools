@@ -106,6 +106,16 @@ dispatches B stacked on A and C stacked on B **without waiting for any merge**. 
 guard holds: a dep with **neither** a closed issue **nor** an open PR still blocks
 the child — nothing to merge, nothing to stack on.
 
+**Stacking status is a PR comment, never PR-description text.** The PR description
+becomes the squash-commit message, so a stacked child's PR body stays limited to
+the change itself (purpose, technical notes, `Closes #N`). Record the stacking
+relationship — e.g. `Stacked on #<dep-PR> (issue #<dep>); merges after it lands.`
+— as a signed **PR comment** (`mcp__github__add_issue_comment`) posted right after
+the child PR opens. This applies to every PR this run opens against a non-default
+base: children `/implement` opens here and stale-worktree recoveries (Step 1,
+item 4). Later status changes (dep merged, retargeted to `main`) are further
+comments, not description edits.
+
 **Stale-worktree check (actionable issues).** Run `git worktree list --porcelain`
 and, for each actionable N, parse the `worktree` lines to find the actual path
 whose leaf matches `issue-<N>-*` (e.g. `.git-worktrees/issue-<N>-slug`); call it
@@ -130,7 +140,9 @@ origin/main..HEAD`). A Conventional-Commits subject → a ready-for-review PR;
      so the coordinator orders parent-before-child; otherwise target `main` (covers
      the normal case and a since-merged/deleted base — GitHub retargets to `main`).
   4. **Open the PR** with `ai-create-pr` (or `mcp__github__create_pull_request`)
-     against the resolved base, with the draft/ready state + title.
+     against the resolved base, with the draft/ready state + title. When the base
+     is a non-default branch, keep the body free of stacking notes and post the
+     stacking status as a PR comment instead (see **Stacking** above).
   5. **Success** → move the issue `actionable` → `in_flight`; log
      `"issue #N: stale worktree recovered — pushed and opened PR <url>"`.
   6. **Failure** → preserve the worktree, drop from `actionable`, and note for the
