@@ -56,9 +56,12 @@ Feed the **diff-derived** bump to `assessDependabotRisk` (with `name`,
 - **`review` or `high`** (or a misstated title) → emit a `dependency-bump` finding
   at severity `blocking`: the specific risk (`assessment.reasons`, plus the
   bump-mismatch `note` when present) and what a human should verify.
-- **`github_actions` bump** — add a finding noting it **cannot be merged by an
-  automation lacking the `workflows` OAuth scope**; that is a merge-mechanics
-  constraint a human or a suitably-scoped actor must clear.
+- **`github_actions` bump** — assess it on risk alone, exactly like any other
+  bump. **Never infer merge-ability from token scope, file paths, or labels** —
+  do not add a finding that the PR "cannot be merged by an automation lacking the
+  `workflows` OAuth scope". Escalating for merge mechanics is `/merge`'s job, and
+  only after a merge attempt actually fails on a permission/scope error
+  (rmartz/dotfiles#1592).
 
 ## Step 4 — Emit the findings
 

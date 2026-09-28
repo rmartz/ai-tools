@@ -35,8 +35,8 @@ identically.
    carrying the corrected title and escalates the risk finding.
 3. **Assess risk** — `assessDependabotRisk` on the diff-derived bump; `safe` (title
    matching) emits no risk finding, `review`/`high`/misstated emits a `blocking`
-   `dependency-bump` finding. A `github_actions` bump adds a finding that merging
-   needs the `workflows` OAuth scope.
+   `dependency-bump` finding. A `github_actions` bump is assessed on risk alone —
+   merge-ability is never inferred from token scope, paths, or labels.
 4. **Emit the findings** — a `review-findings` record (same schema as `review`,
    `skill: "dependabot-review"`) via `ai-post-json-marker <pr> review-findings <file>`.
 

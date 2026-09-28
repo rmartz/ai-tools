@@ -109,9 +109,12 @@ function normalizeName(name: string): string {
  *   a major bump of CI-sensitive tooling (a stricter linter/formatter can fail
  *   CI on unrelated files). These warrant a human-readable concern, not a
  *   silent approve.
- * - `review`: signals worth a glance but not a block — a `github_actions`
- *   workflow bump (cannot be merged by an automation lacking the `workflows`
- *   OAuth scope), or any minor bump of CI-sensitive tooling.
+ * - `review`: signals worth a glance but not a block — any minor bump of
+ *   CI-sensitive tooling.
+ *
+ * A `github_actions` workflow bump is assessed on the same semver risk as any
+ * other bump. Whether the merging token can land it is never inferred here —
+ * only a merge attempt that actually fails decides that (rmartz/dotfiles#1592).
  * - `safe`: lockfile-only refreshes and ordinary minor/patch bumps — exactly the
  *   mechanical updates the dotfiles fast path approves without manual testing.
  */
@@ -120,7 +123,6 @@ export function assessDependabotRisk(bump: DependabotBump): DependabotRiskAssess
   const semverChange = classifySemverChange(bump.fromVersion, bump.toVersion);
   const tool = normalizeName(bump.name);
   const ciSensitive = CI_SENSITIVE_TOOLS.has(tool);
-  const isWorkflow = bump.ecosystem === 'github_actions';
 
   let level: DependabotRiskLevel = 'safe';
   const escalate = (to: DependabotRiskLevel) => {
@@ -145,14 +147,6 @@ export function assessDependabotRisk(bump: DependabotBump): DependabotRiskAssess
     reasons.push(
       `${tool} is CI-sensitive tooling; even a minor bump can change lint/format/type ` +
         'output — confirm CI is green on the new version before merging.',
-    );
-  }
-
-  if (isWorkflow) {
-    escalate('review');
-    reasons.push(
-      'Touches a GitHub Actions workflow (`github_actions`); an automation lacking the ' +
-        '`workflows` OAuth scope cannot merge it — surface for manual merge.',
     );
   }
 

@@ -67,15 +67,24 @@ describe('assessDependabotRisk', () => {
     expect(r.reasons[0]).toMatch(/CI-sensitive/);
   });
 
-  it('flags a github_actions workflow bump as review (manual-merge surface)', () => {
-    const r = assessDependabotRisk({
+  it('assesses a github_actions bump on semver risk alone, never on merge-ability', () => {
+    const minor = assessDependabotRisk({
       name: 'actions/checkout',
-      fromVersion: 'v3',
-      toVersion: 'v4',
+      fromVersion: 'v4.1.0',
+      toVersion: 'v4.2.0',
       ecosystem: 'github_actions',
     });
-    expect(r.level).toBe('review');
-    expect(r.reasons.some((x) => /workflows. OAuth scope|GitHub Actions/.test(x))).toBe(true);
+    expect(minor.level).toBe('safe');
+    expect(minor.reasons.some((x) => /OAuth scope|merge/i.test(x))).toBe(false);
+
+    const major = assessDependabotRisk({
+      name: 'actions/checkout',
+      fromVersion: 'v3.6.0',
+      toVersion: 'v4.1.0',
+      ecosystem: 'github_actions',
+    });
+    expect(major.level).toBe('high');
+    expect(major.reasons.some((x) => /OAuth scope/.test(x))).toBe(false);
   });
 
   it('treats an ordinary minor bump as safe', () => {
