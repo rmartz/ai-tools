@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/rmartz/ai-tools/compare/pr-review-v0.7.0...pr-review-v0.7.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* **pr-review:** assess github_actions Dependabot bumps on risk alone ([#327](https://github.com/rmartz/ai-tools/issues/327)) ([337cf93](https://github.com/rmartz/ai-tools/commit/337cf935b4d80356e76074165f95ed79f3fd2e34))
+
 ## [0.7.0](https://github.com/rmartz/ai-tools/compare/pr-review-v0.6.0...pr-review-v0.7.0) (2026-09-19)
 
 
