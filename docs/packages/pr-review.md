@@ -45,9 +45,10 @@ as review craft.
   the high-risk-vs-safe criteria from dotfiles' `dependabot.md` fast path:
   - **`high`** — a semver-major bump (breaking API surface tests can't catch),
     flagged extra when the package is CI-sensitive tooling.
-  - **`review`** — a `github_actions` workflow bump (an automation lacking the
-    `workflows` OAuth scope can't merge it) or a minor bump of CI-sensitive
-    tooling (`black`, `ruff`, `eslint`, `pylint`, `prettier`, `typescript`, …).
+  - **`review`** — a minor bump of CI-sensitive tooling (`black`, `ruff`,
+    `eslint`, `pylint`, `prettier`, `typescript`, …). A `github_actions` bump
+    gets the same semver-based level as any other bump; merge-ability is never
+    inferred from the ecosystem.
   - **`safe`** — lockfile-only refreshes and ordinary minor/patch bumps.
 - `classifySemverChange(from, to)` → `major | minor | patch | none | unknown`,
   tolerant of `^`/`~`/`v` prefixes.
