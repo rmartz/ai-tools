@@ -230,6 +230,9 @@ describe('goldenWorkflowFiles — the seeded merge-safety reusable-workflow call
     expect(content).toContain('push:');
     expect(content).toContain('workflow_dispatch:');
     expect(content).toContain('checks: write');
+    // v0.9.0+ also posts a `merge-safety` commit status (rmartz/merge-safety#73/#74); the
+    // reusable workflow declares `statuses: write`, so the caller must grant it or GitHub refuses to start it.
+    expect(content).toContain('statuses: write');
     expect(content).toContain('pull-requests: write');
     expect(content).toContain('actions: write');
     expect(content).toContain('pr: ${{ inputs.pr }}');
