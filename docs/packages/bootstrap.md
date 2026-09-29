@@ -136,12 +136,19 @@ file**, not a block spliced into user content.
     read-only-token PRs get base-context write). No checkout is needed — the action
     installs its CLI into its own directory and acts on the PR via the API. It passes
     two inputs: the required `pr: ${{ github.event.pull_request.number }}`, and
-    `release-please-token: ${{ secrets.RELEASE_PLEASE_PAT }}`. A composite action
-    cannot `secrets: inherit`, so the PAT must be explicit: a release-PR merge enabled
-    via `GITHUB_TOKEN` never re-triggers the publish workflow (#236 /
-    rmartz/bot-automerge#8). It is passed unconditionally — empty where the secret is
-    unset, in which case the action falls back to `github.token` (the Dependabot path
-    is unaffected). It stays **gated**: it keeps `gateChecks: ['merge-safety']`, so
+    `token: ${{ secrets.BOT_AUTOMERGE_TOKEN }}` — a real-actor PAT the repo stores as
+    both an Actions **and** a Dependabot secret (a Dependabot-triggered run sees only
+    the latter). A composite action cannot `secrets: inherit`, so the PAT must be
+    explicit: GitHub fires no `push` workflows for a merge whose auto-merge was
+    enabled with `GITHUB_TOKEN`, so a merged Dependabot bump or release PR would never
+    re-trigger the release/CD workflow (#236 / rmartz/bot-automerge-action#31). It is
+    passed unconditionally — empty where the secret is unset, in which case the action
+    falls back to `github.token`. The pin is v2.1.1 or later: v2.x installs its CLI
+    from npmjs (so there is no `packages: read`) and replaced the deprecated
+    `release-please-token` input with `token`. The job's only `if:` is the fork guard
+    — there is no `autorelease: pending` label condition, because the CLI detects
+    release-please PRs by `release-please--` head branch alone
+    (rmartz/bot-automerge#41). It stays **gated**: it keeps `gateChecks: ['merge-safety']`, so
     the writer **withholds** its creation until `merge-safety` is a satisfied required
     check (an ungated `gh pr merge --auto` merges immediately). Like `repo-hygiene.yml`,
     it kept its filename, so an **already-seeded** repo is not migrated by a re-run

@@ -128,14 +128,16 @@ describe('goldenWorkflowFiles — the seeded bot-automerge composite-action cons
     );
   });
 
-  // GHSA-39fm-72q5-676g: v1.1.1 is the first action release that rejects fork PRs.
-  it('pins bot-automerge-action at v1.1.1 or later', () => {
+  // GHSA-39fm-72q5-676g: v1.1.1 is the first action release that rejects fork PRs;
+  // v2.0.0 is the first with the `token` input, an npmjs-installed CLI, and
+  // head-branch-only release-please detection (GHSA-4f7f-7fcp-gcm6).
+  it('pins bot-automerge-action at v2.0.0 or later', () => {
     const version = /rmartz\/bot-automerge-action@[0-9a-f]{40} # v(\d+)\.(\d+)\.(\d+)/.exec(
       botAutomerge?.content ?? '',
     );
     const [major, minor, patch] = (version?.slice(1) ?? []).map(Number);
     expect(version).not.toBeNull();
-    expect(major * 1e6 + minor * 1e3 + patch).toBeGreaterThanOrEqual(1_001_001);
+    expect(major * 1e6 + minor * 1e3 + patch).toBeGreaterThanOrEqual(2_000_000);
   });
 
   it('skips fork PRs at the job level', () => {
@@ -156,20 +158,30 @@ describe('goldenWorkflowFiles — the seeded bot-automerge composite-action cons
     expect(botAutomerge?.content).toContain('pr: ${{ github.event.pull_request.number }}');
   });
 
-  // A composite action cannot `secrets: inherit`, so the release-please PAT must be an
-  // explicit input — without it a release-PR merge never re-triggers release CD (#236).
-  it('passes RELEASE_PLEASE_PAT as the explicit release-please-token input', () => {
-    expect(botAutomerge?.content).toContain(
-      'release-please-token: ${{ secrets.RELEASE_PLEASE_PAT }}',
-    );
+  // A composite action cannot `secrets: inherit`, so the real-actor PAT must be an
+  // explicit input — a merge enabled with GITHUB_TOKEN fires no push workflows, so
+  // release CD would never run (#236, rmartz/bot-automerge-action#31).
+  it('passes BOT_AUTOMERGE_TOKEN as the explicit token input', () => {
+    expect(botAutomerge?.content).toContain('token: ${{ secrets.BOT_AUTOMERGE_TOKEN }}');
+  });
+
+  it('does not pass the deprecated release-please-token input', () => {
+    expect(botAutomerge?.content).not.toContain('release-please-token');
   });
 
   it('drops secrets: inherit, which a composite-action consumer cannot use', () => {
     expect(botAutomerge?.content).not.toContain('secrets: inherit');
   });
 
-  it('grants packages: read so the action can install its CLI from GitHub Packages', () => {
-    expect(botAutomerge?.content).toContain('packages: read');
+  // v2.x installs its CLI from npmjs, so the GitHub Packages read scope is unneeded.
+  it('does not grant packages: read', () => {
+    expect(botAutomerge?.content).not.toContain('packages: read');
+  });
+
+  // rmartz/bot-automerge#41 (GHSA-4f7f-7fcp-gcm6): the CLI detects release-please PRs
+  // by head branch only, since anyone with triage permission can apply the label.
+  it('does not treat the autorelease: pending label as a bot signal', () => {
+    expect(botAutomerge?.content).not.toContain('autorelease: pending');
   });
 
   it('drops the inline fetch-metadata step and the inline merge command', () => {
