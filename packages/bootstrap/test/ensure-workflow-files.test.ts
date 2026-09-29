@@ -288,8 +288,16 @@ describe('goldenWorkflowFiles — the seeded repo-hygiene composite-action consu
     expect(content).not.toContain('fetch-depth: 0');
   });
 
-  it('grants packages: read so the action can install the CLI from GitHub Packages', () => {
-    expect(repoHygiene?.content).toContain('packages: read');
+  it('pins the action at v3.2.0 (npmjs install + per-check statuses)', () => {
+    expect(repoHygiene?.content).toMatch(/rmartz\/repo-hygiene-action@[0-9a-f]{40} # v3\.2\.0\n/);
+  });
+
+  it('grants statuses: write so the action can post one commit status per check', () => {
+    expect(repoHygiene?.content).toContain('statuses: write');
+  });
+
+  it('does not grant packages: read (the action installs the CLI from npmjs with no auth)', () => {
+    expect(repoHygiene?.content).not.toContain('packages: read');
   });
 
   it('is no longer a reusable-workflow caller and carries no hand-rolled CLI install', () => {

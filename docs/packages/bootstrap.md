@@ -193,9 +193,10 @@ file**, not a block spliced into user content.
     Passing no `checks:` input runs the package's registry-derived **default-on** set
     (the universally-safe checks); a repo opts into repo-specific checks (`okf`,
     `docs-links`) and points `config:` at its `.repo-hygiene.yml` by adding those
-    inputs to its own copy. Only `packages: read` is needed at runtime (the action
-    reads the public `@rmartz/repo-hygiene` from GitHub Packages via the default
-    `github.token`) — no Dependabot PAT. A self-updating reference: bootstrap writes
+    inputs to its own copy. The job grants `statuses: write` (v3.2.0+ posts one
+    commit status per check, `repo-hygiene / <check>`) and **no** `packages: read` —
+    since v3.1.0 the action installs the public `@rmartz/repo-hygiene` from npmjs
+    with no auth, so no Dependabot PAT either. A self-updating reference: bootstrap writes
     it once and Dependabot owns the pin thereafter, so it is never overwritten.
     Advisory; `gateChecks: []`.
   - `commit-convention.yml`: the **post-merge conventional-commit
