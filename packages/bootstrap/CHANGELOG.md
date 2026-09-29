@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.3](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.14.2...bootstrap-v0.14.3) (2026-09-29)
+
+
+### Bug Fixes
+
+* **bootstrap:** seed bot-automerge with v2.1.1 and the BOT_AUTOMERGE_TOKEN PAT ([#332](https://github.com/rmartz/ai-tools/issues/332)) ([7b4e6a0](https://github.com/rmartz/ai-tools/commit/7b4e6a03bd39416a6b35b91e2f874193eecf5231))
+
 ## [0.14.2](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.14.1...bootstrap-v0.14.2) (2026-09-29)
 
 

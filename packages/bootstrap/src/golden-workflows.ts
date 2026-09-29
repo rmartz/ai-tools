@@ -24,11 +24,15 @@
 // superseded the reusable-workflow caller form (#282). The consumer carries the
 // real trigger and the write scopes and passes two inputs: `pr` (required — unlike
 // the reusable workflow, the action does not derive it from the event), and
-// `release-please-token`. A composite action cannot `secrets: inherit`, so the
-// release-please PAT must be passed explicitly: a release-PR merge enabled via
-// GITHUB_TOKEN never re-triggers the consumer's release CD (#236). It is passed
-// unconditionally — where the secret is unset it is empty and the action falls back
-// to `github.token`. No checkout is needed: the action installs its CLI into its own
+// `token`. A composite action cannot `secrets: inherit`, so the real-actor
+// `BOT_AUTOMERGE_TOKEN` PAT must be passed explicitly: GitHub fires no `push`
+// workflows for a merge whose auto-merge was enabled with GITHUB_TOKEN, so a merged
+// Dependabot bump or release PR would never re-trigger the consumer's release CD
+// (#236, rmartz/bot-automerge-action#31). The repo stores it as both an Actions and
+// a Dependabot secret, since a Dependabot-triggered run sees only the latter. It is
+// passed unconditionally — where the secret is unset it is empty and the action
+// falls back to `github.token`. v2.x installs its CLI from npmjs, so no
+// `packages: read`. No checkout is needed: the action installs its CLI into its own
 // directory and acts on the PR via the API. The trigger is `pull_request_target`
 // (NOT `pull_request`) — required so Dependabot's read-only-token PRs get
 // base-context write. It stays **gated**: its `goldenWorkflowFiles` entry keeps
@@ -39,8 +43,11 @@
 // once and Dependabot owns the pin thereafter. The job skips fork PRs
 // (GHSA-39fm-72q5-676g): a fork picks its own branch name, so it could pose as a
 // release-please PR under this write-token trigger. The action rejects forks
-// itself from v1.1.1, so this pin must stay at v1.1.1 or later; the job-level
-// guard is a second layer in case an older pin comes back.
+// itself from v1.1.1; the job-level guard is a second layer in case an older pin
+// comes back. The pin must stay at v2.0.0 or later, the first release with the
+// `token` input. The job guard deliberately has no `autorelease: pending` label
+// condition: from v2.0.0 the CLI detects release-please PRs by `release-please--`
+// head branch only (rmartz/bot-automerge#41, GHSA-4f7f-7fcp-gcm6).
 export const BOT_AUTOMERGE = `name: bot-automerge
 
 on:
@@ -50,17 +57,16 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  packages: read
 
 jobs:
   bot-automerge:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - uses: rmartz/bot-automerge-action@a46eafc1396993ffc04918f452b3d1c0e3c80f4f # v1.1.1
+      - uses: rmartz/bot-automerge-action@3e26c765f2da6c360fd39ab8aef7a50090a96657 # v2.1.1
         with:
           pr: \${{ github.event.pull_request.number }}
-          release-please-token: \${{ secrets.RELEASE_PLEASE_PAT }}
+          token: \${{ secrets.BOT_AUTOMERGE_TOKEN }}
 `;
 
 // Consumer-shape `merge-safety` workflow — a thin CALLER of the rmartz/merge-safety
