@@ -103,6 +103,7 @@ on:
 
 permissions:
   checks: write
+  statuses: write # set the merge-safety commit status the merge gate relies on (rmartz/merge-safety#73)
   pull-requests: write
   contents: read
   actions: write
@@ -110,7 +111,7 @@ permissions:
 
 jobs:
   merge-safety:
-    uses: rmartz/merge-safety/.github/workflows/merge-safety.yml@db145fb8c20164185eb9e1a1c237dc4d9085c69f # v0.1.0
+    uses: rmartz/merge-safety/.github/workflows/merge-safety.yml@fd90fb9c028827532801c91f33734c99b3ed869e # v0.10.0
     with:
       pr: \${{ inputs.pr }}
     secrets: inherit
