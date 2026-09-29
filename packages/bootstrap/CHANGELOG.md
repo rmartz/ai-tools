@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.2](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.14.1...bootstrap-v0.14.2) (2026-09-29)
+
+
+### Bug Fixes
+
+* **bootstrap:** seed merge-safety v0.10.0 caller with statuses: write ([#330](https://github.com/rmartz/ai-tools/issues/330)) ([80b4fcf](https://github.com/rmartz/ai-tools/commit/80b4fcf96ecbcb613d518e5d966bc73866cf40d8))
+
 ## [0.14.1](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.14.0...bootstrap-v0.14.1) (2026-09-24)
 
 

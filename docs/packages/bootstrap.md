@@ -157,7 +157,10 @@ file**, not a block spliced into user content.
     which tracks the release in lockstep. The caller carries the triggers
     (`pull_request_target` — not `pull_request`, so the check still fires on an
     unmergeable PR, #272 — / `push` / `check_suite` / `workflow_dispatch`) and the write scopes
-    (`checks` / `pull-requests` / `actions`), threads the dispatch `pr` via `with:`,
+    (`checks` / `statuses` / `pull-requests` / `actions` — `statuses: write` is
+    required from v0.9.0, which also posts a `merge-safety` commit status the merge
+    gate relies on, rmartz/merge-safety#73; GitHub refuses to start a reusable
+    workflow that requests a permission its caller does not grant), threads the dispatch `pr` via `with:`,
     and `secrets: inherit`; the reusable side is `on: workflow_call` and owns the
     evaluate-vs-invalidate branch + the label-narrowing. Seeding it makes the check
     **run**; making it a **required gate** is the separate per-repo curation step
