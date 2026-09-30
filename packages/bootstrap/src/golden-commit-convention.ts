@@ -1,14 +1,18 @@
 /**
- * The golden `commit-convention.yml` body — the one golden file whose behaviour is
- * **implemented inline** rather than delegated. Its siblings in `golden-workflows.ts`
- * are all thin, self-updating references to a shared CI product (a SHA-pinned
- * reusable-workflow caller or composite-action consumer that Dependabot bumps), so a
- * body there is a dozen lines of `uses:`/`with:`. This one carries a ~50-line shell
- * script, and that single payload was most of `golden-workflows.ts`'s length — so it
- * lives here, along the inline-implementation-vs-thin-reference seam, rather than
- * padding the reference table. Pure string data — no imports, no logic. See
- * `golden-config.ts` for how it is assembled into the golden set.
+ * The golden `commit-convention.yml` body — one of the two golden files whose
+ * behaviour is **implemented inline** rather than delegated (the other is
+ * `golden-pr-title-lint.ts`). Their siblings in `golden-workflows.ts` are all thin,
+ * self-updating references to a shared CI product (a SHA-pinned reusable-workflow
+ * caller or composite-action consumer that Dependabot bumps), so a body there is a
+ * dozen lines of `uses:`/`with:`. This one carries a ~50-line shell script, and that
+ * single payload was most of `golden-workflows.ts`'s length — so it lives here, along
+ * the inline-implementation-vs-thin-reference seam, rather than padding the
+ * reference table. Pure string data — no logic; its only import is the grammar it
+ * shares with `pr-title-lint.yml`. See `golden-config.ts` for how it is assembled
+ * into the golden set.
  */
+
+import { CONVENTIONAL_SUBJECT_PATTERN } from './conventional-grammar.js';
 
 // Post-merge conventional-commit tripwire. A `push: [main]` alert (it can't gate
 // — the commit is already merged) that fails loudly when a subject reaches the
@@ -53,7 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           # Conventional-commit subject grammar — mirrors pr-title-lint.yml.
-          pattern='^(feat|fix|docs|chore|refactor|test|style|perf|ci|build|revert)(\\([^)]+\\))?!?: [^[:space:]].*$'
+          pattern='${CONVENTIONAL_SUBJECT_PATTERN}'
           # BEFORE is an unusable range endpoint in two cases: a branch's first
           # push (all-zeros), and a force-push that rewrote the branch, where the
           # old tip is no longer reachable and the range would exit 128. Both cases
