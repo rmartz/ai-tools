@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.15.0...bootstrap-v0.15.1) (2026-09-30)
+
+
+### Bug Fixes
+
+* **bootstrap:** seed repo-hygiene-action v3.2.0 with statuses: write ([#337](https://github.com/rmartz/ai-tools/issues/337)) ([cac35f0](https://github.com/rmartz/ai-tools/commit/cac35f04910f5ec69c2025423ebb881517a883f2))
+
 ## [0.15.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.14.3...bootstrap-v0.15.0) (2026-09-30)
 
 
