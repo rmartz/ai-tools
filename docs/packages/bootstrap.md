@@ -99,7 +99,7 @@ file**, not a block spliced into user content.
   `repo-hygiene.yml`) or a **starting config** the repo tailors
   (`dependabot.yml`), or
   an **inline-logic** file seeded once and re-propagated by the checklist audit rather
-  than a cron (`commit-convention.yml`). In every case there is nothing for a re-run
+  than a cron (`commit-convention.yml`, `pr-title-lint.yml`). In every case there is nothing for a re-run
   to overwrite, which is why the old `manage`/overwrite-on-drift policy and its
   `golden-sync.yml` loop are gone (#263).
 
@@ -221,6 +221,28 @@ file**, not a block spliced into user content.
     fall back to validating just the **pushed tip**, announced in the log: the
     tripwire narrows its scope and still fails on a bad subject, rather than skipping
     silently.
+  - `pr-title-lint.yml`: the **pre-merge PR-title linter** — the other half of the
+    conventional-commit pair (rmartz/repo-hygiene#49). A `pull_request` job
+    (`opened`/`edited`/`synchronize`/`reopened`, so a title-only edit re-runs it) that
+    fails when the PR title is not a conventional-commit subject. Under the `PR_TITLE`
+    squash default the title _is_ the subject that reaches `main`, so it validates
+    against the **same grammar** as `commit-convention.yml` — both interpolate
+    `CONVENTIONAL_SUBJECT_PATTERN` (`conventional-grammar.ts`), so the pair cannot
+    drift. It needs the `pull_request` payload, which the tree-based `repo-hygiene`
+    check never sees — that is why it is a golden workflow, not a registry check. The
+    title reaches the shell through `env:` (never an inline `${{ }}` in `run:`), so a
+    crafted title cannot inject shell; `permissions: {}`, no checkout. A `[WIP] `
+    prefix fails the grammar, keeping a work-in-progress PR red until it is removed.
+    Inline logic, seeded once and repo-owned like the tripwire. It is a CI check, not
+    an auto-merger, so `gateChecks: []`; a repo makes it blocking by requiring its
+    context, `Validate PR title`, in its own ruleset.
+
+    **Adopting it in an existing repo** (bootstrap is new-repo-only, and never
+    overwrites): delete any hand-rolled `pr-title-lint.yml` whose grammar matches, run
+    `ai-ensure-project-config` to seed the golden copy, then point the repo's ruleset
+    at `Validate PR title` (renaming a required context is a lockstep change — see
+    below). A repo whose own linter is deliberately stricter (e.g. extra `[WIP]` or
+    `!`-placement rules) keeps it; the golden copy is the fleet floor, not a ceiling.
 
   **Check-name convention (#299).** The check names these templates produce follow
   one fleet-wide rule, and the casing encodes _who owns the check_: a check supplied
@@ -230,7 +252,8 @@ file**, not a block spliced into user content.
   `Validate PR title`, `Validate commit subjects on main`). That is why
   `repo-hygiene.yml`'s job sets no `name:` — the check posts under the bare job id,
   `hygiene` — while `commit-convention.yml` sets an explicit
-  `name: Validate commit subjects on main`. The #278 composite-action migration
+  `name: Validate commit subjects on main` (and `pr-title-lint.yml`,
+  `name: Validate PR title`). The #278 composite-action migration
   shortened the hygiene context from `hygiene / Repo hygiene` to plain `hygiene`
   without moving it across the rule; the supplier is still the shared product.
   **A check's name _is_ its required-status-check context**, so renaming one blocks
@@ -357,8 +380,8 @@ feature branch" rule — instead of the conventional PR **title**. release-pleas
 only releases conventional commits, so a non-conventional subject on `main` is
 **silently skipped**; this is the setting-side fix for the same failure the
 `commit-convention.yml` tripwire alerts on after the fact. The pair — a **pre-set**
-default here and a **post-merge** alarm in the workflow — closes the loop
-`pr-title-lint` (pre-merge, title-only) cannot.
+default here and a **post-merge** alarm in the workflow — closes the loop the
+seeded `pr-title-lint.yml` (pre-merge, title-only) cannot.
 
 ## CLIs
 

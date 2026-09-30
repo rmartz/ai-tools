@@ -42,6 +42,10 @@ files, **and** the golden whole-file set:
   published `@rmartz/repo-hygiene` CLI).
 - `.github/workflows/commit-convention.yml` — the post-merge tripwire that fails
   when a non-conventional subject reaches `main`.
+- `.github/workflows/pr-title-lint.yml` — the pre-merge PR-title linter (check
+  context `Validate PR title`); it shares the conventional-subject grammar with
+  `commit-convention.yml`. It seeds no required-check gate, so a repo makes it
+  blocking through its own ruleset.
 - `.github/dependabot.yml` — a starting Dependabot config (**seed** policy:
   write-if-absent, then repo-owned).
 
@@ -113,8 +117,8 @@ Run `ai-verify-squash-setting -C <repo>` to confirm the repo squashes with the
 This is the **pre-set** half of the release-integrity fix; the seeded
 `commit-convention.yml` tripwire (written in Step 2) is the **post-merge** alarm
 for the same failure, catching squash-setting drift or a direct push after the
-fact. `pr-title-lint` validates the title pre-merge but can't see whether it
-reached `main` — these two close that gap.
+fact. The seeded `pr-title-lint.yml` (also written in Step 2) validates the title
+pre-merge but can't see whether it reached `main` — these two close that gap.
 
 ## Step 5 — Report
 

@@ -34,6 +34,7 @@ import {
   REPO_HYGIENE,
 } from './golden-workflows.js';
 import { COMMIT_CONVENTION } from './golden-commit-convention.js';
+import { PR_TITLE_LINT } from './golden-pr-title-lint.js';
 
 /** Sentinel lines bracketing the managed region in every ignore file. */
 export const BLOCK_BEGIN = '# >>> ai-tools managed (ensure-project-config) >>>';
@@ -131,6 +132,13 @@ export interface GoldenWorkflowFile {
  *   (no Dependabot channel), so it is seeded once and the repo owns it thereafter;
  *   the checklist audit re-propagates a later revision. Alerts (the commit is already
  *   merged), so `gateChecks: []`.
+ * - `pr-title-lint.yml` — the pre-merge half of that pair: a `pull_request` check
+ *   (check context `Validate PR title`) that validates the PR title — the subject a
+ *   squash merge lands on `main` — against the same shared grammar
+ *   (`conventional-grammar.ts`). It needs the event payload, so it cannot be a
+ *   tree-based `repo-hygiene` check (rmartz/repo-hygiene#49). Inline logic, seeded
+ *   once and repo-owned like the tripwire. A CI check, not an auto-merger, so
+ *   `gateChecks: []` (a repo requires it via its own ruleset).
  */
 export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
   {
@@ -156,6 +164,11 @@ export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
   {
     filename: '.github/workflows/commit-convention.yml',
     content: COMMIT_CONVENTION,
+    gateChecks: [],
+  },
+  {
+    filename: '.github/workflows/pr-title-lint.yml',
+    content: PR_TITLE_LINT,
     gateChecks: [],
   },
 ];
