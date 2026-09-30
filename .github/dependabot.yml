@@ -14,11 +14,13 @@ registries:
 
 updates:
   - package-ecosystem: npm
-    # Monorepo: scan the root manifest and every workspace package so per-package
-    # deps (tsup, typescript, commander, zod, …) are covered, not just the root.
-    directories:
-      - '/'
-      - '/packages/*'
+    # pnpm workspace: scan the ROOT only. Dependabot reads pnpm-workspace.yaml from
+    # the root and updates every workspace package's manifest together with the
+    # single root pnpm-lock.yaml. Do NOT add '/packages/*': each listed directory runs
+    # its own update job, and a job rooted in a package directory has no lockfile in
+    # scope, so it edits package.json alone and every CI job fails
+    # `pnpm install --frozen-lockfile` (e.g. #336 vs the root-job #308 for the same bump).
+    directory: /
     # Grants this ecosystem access to the GitHub Packages registry declared above.
     registries:
       - github-packages
@@ -32,12 +34,11 @@ updates:
       prefix: 'chore'
       include: 'scope'
     groups:
-      # `typescript` and `tsup` are declared in EVERY workspace manifest, so a MAJOR
-      # bump — which the `dev-dependencies` catch-all below does not cover — would
-      # otherwise fan out into one PR per package (root + 9 packages). These groups
-      # collapse that into a SINGLE multi-directory PR. minor/patch fan-out is already
-      # collapsed by `dev-dependencies`, so each group covers only the update types the
-      # catch-all leaves out:
+      # `typescript` and `tsup` are declared in EVERY workspace manifest. These groups
+      # give a MAJOR bump — which the `dev-dependencies` catch-all below does not
+      # cover — a single dedicated PR that moves every package in lockstep. minor/patch
+      # bumps are already batched by `dev-dependencies`, so each group covers only the
+      # update types the catch-all leaves out:
       #   - typescript keeps `minor` as well: a minor can shift type inference and fail
       #     the typecheck, so (like prettier) it is isolated in its own PR rather than
       #     batched into dev-dependencies; its patch falls through to dev-dependencies.
