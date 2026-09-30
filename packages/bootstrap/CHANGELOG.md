@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.14.3...bootstrap-v0.15.0) (2026-09-30)
+
+
+### Features
+
+* **bootstrap:** seed a golden pr-title-lint workflow ([#338](https://github.com/rmartz/ai-tools/issues/338)) ([d0425da](https://github.com/rmartz/ai-tools/commit/d0425dad6911d47f7dc35e2a7bd0e74b1a5e4b36))
+
 ## [0.14.3](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.14.2...bootstrap-v0.14.3) (2026-09-29)
 
 
