@@ -163,10 +163,12 @@ updates:
 // `fetch-depth: 0` (unlike merge-safety). Passing no `checks:` input runs the
 // package's registry-derived default-on set (the universally-safe checks); a repo
 // opts into repo-specific checks (e.g. `okf`, `docs-links`) and points `config:` at
-// its `.repo-hygiene.yml` by adding those inputs to its own copy. Only
-// `packages: read` is needed at runtime — the action reads the public
-// @rmartz/repo-hygiene from GitHub Packages via the default `github.token`, so no
-// Dependabot PAT (that is only for repos holding @rmartz/* as an npm dep).
+// its `.repo-hygiene.yml` by adding those inputs to its own copy. Since v3.1.0 the
+// action installs the public @rmartz/repo-hygiene from npmjs with no auth, so there
+// is no `packages: read` and no Dependabot PAT. Since v3.2.0 it posts one commit
+// status per check (`repo-hygiene / <check>`) with the default `github.token`, which
+// needs `statuses: write` — without it the action only warns, but the golden grants
+// it so the per-check breakdown works out of the box.
 //
 // CHECK-NAME CONVENTION (fleet-wide, #299) — the `hygiene` job deliberately sets no
 // `name:`, so GitHub posts the check under the bare job id, `hygiene`. That is the
@@ -199,8 +201,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: read
+      statuses: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: rmartz/repo-hygiene-action@66118369122afacf29241703137f60cbfa0315f0 # v1.0.0
+      - uses: rmartz/repo-hygiene-action@bca5c484060d5d608333810b4e042cd39c59f7a9 # v3.2.0
 `;
