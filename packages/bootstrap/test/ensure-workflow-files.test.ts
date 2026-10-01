@@ -250,6 +250,24 @@ describe('goldenWorkflowFiles — the seeded merge-safety action consumer', () =
     expect(content).toContain('cancel-in-progress: false');
   });
 
+  it('skips, without a runner, the push and check_suite events the action would no-op on', () => {
+    const content = mergeSafety?.content ?? '';
+    expect(content).toContain('!github.event.deleted');
+    expect(content).toContain("startsWith(github.ref, 'refs/heads/')");
+    expect(content).toContain("github.event.check_suite.app.slug == 'github-actions'");
+    expect(content).toContain(
+      'github.event.check_suite.head_branch == github.event.repository.default_branch',
+    );
+  });
+
+  it('serializes base-moved invalidations per branch', () => {
+    const content = mergeSafety?.content ?? '';
+    expect(content).toContain("format('merge-safety-invalidate-{0}'");
+    expect(content).toContain(
+      "github.event_name == 'push' && github.ref_name || github.event.check_suite.head_branch",
+    );
+  });
+
   it('drops the hand-rolled CLI install and the bare env version pin', () => {
     const content = mergeSafety?.content ?? '';
     expect(content).not.toContain('npm install -g');
