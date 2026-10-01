@@ -116,9 +116,9 @@ export interface GoldenWorkflowFile {
  *   `gateChecks: ['merge-safety']` so the writer withholds its creation until
  *   merge-safety is a satisfied required check — an ungated `gh pr merge --auto`
  *   merges *immediately*, so it must never land without the gate.
- * - `merge-safety.yml` — a thin caller of the SHA-pinned `rmartz/merge-safety`
- *   reusable workflow (Dependabot bumps the pin, and the CLI version it installs, in
- *   lockstep). No `gateChecks` of its own: it *provides* the `merge-safety` check the
+ * - `merge-safety.yml` — a thin consumer of the SHA-pinned
+ *   `rmartz/merge-safety-action` composite action (Dependabot bumps the pin; each
+ *   action release pins the CLI version in its lockfile). No `gateChecks` of its own: it *provides* the `merge-safety` check the
  *   auto-merge file depends on rather than consuming one.
  * - `.github/dependabot.yml` — a starting Dependabot config the repo then owns;
  *   bootstrap writes it only if absent and never overwrites local edits.
