@@ -153,23 +153,24 @@ file**, not a block spliced into user content.
     check (an ungated `gh pr merge --auto` merges immediately). Like `repo-hygiene.yml`,
     it kept its filename, so an **already-seeded** repo is not migrated by a re-run
     (write-if-absent leaves it untouched) — existing consumers move deliberately.
-  - `merge-safety.yml`: a thin **caller** of the SHA-pinned
-    `rmartz/merge-safety` reusable workflow
-    (`uses: rmartz/merge-safety/.github/workflows/merge-safety.yml@<sha> # vX.Y.Z`),
-    which posts the advisory `merge-safety` check (the coordinator's "must this PR
-    be brought current before merge?" verdict) and, via the push fan-out,
-    invalidates open PRs when the base moves. merge-safety now ships from its own
-    repo (extracted from `@rmartz/pr-review`, #247); Dependabot's `github-actions`
-    ecosystem bumps the pin — and the CLI version the reusable workflow installs,
-    which tracks the release in lockstep. The caller carries the triggers
-    (`pull_request_target` — not `pull_request`, so the check still fires on an
-    unmergeable PR, #272 — / `push` / `check_suite` / `workflow_dispatch`) and the write scopes
-    (`checks` / `statuses` / `pull-requests` / `actions` — `statuses: write` is
-    required from v0.9.0, which also posts a `merge-safety` commit status the merge
-    gate relies on, rmartz/merge-safety#73; GitHub refuses to start a reusable
-    workflow that requests a permission its caller does not grant), threads the dispatch `pr` via `with:`,
-    and `secrets: inherit`; the reusable side is `on: workflow_call` and owns the
-    evaluate-vs-invalidate branch + the label-narrowing. Seeding it makes the check
+  - `merge-safety.yml`: a thin **consumer** of the SHA-pinned
+    [`rmartz/merge-safety-action`](https://github.com/rmartz/merge-safety-action)
+    composite action (`- uses: rmartz/merge-safety-action@<sha> # vX.Y.Z`), which
+    posts the advisory `merge-safety` check (the coordinator's "must this PR be
+    brought current before merge?" verdict) and, via the push fan-out, invalidates
+    open PRs when the base moves. It supersedes the deprecated `rmartz/merge-safety`
+    reusable-workflow caller. Dependabot's `github-actions` ecosystem bumps the pin;
+    each action release pins the `@rmartz/merge-safety` CLI version in its lockfile.
+    The consumer carries the triggers (`pull_request_target` — not `pull_request`, so
+    the check still fires on an unmergeable PR, #272 — / `push` / `check_suite` /
+    `workflow_dispatch`) and the write scopes (`checks` / `statuses` /
+    `pull-requests` / `actions`), threads the dispatch `pr` via `with:`, and owns the
+    job: an `if:` that skips the events the action would no-op on, and a concurrency
+    group that serializes base-moved fan-outs per branch while giving each evaluate
+    run its own group, so a burst of PR events never cancels a run. The action picks
+    evaluate vs invalidate from the event and needs no checkout. Like the other seeded
+    files it kept its filename, so an **already-seeded** repo is not migrated by a
+    re-run — existing consumers move deliberately. Seeding it makes the check
     **run**; making it a **required gate** is the separate per-repo curation step
     (it is `gateChecks: []` — it _provides_ the check the auto-merge file depends
     on, it doesn't consume one). Its `update required` / `merge conflict` labels

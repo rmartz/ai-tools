@@ -69,24 +69,28 @@ jobs:
           token: \${{ secrets.BOT_AUTOMERGE_TOKEN }}
 `;
 
-// Consumer-shape `merge-safety` workflow — a thin CALLER of the rmartz/merge-safety
-// reusable workflow (SHA-pinned + version comment, so Dependabot's github-actions
-// ecosystem bumps it, and the CLI version it installs tracks the release in
-// lockstep). merge-safety now ships from its own repo (extracted from
-// @rmartz/pr-review, #247). The caller carries the real triggers
-// (pull_request_target/push/check_suite/workflow_dispatch) and the write scopes,
-// threads the dispatch `pr` input via `with:`, and `secrets: inherit`; the reusable
-// side is `on: workflow_call` and owns the evaluate-vs-invalidate branch + the
-// label-narrowing logic.
+// Consumer-shape `merge-safety` workflow — a thin consumer of the
+// rmartz/merge-safety-action COMPOSITE ACTION (a step-level `- uses:`), SHA-pinned +
+// version comment so Dependabot's github-actions ecosystem bumps it; each action
+// release pins a specific @rmartz/merge-safety CLI in its lockfile. It supersedes
+// the rmartz/merge-safety reusable-workflow caller, which is deprecated. The
+// consumer carries the real triggers (pull_request_target/push/check_suite/
+// workflow_dispatch) and the write scopes, threads the dispatch `pr` input via
+// `with:`, and owns the job: an `if:` that skips (without a runner) the events the
+// action would no-op on, and a concurrency group that serializes base-moved
+// fan-outs per branch while giving each per-PR evaluate run its own group (run_id),
+// so a burst of PR events never cancels a run. The action picks evaluate vs
+// invalidate from the event and re-dispatches the workflow it runs in, and needs no
+// checkout (it fetches git data into $RUNNER_TEMP).
 // The PR trigger is `pull_request_target` (NOT `pull_request`) — GitHub does not
 // dispatch `pull_request` runs for an unmergeable PR (it cannot build the
 // `refs/pull/N/merge` commit those runs check out), so a required `merge-safety`
 // check would sit "Expected — waiting for status" forever on exactly the conflicting
 // PR where the verdict matters most (#272). `pull_request_target` fires in base
-// context with no merge commit; it is safe here because the reusable `evaluate` job
-// checks out the base ref, fetches the PR head only as git data, and runs the
-// published CLI — never PR-authored code. `check_suite: [completed]` re-holds/releases
-// open PRs when the base branch's own CI flips red/green.
+// context with no merge commit; it is safe here because the action fetches the PR
+// head only as git data and runs the published CLI — never PR-authored code.
+// `check_suite: [completed]` re-holds/releases open PRs when the base branch's own
+// CI flips red/green.
 // Advisory by default: seeding it makes the `merge-safety`
 // check *run*; making it a required gate is the separate per-repo curation step.
 // It is a `seed` file (see the per-file seed-vs-manage principle in
@@ -109,18 +113,31 @@ on:
 
 permissions:
   checks: write
-  statuses: write # set the merge-safety commit status the merge gate relies on (rmartz/merge-safety#73)
+  statuses: write # mirror the verdict to the merge-safety commit status (rmartz/merge-safety#73)
   pull-requests: write
   contents: read
   actions: write
-  packages: read
 
 jobs:
   merge-safety:
-    uses: rmartz/merge-safety/.github/workflows/merge-safety.yml@fd90fb9c028827532801c91f33734c99b3ed869e # v0.10.0
-    with:
-      pr: \${{ inputs.pr }}
-    secrets: inherit
+    if: >-
+      (github.event_name != 'push' && github.event_name != 'check_suite') ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') && !github.event.deleted) ||
+      (github.event_name == 'check_suite' &&
+       github.event.check_suite.app.slug == 'github-actions' &&
+       github.event.check_suite.head_branch == github.event.repository.default_branch)
+    concurrency:
+      group: >-
+        \${{ (github.event_name == 'push' || github.event_name == 'check_suite')
+        && format('merge-safety-invalidate-{0}', github.event_name == 'push' && github.ref_name || github.event.check_suite.head_branch)
+        || format('merge-safety-evaluate-{0}', github.run_id) }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: rmartz/merge-safety-action@a327f9599a1da413a08e4b831d8babe075935e27 # v0.1.0
+        with:
+          pr: \${{ inputs.pr }}
 `;
 
 // Generic Dependabot config, seeded (write-if-absent) as a starting point repos

@@ -201,11 +201,11 @@ describe('goldenWorkflowFiles — the seeded bot-automerge composite-action cons
   });
 });
 
-// #247 — the seeded merge-safety CI is a thin caller of the rmartz/merge-safety
-// reusable workflow (SHA-pinned, Dependabot-bumped), seeded once and thereafter
-// repo-owned. The evaluate/invalidate logic + the label-narrowing live inside the
-// reusable workflow now, not the caller.
-describe('goldenWorkflowFiles — the seeded merge-safety reusable-workflow caller', () => {
+// #247 — the seeded merge-safety CI is a thin consumer of the
+// rmartz/merge-safety-action COMPOSITE ACTION (SHA-pinned, Dependabot-bumped),
+// seeded once and thereafter repo-owned. It supersedes the deprecated
+// rmartz/merge-safety reusable-workflow caller.
+describe('goldenWorkflowFiles — the seeded merge-safety action consumer', () => {
   const mergeSafety = goldenWorkflowFiles.find(
     (w) => w.filename === '.github/workflows/merge-safety.yml',
   );
@@ -215,13 +215,20 @@ describe('goldenWorkflowFiles — the seeded merge-safety reusable-workflow call
     expect(mergeSafety?.gateChecks).toEqual([]);
   });
 
-  it('calls the rmartz/merge-safety reusable workflow, SHA-pinned with a version comment', () => {
+  it('runs the rmartz/merge-safety-action step, SHA-pinned with a version comment', () => {
     expect(mergeSafety?.content).toMatch(
-      /uses: rmartz\/merge-safety\/\.github\/workflows\/merge-safety\.yml@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
+      /- uses: rmartz\/merge-safety-action@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
     );
   });
 
-  it('carries the triggers + write scopes the reusable workflow needs, threads pr, inherits secrets', () => {
+  it('no longer calls the rmartz/merge-safety reusable workflow', () => {
+    const content = mergeSafety?.content ?? '';
+    expect(content).not.toContain('rmartz/merge-safety/.github/workflows/');
+    expect(content).not.toContain('secrets: inherit');
+    expect(content).not.toContain('packages: read');
+  });
+
+  it('carries the triggers + write scopes the action needs and threads pr', () => {
     const content = mergeSafety?.content ?? '';
     // pull_request_target (NOT pull_request) so the check fires on unmergeable PRs (#272);
     // check_suite re-holds/releases PRs when the base branch's CI flips.
@@ -230,13 +237,35 @@ describe('goldenWorkflowFiles — the seeded merge-safety reusable-workflow call
     expect(content).toContain('push:');
     expect(content).toContain('workflow_dispatch:');
     expect(content).toContain('checks: write');
-    // v0.9.0+ also posts a `merge-safety` commit status (rmartz/merge-safety#73/#74); the
-    // reusable workflow declares `statuses: write`, so the caller must grant it or GitHub refuses to start it.
+    // The CLI also posts a `merge-safety` commit status (rmartz/merge-safety#73/#74).
     expect(content).toContain('statuses: write');
     expect(content).toContain('pull-requests: write');
     expect(content).toContain('actions: write');
     expect(content).toContain('pr: ${{ inputs.pr }}');
-    expect(content).toContain('secrets: inherit');
+  });
+
+  it('gives each evaluate run its own concurrency group and never cancels', () => {
+    const content = mergeSafety?.content ?? '';
+    expect(content).toContain("format('merge-safety-evaluate-{0}', github.run_id)");
+    expect(content).toContain('cancel-in-progress: false');
+  });
+
+  it('skips, without a runner, the push and check_suite events the action would no-op on', () => {
+    const content = mergeSafety?.content ?? '';
+    expect(content).toContain('!github.event.deleted');
+    expect(content).toContain("startsWith(github.ref, 'refs/heads/')");
+    expect(content).toContain("github.event.check_suite.app.slug == 'github-actions'");
+    expect(content).toContain(
+      'github.event.check_suite.head_branch == github.event.repository.default_branch',
+    );
+  });
+
+  it('serializes base-moved invalidations per branch', () => {
+    const content = mergeSafety?.content ?? '';
+    expect(content).toContain("format('merge-safety-invalidate-{0}'");
+    expect(content).toContain(
+      "github.event_name == 'push' && github.ref_name || github.event.check_suite.head_branch",
+    );
   });
 
   it('drops the hand-rolled CLI install and the bare env version pin', () => {
