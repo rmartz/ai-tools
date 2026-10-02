@@ -40,7 +40,10 @@ is the cross-cutting + meta set only.
   gate/verdict labels) and per-app `projects` families are deliberately excluded —
   this layer must not know PR Shepherd's labels, and project families live with
   their projects. Colors are kept verbatim as 6-hex without a leading `#` (REST
-  contract).
+  contract). Every label that also appears in `labels.yml` copies its color and
+  description verbatim, since both reconcilers run on the same repos and any
+  drift makes each revert the other. `test/labels-roster.test.ts` pins those
+  shared values; only `discussion` is bootstrap-only.
 
 ### Project config (`ensure-project-config.ts`, `golden-config.ts`)
 
