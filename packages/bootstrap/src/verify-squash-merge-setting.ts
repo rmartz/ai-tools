@@ -11,7 +11,7 @@ import { ghCall, resolveRepoTarget, type RepoTargetOptions } from '@rmartz/githu
  * release-please only releases conventional commits, so a non-conventional subject
  * on `main` is **silently skipped** — the exact failure that dropped four releases
  * (#214–#217). Setting the repo default to `PR_TITLE` + `PR_BODY` makes the
- * conventional title the thing that lands. `pr-title-lint` validates titles
+ * conventional title the thing that lands. pr-policy's `title` check validates titles
  * pre-merge; this confirms the title actually reaches `main`.
  */
 
