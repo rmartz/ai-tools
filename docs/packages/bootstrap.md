@@ -17,7 +17,7 @@ the single source of truth, applied by audit + self-manage rather than by bootst
 re-asserting golden files (#263). It composes `@rmartz/github` (label CRUD) and
 `@rmartz/agent-runtime` (`boundedRun`, for the bins' git shell-out) and nothing else
 internal. It knows nothing about PR Shepherd's gate/verdict labels — the roster here
-is the cross-cutting + meta set only.
+is the cross-cutting + meta set plus the labels its seeded checks apply.
 
 ## Surface
 
@@ -32,12 +32,18 @@ is the cross-cutting + meta set only.
   fails (no live state to diff); per-label `gh` failures are collected into
   `result.failures` and reported per-label in `result.outcomes`, mirroring the
   Python's best-effort posture.
-- `defaultRoster` = `crossCuttingLabels` + `metaLabels` + `mergeSafetyLabels`.
-  **Reframe from dotfiles' `labels.yml`:** only the cross-cutting domain labels
-  carry over, plus `tracking` and `discussion` (the meta set) and the
-  `merge-safety` check's own `update required` / `merge conflict` labels (seeded
-  wherever its golden workflow runs). The dotfiles `workflow` set (PR-Shepherd
-  gate/verdict labels) and per-app `projects` families are deliberately excluded —
+- `defaultRoster` = `crossCuttingLabels` + `metaLabels` + `mergeSafetyLabels` +
+  `prPolicyLabels`. **Reframe from dotfiles' `labels.yml`:** only the cross-cutting
+  domain labels carry over, plus `tracking` and `discussion` (the meta set), the
+  `merge-safety` check's own `update required` / `merge conflict` labels, and the
+  one label the `pr-policy` check writes, `CI approval needed` (each seeded because
+  its golden workflow applies it; `CI approval needed` copies `labels.yml`'s color
+  and description so the two reconcilers agree). The labels pr-policy only _reads_
+  (`CI change approved`, `no UAT needed`, `UAT passed`/`tested`, `do not merge`,
+  `blocked`, `escalation needed`, `contained break`, `epic`, `breaking change`,
+  `hotfix`) are workflow labels and stay in that roster (`ensure-labels.py`). The
+  dotfiles `workflow` set (PR-Shepherd gate/verdict labels) and per-app `projects`
+  families are deliberately excluded —
   this layer must not know PR Shepherd's labels, and project families live with
   their projects. Colors are kept verbatim as 6-hex without a leading `#` (REST
   contract). Every label that also appears in `labels.yml` copies its color and
@@ -76,8 +82,9 @@ is the cross-cutting + meta set only.
   write-if-absent seeds with no bootstrap-tended region.)
 
   Retiring a stale **workflow** from an existing repo (e.g. the old
-  `dependabot-auto-merge.yml` superseded by `bot-automerge.yml`, or a leftover
-  `golden-sync.yml`) is **not** bootstrap's job — that is an ongoing-manager behavior
+  `dependabot-auto-merge.yml` superseded by `bot-automerge.yml`, a leftover
+  `golden-sync.yml`, or a `pr-title-lint.yml` superseded by `pr-policy.yml`) is
+  **not** bootstrap's job — that is an ongoing-manager behavior
   it no longer performs. Sweeping such files is a repository-checklist conformance
   item (the checklist asserts their absence); an agent auditing an existing repo
   removes them.
@@ -99,10 +106,10 @@ file**, not a block spliced into user content.
   a new-repo initializer, not an ongoing manager. Every golden workflow is either a
   **self-updating reference** (a SHA-pinned reusable-workflow caller or
   composite-action consumer Dependabot bumps — `bot-automerge.yml`, `merge-safety.yml`,
-  `repo-hygiene.yml`) or a **starting config** the repo tailors
+  `repo-hygiene.yml`, `pr-policy.yml`) or a **starting config** the repo tailors
   (`dependabot.yml`), or
   an **inline-logic** file seeded once and re-propagated by the checklist audit rather
-  than a cron (`commit-convention.yml`, `pr-title-lint.yml`). In every case there is nothing for a re-run
+  than a cron (`commit-convention.yml`). In every case there is nothing for a re-run
   to overwrite, which is why the old `manage`/overwrite-on-drift policy and its
   `golden-sync.yml` loop are gone (#263).
 
@@ -206,8 +213,8 @@ file**, not a block spliced into user content.
   - `commit-convention.yml`: the **post-merge conventional-commit
     tripwire** — a `push: [main]` job that fails when a subject reaches the default
     branch without a valid conventional-commit prefix. It is the counterpart of
-    `pr-title-lint` (which validates titles _pre-merge_ but can't see whether the
-    title reached `main`): it catches a squash-merge setting that used the branch
+    pr-policy's `title` check (which validates titles _pre-merge_ but can't see
+    whether the title reached `main`): it catches a squash-merge setting that used the branch
     commit message instead of the PR title, a direct push, or a squash that dropped
     the prefix — any of which makes release-please **silently skip** the release
     (the failure that dropped `@rmartz/github`'s release, #214–#217). It **alerts,
@@ -225,39 +232,53 @@ file**, not a block spliced into user content.
     fall back to validating just the **pushed tip**, announced in the log: the
     tripwire narrows its scope and still fails on a bad subject, rather than skipping
     silently.
-  - `pr-title-lint.yml`: the **pre-merge PR-title linter** — the other half of the
-    conventional-commit pair (rmartz/repo-hygiene#49). A `pull_request` job
-    (`opened`/`edited`/`synchronize`/`reopened`, so a title-only edit re-runs it) that
-    fails when the PR title is not a conventional-commit subject. Under the `PR_TITLE`
-    squash default the title _is_ the subject that reaches `main`, so it validates
-    against the **same grammar** as `commit-convention.yml` — both interpolate
-    `CONVENTIONAL_SUBJECT_PATTERN` (`conventional-grammar.ts`), so the pair cannot
-    drift. It needs the `pull_request` payload, which the tree-based `repo-hygiene`
-    check never sees — that is why it is a golden workflow, not a registry check. The
-    title reaches the shell through `env:` (never an inline `${{ }}` in `run:`), so a
-    crafted title cannot inject shell; `permissions: {}`, no checkout. A `[WIP] `
-    prefix fails the grammar, keeping a work-in-progress PR red until it is removed.
-    Inline logic, seeded once and repo-owned like the tripwire. It is a CI check, not
-    an auto-merger, so `gateChecks: []`; a repo makes it blocking by requiring its
-    context, `Validate PR title`, in its own ruleset.
+  - `pr-policy.yml`: a thin consumer of the SHA-pinned `rmartz/pr-policy-action`
+    composite action (`golden-pr-policy.ts`), which runs the `@rmartz/pr-policy`
+    read-only PR content checks and posts one verdict as the **`pr-policy`** check-run
+    (plus a matching commit status, and one `pr-policy / <check>` status per check).
+    Its `title` check is the **pre-merge** half of the conventional-commit pair: it
+    validates the PR title (the subject a `PR_TITLE` squash lands on `main`) against
+    the conventional-commit grammar, plus the breaking-marker and type rules. It
+    replaces the inline `pr-title-lint.yml` (context `Validate PR title`), which the
+    fleet has retired. The trigger is `pull_request_target` (nothing checks out or
+    runs PR code; the Action reads through the API), so fork and Dependabot PRs still
+    get a write token; the Action owns the `CI approval needed` label. The job is
+    named `pr-policy (evaluate)` so it never posts a second, always-green `pr-policy`
+    entry. A CI check, not an auto-merger, so `gateChecks: []`.
 
-    **Adopting it in an existing repo** (bootstrap is new-repo-only, and never
-    overwrites): delete any hand-rolled `pr-title-lint.yml` whose grammar matches, run
-    `ai-ensure-project-config` to seed the golden copy, then point the repo's ruleset
-    at `Validate PR title` (renaming a required context is a lockstep change — see
-    below). A repo whose own linter is deliberately stricter (e.g. extra `[WIP]` or
-    `!`-placement rules) keeps it; the golden copy is the fleet floor, not a ceiling.
+    **UAT variant.** Bootstrap has no project-type signal, so it seeds the fleet
+    default, `skip-uat: true`: the right setting for npm packages, Actions, reusable
+    workflows, and tooling, which have nothing to user-test. A **Next.js/Vercel app**
+    repo keeps the UAT gate: delete the `skip-uat` line from its copy and change the
+    header comment to say the repo keeps the gate (a PR then stays pending until it
+    carries `no UAT needed` or a person's `UAT passed`). The flag lives in the
+    default-branch caller so a PR cannot switch off a gate it would wait on.
+
+    **Making it required.** A repo makes the check blocking by requiring the
+    `pr-policy` context (GitHub Actions app, `integration_id: 15368`) in its
+    ruleset. Do that only **after** `pr-policy` has posted on a PR: a
+    `pull_request_target` caller runs the default-branch copy, so it first runs on
+    the PR _after_ the one that adds it. Requiring it earlier leaves the adding PR
+    waiting on a context that never posts. Bootstrap seeds the workflow and never
+    adds `pr-policy` to a ruleset itself (the `--apply` gate only requires
+    `goldenGateChecks`), so this is a manual step once the check has run.
+
+    **Existing repos.** Bootstrap only stops _seeding_ `pr-title-lint.yml`; it never
+    deletes a workflow a repo already has, so an existing copy is left alone. Moving
+    a repo over is the checklist's job: add `pr-policy.yml`, swap the ruleset's
+    `Validate PR title` context for `pr-policy` (once it has posted), then delete
+    `pr-title-lint.yml` (renaming a required context is a lockstep change — see
+    below).
 
   **Check-name convention (#299).** The check names these templates produce follow
   one fleet-wide rule, and the casing encodes _who owns the check_: a check supplied
   by a **shared CI product** is lowercase-kebab (`hygiene`, `merge-safety`,
-  `bot-automerge`), while a job a **repo defines itself** is Title Case and
-  human-readable (`Build`, `Format`, `Lint`, `Test`, `Typecheck`,
-  `Validate PR title`, `Validate commit subjects on main`). That is why
+  `bot-automerge`, `pr-policy`), while a job a **repo defines itself** is Title Case
+  and human-readable (`Build`, `Format`, `Lint`, `Test`, `Typecheck`,
+  `Validate commit subjects on main`). That is why
   `repo-hygiene.yml`'s job sets no `name:` — the check posts under the bare job id,
   `hygiene` — while `commit-convention.yml` sets an explicit
-  `name: Validate commit subjects on main` (and `pr-title-lint.yml`,
-  `name: Validate PR title`). The #278 composite-action migration
+  `name: Validate commit subjects on main`. The #278 composite-action migration
   shortened the hygiene context from `hygiene / Repo hygiene` to plain `hygiene`
   without moving it across the rule; the supplier is still the shared product.
   **A check's name _is_ its required-status-check context**, so renaming one blocks
@@ -279,7 +300,7 @@ file**, not a block spliced into user content.
   Native auto-merge waits only on _required_ checks and ignores non-required ones,
   so requiring `merge-safety` alone still lets a bump that breaks a _non-required_
   Test/Build auto-merge. A safe gate additionally requires the repo's substantive
-  CI checks (typecheck / lint / format / build / test / PR-title, by that repo's
+  CI checks (typecheck / lint / format / build / test / `pr-policy`, by that repo's
   own context names) — repo-specific, so supplied per repo via the verifier's
   `--check` flags rather than hardcoded. Choosing which of a repo's checks are
   **required vs advisory** is a per-repo curation decision; a declarative config
@@ -385,7 +406,7 @@ only releases conventional commits, so a non-conventional subject on `main` is
 **silently skipped**; this is the setting-side fix for the same failure the
 `commit-convention.yml` tripwire alerts on after the fact. The pair — a **pre-set**
 default here and a **post-merge** alarm in the workflow — closes the loop the
-seeded `pr-title-lint.yml` (pre-merge, title-only) cannot.
+seeded `pr-policy.yml`'s `title` check (pre-merge, title-only) cannot.
 
 ## CLIs
 
