@@ -9,7 +9,8 @@
  * Every body here is a **thin reference** to a shared CI product — a SHA-pinned
  * reusable-workflow caller or composite-action consumer that Dependabot keeps
  * current — or a short starting config a repo tailors. The one golden file whose
- * behaviour is implemented *inline* lives in `golden-commit-convention.ts`.
+ * behaviour is implemented *inline* lives in `golden-commit-convention.ts`; the
+ * `pr-policy` caller lives in `golden-pr-policy.ts`.
  */
 
 // Consumer-shape `bot-automerge` workflow — a thin CONSUMER of the
@@ -190,9 +191,9 @@ updates:
 // CHECK-NAME CONVENTION (fleet-wide, #299) — the `hygiene` job deliberately sets no
 // `name:`, so GitHub posts the check under the bare job id, `hygiene`. That is the
 // rule, not an omission: a check supplied by one of the SHARED CI PRODUCTS is
-// lowercase-kebab (`hygiene`, `merge-safety`, `bot-automerge`), while a job a
+// lowercase-kebab (`hygiene`, `merge-safety`, `bot-automerge`, `pr-policy`), while a job a
 // repo DEFINES ITSELF is Title Case and human-readable (`Build`, `Format`, `Lint`,
-// `Test`, `Typecheck`, `Validate PR title`, and COMMIT_CONVENTION's
+// `Test`, `Typecheck`, and COMMIT_CONVENTION's
 // `Validate commit subjects on main` in `golden-commit-convention.ts` — which sets
 // an explicit `name:` for exactly that reason). The casing encodes *who owns the check*, which is why the
 // #278 reusable-workflow → composite-action migration shortened the context from

@@ -102,7 +102,7 @@ describe('ensureLabels', () => {
     expect(res.outcomes[1]).toEqual({ name: 'UI', action: 'created' });
   });
 
-  it('reconciles the default roster (cross-cutting + meta + merge-safety) when no roster is given', async () => {
+  it('reconciles the default roster (cross-cutting + meta + merge-safety + pr-policy) when no roster is given', async () => {
     listLabels.mockResolvedValueOnce([]);
     const res = await ensureLabels('r/r');
     const names = res.outcomes.map((o) => o.name);
@@ -111,5 +111,6 @@ describe('ensureLabels', () => {
     expect(names).toContain('discussion');
     expect(names).toContain('update required');
     expect(names).toContain('merge conflict');
+    expect(names).toContain('CI approval needed');
   });
 });

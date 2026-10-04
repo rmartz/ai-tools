@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.16.0...bootstrap-v0.17.0) (2026-10-02)
+
+
+### Features
+
+* **bootstrap:** seed the pr-policy caller instead of pr-title-lint ([#353](https://github.com/rmartz/ai-tools/issues/353)) ([5bc7235](https://github.com/rmartz/ai-tools/commit/5bc7235afde9fc074042b2196445d93ae0b109f7))
+
 ## [0.16.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.15.1...bootstrap-v0.16.0) (2026-10-01)
 
 
