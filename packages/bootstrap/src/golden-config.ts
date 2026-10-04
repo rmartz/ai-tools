@@ -34,7 +34,7 @@ import {
   REPO_HYGIENE,
 } from './golden-workflows.js';
 import { COMMIT_CONVENTION } from './golden-commit-convention.js';
-import { PR_TITLE_LINT } from './golden-pr-title-lint.js';
+import { PR_POLICY } from './golden-pr-policy.js';
 
 /** Sentinel lines bracketing the managed region in every ignore file. */
 export const BLOCK_BEGIN = '# >>> ai-tools managed (ensure-project-config) >>>';
@@ -112,14 +112,16 @@ export interface GoldenWorkflowFile {
  *   for trustworthy bot PRs: green patch/minor Dependabot bumps *and* release-please
  *   release PRs (#264). It passes `pr` and an explicit `token` carrying the
  *   real-actor `BOT_AUTOMERGE_TOKEN` PAT (a composite action cannot
- *   `secrets: inherit`, and a GITHUB_TOKEN-enabled merge fires no push workflows). Still **gated**: keeps
+ *   `secrets: inherit`, and a GITHUB_TOKEN-enabled merge fires no push workflows).
+ *   Still **gated**: keeps
  *   `gateChecks: ['merge-safety']` so the writer withholds its creation until
  *   merge-safety is a satisfied required check — an ungated `gh pr merge --auto`
  *   merges *immediately*, so it must never land without the gate.
- * - `merge-safety.yml` — a thin caller of the SHA-pinned `rmartz/merge-safety`
- *   reusable workflow (Dependabot bumps the pin, and the CLI version it installs, in
- *   lockstep). No `gateChecks` of its own: it *provides* the `merge-safety` check the
- *   auto-merge file depends on rather than consuming one.
+ * - `merge-safety.yml` — a thin consumer of the SHA-pinned
+ *   `rmartz/merge-safety-action` composite action (Dependabot bumps the pin; each
+ *   action release pins the CLI version in its lockfile). No `gateChecks` of its
+ *   own: it *provides* the `merge-safety` check the auto-merge file depends on
+ *   rather than consuming one.
  * - `.github/dependabot.yml` — a starting Dependabot config the repo then owns;
  *   bootstrap writes it only if absent and never overwrites local edits.
  * - `repo-hygiene.yml` — a thin consumer of the SHA-pinned
@@ -132,13 +134,17 @@ export interface GoldenWorkflowFile {
  *   (no Dependabot channel), so it is seeded once and the repo owns it thereafter;
  *   the checklist audit re-propagates a later revision. Alerts (the commit is already
  *   merged), so `gateChecks: []`.
- * - `pr-title-lint.yml` — the pre-merge half of that pair: a `pull_request` check
- *   (check context `Validate PR title`) that validates the PR title — the subject a
- *   squash merge lands on `main` — against the same shared grammar
- *   (`conventional-grammar.ts`). It needs the event payload, so it cannot be a
- *   tree-based `repo-hygiene` check (rmartz/repo-hygiene#49). Inline logic, seeded
- *   once and repo-owned like the tripwire. A CI check, not an auto-merger, so
- *   `gateChecks: []` (a repo requires it via its own ruleset).
+ * - `pr-policy.yml` — a thin consumer of the SHA-pinned `rmartz/pr-policy-action`
+ *   composite action, posting the `pr-policy` check. Its `title` check is the
+ *   pre-merge counterpart of the tripwire (it replaced the retired inline
+ *   `pr-title-lint.yml`). Seeded with `skip-uat: true`, the fleet default for
+ *   non-app repos; an app repo deletes that line to keep the UAT gate. A CI check,
+ *   not an auto-merger, so `gateChecks: []` (a repo requires `pr-policy` via its
+ *   own ruleset, once the check has posted on a PR).
+ *
+ * Retiring a file here only stops seeding it: bootstrap never deletes a workflow a
+ * repo already has, so an existing `pr-title-lint.yml` is left for the repo to
+ * remove.
  */
 export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
   {
@@ -167,8 +173,8 @@ export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
     gateChecks: [],
   },
   {
-    filename: '.github/workflows/pr-title-lint.yml',
-    content: PR_TITLE_LINT,
+    filename: '.github/workflows/pr-policy.yml',
+    content: PR_POLICY,
     gateChecks: [],
   },
 ];
@@ -182,7 +188,7 @@ export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
  * on *required* checks and ignores non-required ones, so requiring `merge-safety`
  * alone would still let a bump that breaks a *non-required* Test/Build auto-merge.
  * A safe gate additionally requires the repo's substantive CI checks (typecheck /
- * lint / format / build / test / PR-title, by whatever names that repo uses) —
+ * lint / format / build / test / `pr-policy`, by whatever names that repo uses) —
  * which are repo-specific and so are supplied per repo via the verifier's
  * `--check` flags, not hardcoded here.
  */

@@ -34,26 +34,29 @@ tooling ignores a healthy repo expects (`.prettierignore`, an ESLint ignore conf
 `.gitignore` baselines) so formatters and linters don't fight generated or vendored
 files, **and** the golden whole-file set:
 
-- `.github/workflows/dependabot-auto-merge.yml` — native auto-merge on green
-  patch/minor Dependabot PRs (majors stay manual).
-- `.github/workflows/merge-safety.yml` — the advisory `merge-safety` check
-  (consumer shape: installs the published `@rmartz/pr-review` CLI).
-- `.github/workflows/repo-hygiene.yml` — the universal `action-pins` check (via the
-  published `@rmartz/repo-hygiene` CLI).
+- `.github/workflows/bot-automerge.yml` — native auto-merge on green
+  patch/minor Dependabot PRs (majors stay manual) and release-please release PRs.
+- `.github/workflows/merge-safety.yml` — the advisory `merge-safety` check (a
+  consumer of `rmartz/merge-safety-action`).
+- `.github/workflows/repo-hygiene.yml` — the `hygiene` check (a consumer of
+  `rmartz/repo-hygiene-action`).
 - `.github/workflows/commit-convention.yml` — the post-merge tripwire that fails
   when a non-conventional subject reaches `main`.
-- `.github/workflows/pr-title-lint.yml` — the pre-merge PR-title linter (check
-  context `Validate PR title`); it shares the conventional-subject grammar with
-  `commit-convention.yml`. It seeds no required-check gate, so a repo makes it
-  blocking through its own ruleset.
-- `.github/dependabot.yml` — a starting Dependabot config (**seed** policy:
-  write-if-absent, then repo-owned).
+- `.github/workflows/pr-policy.yml` — a consumer of `rmartz/pr-policy-action`,
+  posting the `pr-policy` check; its `title` check is the pre-merge counterpart of
+  the tripwire. It is seeded with `skip-uat: true` (nothing to user-test); a
+  Next.js/Vercel app repo deletes that line to keep the UAT gate. It seeds no
+  required-check gate. Require the `pr-policy` context in the repo's ruleset only
+  after the check has posted on a PR: a `pull_request_target` caller first runs on
+  the PR after the one that adds it.
+- `.github/dependabot.yml` — a starting Dependabot config.
 
-Idempotent per file: a drifted **managed** workflow is overwritten back to golden;
-a **seed** file is written only when absent; and a user-authored workflow of the
-same name (no managed header) is left untouched (`skipped`).
+Every file is **write-if-absent**: an existing file of the same name is left
+untouched (`unchanged`), whoever wrote it, and bootstrap never deletes a workflow. A
+repo that still has the retired `pr-title-lint.yml` keeps it until someone removes
+it by hand.
 
-**The `dependabot-auto-merge.yml` is `withheld` here, by design (#239).** It is a
+**The `bot-automerge.yml` is `withheld` here, by design (#239).** It is a
 gated workflow — seeding it before its required-checks gate exists would auto-merge
 every green bump ungated — so a plain `ai-ensure-project-config` run **does not
 create it** (a `withheld` outcome), and neither does any direct call. It is seeded
@@ -62,7 +65,7 @@ This machine-enforces the ordering at the tooling boundary, not just in this ski
 
 ## Step 3 — Confirm the auto-merge gate (hard block)
 
-A seeded `dependabot-auto-merge.yml` **must not** land in a repo where auto-merge
+A seeded `bot-automerge.yml` **must not** land in a repo where auto-merge
 would fire ungated: `gh pr merge --auto` with no required checks merges
 **immediately**, so an ungated file auto-merges every patch/minor Dependabot PR
 with zero gate. After Step 2 writes the workflow, run
@@ -87,7 +90,7 @@ workflow depends on:
   this drift; it never writes or deletes classic protection.
 - **Seed the auto-merge workflow (gate now satisfied):** once the gate confirms
   satisfied, re-run `ai-ensure-project-config --with-gate -C <repo>` to seed the
-  `dependabot-auto-merge.yml` that Step 2 withheld. `--with-gate` re-reads the gate
+  `bot-automerge.yml` that Step 2 withheld. `--with-gate` re-reads the gate
   (read-only) and creates the workflow **only if it is actually satisfied**, so the
   ungated workflow can never land — the ordering is enforced by the tooling, not by
   remembering to run this step.
@@ -117,12 +120,13 @@ Run `ai-verify-squash-setting -C <repo>` to confirm the repo squashes with the
 This is the **pre-set** half of the release-integrity fix; the seeded
 `commit-convention.yml` tripwire (written in Step 2) is the **post-merge** alarm
 for the same failure, catching squash-setting drift or a direct push after the
-fact. The seeded `pr-title-lint.yml` (also written in Step 2) validates the title
-pre-merge but can't see whether it reached `main` — these two close that gap.
+fact. The seeded `pr-policy.yml` (also written in Step 2) validates the title
+pre-merge, through pr-policy's `title` check, but can't see whether it reached
+`main` — these two close that gap.
 
 ## Step 5 — Report
 
-Summarize what each step created vs. left unchanged (and any `skipped`
-user-authored workflow), plus the auto-merge gate's and squash-setting's
+Summarize what each step created vs. left unchanged (and any `withheld` gated
+workflow), plus the auto-merge gate's and squash-setting's
 confirmed/applied state, so a re-run on an already-bootstrapped repo reads as a
 clean no-op rather than churn.
