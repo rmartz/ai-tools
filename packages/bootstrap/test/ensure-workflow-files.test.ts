@@ -5,6 +5,7 @@ import { join, dirname } from 'node:path';
 
 import { ensureWorkflowFiles } from '../src/ensure-workflow-files.js';
 import { goldenWorkflowFiles, type GoldenWorkflowFile } from '../src/golden-config.js';
+import { CONVENTIONAL_SUBJECT_PATTERN } from '../src/conventional-grammar.js';
 
 let dir: string;
 beforeEach(() => {
@@ -201,11 +202,11 @@ describe('goldenWorkflowFiles — the seeded bot-automerge composite-action cons
   });
 });
 
-// #247 — the seeded merge-safety CI is a thin caller of the rmartz/merge-safety
-// reusable workflow (SHA-pinned, Dependabot-bumped), seeded once and thereafter
-// repo-owned. The evaluate/invalidate logic + the label-narrowing live inside the
-// reusable workflow now, not the caller.
-describe('goldenWorkflowFiles — the seeded merge-safety reusable-workflow caller', () => {
+// #247 — the seeded merge-safety CI is a thin consumer of the
+// rmartz/merge-safety-action COMPOSITE ACTION (SHA-pinned, Dependabot-bumped),
+// seeded once and thereafter repo-owned. It supersedes the deprecated
+// rmartz/merge-safety reusable-workflow caller.
+describe('goldenWorkflowFiles — the seeded merge-safety action consumer', () => {
   const mergeSafety = goldenWorkflowFiles.find(
     (w) => w.filename === '.github/workflows/merge-safety.yml',
   );
@@ -215,13 +216,20 @@ describe('goldenWorkflowFiles — the seeded merge-safety reusable-workflow call
     expect(mergeSafety?.gateChecks).toEqual([]);
   });
 
-  it('calls the rmartz/merge-safety reusable workflow, SHA-pinned with a version comment', () => {
+  it('runs the rmartz/merge-safety-action step, SHA-pinned with a version comment', () => {
     expect(mergeSafety?.content).toMatch(
-      /uses: rmartz\/merge-safety\/\.github\/workflows\/merge-safety\.yml@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
+      /- uses: rmartz\/merge-safety-action@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
     );
   });
 
-  it('carries the triggers + write scopes the reusable workflow needs, threads pr, inherits secrets', () => {
+  it('no longer calls the rmartz/merge-safety reusable workflow', () => {
+    const content = mergeSafety?.content ?? '';
+    expect(content).not.toContain('rmartz/merge-safety/.github/workflows/');
+    expect(content).not.toContain('secrets: inherit');
+    expect(content).not.toContain('packages: read');
+  });
+
+  it('carries the triggers + write scopes the action needs and threads pr', () => {
     const content = mergeSafety?.content ?? '';
     // pull_request_target (NOT pull_request) so the check fires on unmergeable PRs (#272);
     // check_suite re-holds/releases PRs when the base branch's CI flips.
@@ -230,13 +238,35 @@ describe('goldenWorkflowFiles — the seeded merge-safety reusable-workflow call
     expect(content).toContain('push:');
     expect(content).toContain('workflow_dispatch:');
     expect(content).toContain('checks: write');
-    // v0.9.0+ also posts a `merge-safety` commit status (rmartz/merge-safety#73/#74); the
-    // reusable workflow declares `statuses: write`, so the caller must grant it or GitHub refuses to start it.
+    // The CLI also posts a `merge-safety` commit status (rmartz/merge-safety#73/#74).
     expect(content).toContain('statuses: write');
     expect(content).toContain('pull-requests: write');
     expect(content).toContain('actions: write');
     expect(content).toContain('pr: ${{ inputs.pr }}');
-    expect(content).toContain('secrets: inherit');
+  });
+
+  it('gives each evaluate run its own concurrency group and never cancels', () => {
+    const content = mergeSafety?.content ?? '';
+    expect(content).toContain("format('merge-safety-evaluate-{0}', github.run_id)");
+    expect(content).toContain('cancel-in-progress: false');
+  });
+
+  it('skips, without a runner, the push and check_suite events the action would no-op on', () => {
+    const content = mergeSafety?.content ?? '';
+    expect(content).toContain('!github.event.deleted');
+    expect(content).toContain("startsWith(github.ref, 'refs/heads/')");
+    expect(content).toContain("github.event.check_suite.app.slug == 'github-actions'");
+    expect(content).toContain(
+      'github.event.check_suite.head_branch == github.event.repository.default_branch',
+    );
+  });
+
+  it('serializes base-moved invalidations per branch', () => {
+    const content = mergeSafety?.content ?? '';
+    expect(content).toContain("format('merge-safety-invalidate-{0}'");
+    expect(content).toContain(
+      "github.event_name == 'push' && github.ref_name || github.event.check_suite.head_branch",
+    );
   });
 
   it('drops the hand-rolled CLI install and the bare env version pin', () => {
@@ -320,8 +350,8 @@ describe('goldenWorkflowFiles — the seeded repo-hygiene composite-action consu
 
 // #219 — the post-merge conventional-commit tripwire: a push:[main] alert that fails
 // loudly when a commit subject reaches the default branch without a valid
-// conventional-commit prefix (the silent release-please skip pre-merge title-lint
-// can't see). Its logic is inline, so it is seeded once and the repo owns it; the
+// conventional-commit prefix (the silent release-please skip that pr-policy's
+// pre-merge `title` check can't see). Its logic is inline, so it is seeded once and the repo owns it; the
 // checklist audit re-propagates a later revision (there is no golden-sync loop).
 describe('goldenWorkflowFiles — the commit-convention tripwire', () => {
   const tripwire = goldenWorkflowFiles.find(
@@ -351,6 +381,10 @@ describe('goldenWorkflowFiles — the commit-convention tripwire', () => {
     expect(content).toContain('feat|fix|docs|chore|refactor|test|style|perf|ci|build|revert');
     // The `!` breaking-change marker is optional in the subject grammar.
     expect(content).toContain('!?:');
+  });
+
+  it('embeds the shared conventional-subject pattern', () => {
+    expect(tripwire?.content).toContain(`pattern='${CONVENTIONAL_SUBJECT_PATTERN}'`);
   });
 
   it('pins actions/checkout to a full 40-char SHA with a major.minor.patch comment', () => {

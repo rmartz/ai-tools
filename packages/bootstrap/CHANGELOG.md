@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.17.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.16.0...bootstrap-v0.17.0) (2026-10-02)
+
+
+### Features
+
+* **bootstrap:** seed the pr-policy caller instead of pr-title-lint ([#353](https://github.com/rmartz/ai-tools/issues/353)) ([5bc7235](https://github.com/rmartz/ai-tools/commit/5bc7235afde9fc074042b2196445d93ae0b109f7))
+
+## [0.16.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.15.1...bootstrap-v0.16.0) (2026-10-01)
+
+
+### Features
+
+* **bootstrap:** seed the merge-safety-action consumer instead of the reusable-workflow caller ([#349](https://github.com/rmartz/ai-tools/issues/349)) ([8452938](https://github.com/rmartz/ai-tools/commit/84529389a8bc8209199e7fe2f5b76b8351c8944d))
+
 ## [0.15.1](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.15.0...bootstrap-v0.15.1) (2026-09-30)
 
 

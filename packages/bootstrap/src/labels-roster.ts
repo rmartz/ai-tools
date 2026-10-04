@@ -106,9 +106,29 @@ export const mergeSafetyLabels: readonly LabelSpec[] = [
   },
 ];
 
+/**
+ * The label the seeded `pr-policy` check applies: rmartz/pr-policy-action adds
+ * `CI approval needed` to a PR whose CI change loosens the repo's own CI, and it is
+ * the only label pr-policy writes. Seeded so the label exists, with the name, color,
+ * and description of the fleet workflow roster (dotfiles' `labels.yml`), so the two
+ * reconcilers agree rather than fight over it. The labels pr-policy only *reads*
+ * (the human sign-offs such as `CI change approved` and `no UAT needed`, and the
+ * blocking labels such as `do not merge`) are workflow labels and stay with that
+ * roster, outside this package (see the file header).
+ */
+export const prPolicyLabels: readonly LabelSpec[] = [
+  {
+    name: 'CI approval needed',
+    color: 'F59E0B',
+    description:
+      'CI-loosening change awaiting human sign-off; merge-gated until `CI change approved`.',
+  },
+];
+
 /** The full default roster `ensureLabels` reconciles when no extras are passed. */
 export const defaultRoster: readonly LabelSpec[] = [
   ...crossCuttingLabels,
   ...metaLabels,
   ...mergeSafetyLabels,
+  ...prPolicyLabels,
 ];

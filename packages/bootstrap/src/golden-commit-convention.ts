@@ -1,15 +1,16 @@
 /**
- * The golden `commit-convention.yml` body — one of the two golden files whose
- * behaviour is **implemented inline** rather than delegated (the other is
- * `golden-pr-title-lint.ts`). Their siblings in `golden-workflows.ts` are all thin,
- * self-updating references to a shared CI product (a SHA-pinned reusable-workflow
- * caller or composite-action consumer that Dependabot bumps), so a body there is a
- * dozen lines of `uses:`/`with:`. This one carries a ~50-line shell script, and that
- * single payload was most of `golden-workflows.ts`'s length — so it lives here, along
- * the inline-implementation-vs-thin-reference seam, rather than padding the
- * reference table. Pure string data — no logic; its only import is the grammar it
- * shares with `pr-title-lint.yml`. See `golden-config.ts` for how it is assembled
- * into the golden set.
+ * The golden `commit-convention.yml` body — the one golden file whose behaviour is
+ * **implemented inline** rather than delegated. Its siblings (`golden-workflows.ts`,
+ * `golden-pr-policy.ts`) are all thin, self-updating references to a shared CI
+ * product (a SHA-pinned reusable-workflow caller or composite-action consumer that
+ * Dependabot bumps), so a body there is a dozen lines of `uses:`/`with:`. This one
+ * carries a ~50-line shell script, and that single payload was most of
+ * `golden-workflows.ts`'s length — so it lives here, along the
+ * inline-implementation-vs-thin-reference seam, rather than padding the reference
+ * table. Pure string data — no logic; its only import is the conventional-subject
+ * grammar (`conventional-grammar.ts`). It is the post-merge counterpart of the
+ * pre-merge `title` check that the seeded `pr-policy.yml` runs. See
+ * `golden-config.ts` for how it is assembled into the golden set.
  */
 
 import { CONVENTIONAL_SUBJECT_PATTERN } from './conventional-grammar.js';
@@ -17,8 +18,8 @@ import { CONVENTIONAL_SUBJECT_PATTERN } from './conventional-grammar.js';
 // Post-merge conventional-commit tripwire. A `push: [main]` alert (it can't gate
 // — the commit is already merged) that fails loudly when a subject reaches the
 // default branch without a valid conventional-commit prefix. It catches the exact
-// silent-skip that pre-merge `pr-title-lint` cannot see: a squash-merge setting
-// that used the branch commit message instead of the PR title, a direct push, or
+// silent-skip that pr-policy's pre-merge `title` check cannot see: a squash-merge
+// setting that used the branch commit message instead of the PR title, a direct push, or
 // a squash that dropped the prefix — any of which makes release-please silently
 // skip the release. Validates the first-parent chain of the pushed range (so a
 // squash merge is its single new commit, a stray merge commit is flagged, and a
@@ -56,7 +57,7 @@ jobs:
           AFTER: \${{ github.event.after }}
         run: |
           set -euo pipefail
-          # Conventional-commit subject grammar — mirrors pr-title-lint.yml.
+          # Conventional-commit subject grammar — post-merge counterpart of pr-policy's title check.
           pattern='${CONVENTIONAL_SUBJECT_PATTERN}'
           # BEFORE is an unusable range endpoint in two cases: a branch's first
           # push (all-zeros), and a force-push that rewrote the branch, where the
