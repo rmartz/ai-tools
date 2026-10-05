@@ -26,10 +26,15 @@ updates:
       - github-packages
     schedule:
       interval: weekly
-    # Let new releases age 7 days before opening update PRs, reducing exposure
-    # to supply-chain attacks where a malicious version is published then yanked.
+    # Let new third-party releases age 7 days before opening update PRs, reducing
+    # exposure to supply-chain attacks where a malicious version is published then
+    # yanked. First-party `@rmartz/*` packages are exempt: they're published from
+    # our own repos with provenance, so the wait adds no protection and only holds
+    # our own fixes back.
     cooldown:
       default-days: 7
+      exclude:
+        - '@rmartz/*'
     commit-message:
       prefix: 'chore'
       include: 'scope'
@@ -112,10 +117,14 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    # Let new releases age 7 days before opening update PRs, reducing exposure
-    # to supply-chain attacks where a malicious version is published then yanked.
+    # Let new third-party releases age 7 days before opening update PRs, reducing
+    # exposure to supply-chain attacks where a malicious version is published then
+    # yanked. First-party `rmartz/*` actions and reusable workflows are exempt:
+    # they're published from our own repos, so the wait only holds our fixes back.
     cooldown:
       default-days: 7
+      exclude:
+        - 'rmartz/*'
     commit-message:
       prefix: 'chore'
       include: 'scope'
