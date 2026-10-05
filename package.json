@@ -23,7 +23,7 @@
     "ci": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run build && pnpm run check:okf && pnpm run check:docs-links && pnpm run check:pins && pnpm run check:actions && pnpm run test"
   },
   "devDependencies": {
-    "@rmartz/repo-hygiene": "^1.0.0",
+    "@rmartz/repo-hygiene": "^7.0.1",
     "@types/node": "^26.6.1",
     "@typescript-eslint/eslint-plugin": "^8.69.0",
     "@typescript-eslint/parser": "^8.69.0",
