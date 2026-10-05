@@ -9,6 +9,12 @@
  * domain families — are deliberately NOT included: nothing in ai-tools may know
  * about PR Shepherd's labels, and project-specific families live with their
  * projects.
+ *
+ * Source of truth: for every label defined both here and in `labels.yml`, the
+ * YAML wins — copy its name, color, and description verbatim. Both rosters are
+ * reconciled against the same repos, so a mismatch is not cosmetic: each run
+ * reverts the other's color/description. `test/labels-roster.test.ts` pins the
+ * shared labels to their `labels.yml` values; update both together.
  */
 
 export interface LabelSpec {
@@ -91,18 +97,20 @@ export const metaLabels: readonly LabelSpec[] = [
  * `@rmartz/pr-review`'s `MERGE_SAFETY_LABELS` — restated here by name because
  * bootstrap is layer-1 and cannot import the layer-2 pr-review package. Seeded
  * wherever the `merge-safety` golden workflow runs, so the check's `--add-label`
- * has a label to apply.
+ * has a label to apply. Name, color, and description are copied verbatim from
+ * the fleet workflow roster (dotfiles' `labels.yml`), which also seeds these
+ * labels; any drift makes the two reconcilers overwrite each other on every run.
  */
 export const mergeSafetyLabels: readonly LabelSpec[] = [
   {
     name: 'update required',
-    color: 'D93F0B',
-    description: 'Must be brought current with its base before merge (merge-safety check).',
+    color: 'DBAB0A',
+    description: 'Merge-safety: PR must be brought current against its base before merge (stale).',
   },
   {
     name: 'merge conflict',
-    color: 'B60205',
-    description: 'Conflicts with its base and cannot be merged as-is (merge-safety check).',
+    color: 'D93F0B',
+    description: 'Merge-safety: PR has a git merge conflict to resolve before merge.',
   },
 ];
 
