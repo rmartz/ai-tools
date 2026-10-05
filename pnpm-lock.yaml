@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@rmartz/repo-hygiene':
-        specifier: ^1.0.0
-        version: 1.0.0
+        specifier: ^7.0.1
+        version: 7.0.1
       '@types/node':
         specifier: ^26.6.1
         version: 26.6.1
@@ -718,8 +718,8 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@rmartz/repo-hygiene@1.0.0':
-    resolution: {integrity: sha512-kgEAVOSUUNaTB+FuN/x8EX0wClLnY0S5nkQjWUhPSXIz/YyhzwQqeGAZjMv5av7Yy3lKvmXHjyhRv4pD8AzP0A==, tarball: https://npm.pkg.github.com/download/@rmartz/repo-hygiene/1.0.0/7d5bf9cce688c57191d857f0e89c1eb14fbff42c}
+  '@rmartz/repo-hygiene@7.0.1':
+    resolution: {integrity: sha512-nXxzYm/k/C5XcREcGkhQ7QV6KcRnhKPZnIrwkblG7JsJRPign8W1Ex+j2fRXR7W5vH17LcfbWhIBx8yAAicOmw==, tarball: https://npm.pkg.github.com/download/@rmartz/repo-hygiene/7.0.1/dd0ce82221080beb59cf788f941474b6a0ee547e}
     engines: {node: '>=20.11.0'}
     hasBin: true
 
@@ -1765,8 +1765,8 @@ packages:
     resolution: {integrity: sha512-34wB/Y7MW7bzjKRjUKTa46I2Z7eV62Rkhva+KkopW7Qvv/OSWBqvkSY7vusOPrNuZcUG3tApvdVgNB8POj3SPw==}
     engines: {node: '>=10'}
 
-  js-yaml@3.14.2:
-    resolution: {integrity: sha512-PMSmkqxr106Xa156c2M265Z+FTrPl+oxd/rgOQy2tijQeK5TxQ43psO1ZCwhVOSdnn+RzkzlRz/eY4BgJBYVpg==}
+  js-yaml@3.15.2:
+    resolution: {integrity: sha512-6EuL879VkRA+1Cz578mKMiKvjPNEuk6+r1JaFzoSWejZmtf7xWbIyw1e3KkxlkzTIt9Taw6JBhEppG7utc1P+w==}
     hasBin: true
 
   json-schema-traverse@0.4.1:
@@ -2721,7 +2721,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.3
     optional: true
 
-  '@rmartz/repo-hygiene@1.0.0':
+  '@rmartz/repo-hygiene@7.0.1':
     dependencies:
       gray-matter: 4.0.3
       picomatch: 4.0.7
@@ -3723,7 +3723,7 @@ snapshots:
 
   gray-matter@4.0.3:
     dependencies:
-      js-yaml: 3.14.2
+      js-yaml: 3.15.2
       kind-of: 6.0.3
       section-matter: 1.0.0
       strip-bom-string: 1.0.0
@@ -3907,7 +3907,7 @@ snapshots:
 
   joycon@3.1.1: {}
 
-  js-yaml@3.14.2:
+  js-yaml@3.15.2:
     dependencies:
       argparse: 1.0.10
       esprima: 4.0.1
