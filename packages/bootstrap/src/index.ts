@@ -5,6 +5,7 @@ export {
   crossCuttingLabels,
   metaLabels,
   mergeSafetyLabels,
+  prPolicyLabels,
   defaultRoster,
 } from './labels-roster.js';
 export type { LabelSpec } from './labels-roster.js';

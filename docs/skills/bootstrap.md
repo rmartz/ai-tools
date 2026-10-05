@@ -15,10 +15,12 @@ The `bootstrap` skill readies a repository for the PR workflow by composing
   domain label roster the review/route/merge skills rely on.
 - **`ai-ensure-project-config`** — apply the golden-state tooling ignores
   (`.prettierignore`, ESLint ignore config, `.gitignore` baselines) **and** the
-  golden whole-file workflows (`bot-automerge.yml`, `commit-convention.yml`,
-  `pr-title-lint.yml`) so
-  formatters/linters don't fight generated files and drift-controlled workflows stay
-  in sync.
+  golden whole-file workflows (`bot-automerge.yml`, `merge-safety.yml`,
+  `repo-hygiene.yml`, `commit-convention.yml`, `pr-policy.yml`, and
+  `dependabot.yml`), each written only if absent, so formatters/linters don't fight
+  generated files and a new repo starts checklist-conformant. `pr-policy.yml` is
+  seeded with `skip-uat: true`; a Next.js/Vercel app repo deletes that line to keep
+  the UAT gate.
 - **`ai-verify-automerge-gate`** — after the workflow is written, confirm (or
   `--apply`) the branch-protection gate native auto-merge depends on. A non-zero
   exit is a **hard block**: a seeded auto-merge file in a repo with no required

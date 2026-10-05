@@ -5,6 +5,7 @@ import { join, dirname } from 'node:path';
 
 import { ensureWorkflowFiles } from '../src/ensure-workflow-files.js';
 import { goldenWorkflowFiles, type GoldenWorkflowFile } from '../src/golden-config.js';
+import { CONVENTIONAL_SUBJECT_PATTERN } from '../src/conventional-grammar.js';
 
 let dir: string;
 beforeEach(() => {
@@ -349,8 +350,8 @@ describe('goldenWorkflowFiles — the seeded repo-hygiene composite-action consu
 
 // #219 — the post-merge conventional-commit tripwire: a push:[main] alert that fails
 // loudly when a commit subject reaches the default branch without a valid
-// conventional-commit prefix (the silent release-please skip pre-merge title-lint
-// can't see). Its logic is inline, so it is seeded once and the repo owns it; the
+// conventional-commit prefix (the silent release-please skip that pr-policy's
+// pre-merge `title` check can't see). Its logic is inline, so it is seeded once and the repo owns it; the
 // checklist audit re-propagates a later revision (there is no golden-sync loop).
 describe('goldenWorkflowFiles — the commit-convention tripwire', () => {
   const tripwire = goldenWorkflowFiles.find(
@@ -380,6 +381,10 @@ describe('goldenWorkflowFiles — the commit-convention tripwire', () => {
     expect(content).toContain('feat|fix|docs|chore|refactor|test|style|perf|ci|build|revert');
     // The `!` breaking-change marker is optional in the subject grammar.
     expect(content).toContain('!?:');
+  });
+
+  it('embeds the shared conventional-subject pattern', () => {
+    expect(tripwire?.content).toContain(`pattern='${CONVENTIONAL_SUBJECT_PATTERN}'`);
   });
 
   it('pins actions/checkout to a full 40-char SHA with a major.minor.patch comment', () => {
