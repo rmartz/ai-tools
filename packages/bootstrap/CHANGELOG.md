@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.17.0...bootstrap-v0.17.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* **bootstrap:** match merge-safety label colors and descriptions to labels.yml ([#354](https://github.com/rmartz/ai-tools/issues/354)) ([4b150fd](https://github.com/rmartz/ai-tools/commit/4b150fdafac140f010ae33d25317dc7254b0f288))
+
 ## [0.17.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.16.0...bootstrap-v0.17.0) (2026-10-02)
 
 
