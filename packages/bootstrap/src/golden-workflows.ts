@@ -145,9 +145,11 @@ jobs:
 // then own. github-actions is the minimum every repo wants (it keeps pinned
 // action SHAs — including the bot-automerge consumer's composite-action pin — fresh);
 // the npm ecosystem is the ideal for the JS repos this toolkit targets (it also
-// feeds the native auto-merge path). Both are grouped so related bumps land as one PR.
-// A repo without an npm manifest, or wanting other ecosystems, edits its copy —
-// which the `seed` policy then leaves untouched.
+// feeds the native auto-merge path). Patch and minor bumps are grouped so they land
+// as one auto-mergeable PR; a major matches no group, so Dependabot opens it as its
+// own PR for review instead of holding the whole group (rmartz/ai
+// repository-checklist §Supply chain). A repo without an npm manifest, or wanting
+// other ecosystems, edits its copy — which the `seed` policy then leaves untouched.
 export const DEPENDABOT_CONFIG = `version: 2
 updates:
   - package-ecosystem: github-actions
@@ -158,6 +160,9 @@ updates:
       github-actions:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -165,8 +170,14 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: development
+        update-types:
+          - minor
+          - patch
       production-dependencies:
         dependency-type: production
+        update-types:
+          - minor
+          - patch
 `;
 
 // Generic repo-hygiene CI, consumer shape — a thin consumer of the
