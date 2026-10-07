@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.17.1...bootstrap-v0.18.0) (2026-10-07)
+
+
+### Features
+
+* **bootstrap:** seed Dependabot groups that give each major its own PR ([#364](https://github.com/rmartz/ai-tools/issues/364)) ([7aad739](https://github.com/rmartz/ai-tools/commit/7aad7390d1e4441f38dfb916b6f5e10a138f4500))
+
 ## [0.17.1](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.17.0...bootstrap-v0.17.1) (2026-10-04)
 
 
