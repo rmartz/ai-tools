@@ -289,6 +289,15 @@ describe('goldenWorkflowFiles — the seeded Dependabot config', () => {
     expect(content).toContain('package-ecosystem: github-actions');
     expect(content).toContain('package-ecosystem: npm');
   });
+
+  // A major left in a group would hold every patch/minor bump in it from
+  // auto-merge, so each group is filtered and majors open their own PRs.
+  it('limits every group to minor and patch bumps', () => {
+    const content = dependabotConfig?.content ?? '';
+    const groups = content.match(/^ {6}[\w-]+:$/gm) ?? [];
+    const filters = content.match(/update-types:\n\s+- minor\n\s+- patch/g) ?? [];
+    expect([groups.length, filters.length]).toEqual([3, 3]);
+  });
 });
 
 // #278 — the seeded repo-hygiene CI is a thin consumer of the rmartz/repo-hygiene-action
