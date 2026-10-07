@@ -1,13 +1,15 @@
-# @rmartz/repo-hygiene check configuration for this repo. The checks run via the
-# published @rmartz/repo-hygiene CLI (a devDependency); see the rmartz/repo-hygiene
-# repo for docs. Each section under `checks` is read by the check of that name;
+# @rmartz/repo-hygiene check configuration for this repo. CI runs the checks via
+# rmartz/repo-hygiene-action (.github/workflows/repo-hygiene.yml); the local
+# `check:*` scripts use the CLI devDependency. See the rmartz/repo-hygiene repo
+# for docs. Each section under `checks` is read by the check of that name;
 # `severity` (when set) overrides that check's findings.
 checks:
   # OKF docs frontmatter vocabulary + exemptions (per-repo).
   okf:
     types: [Skill, Script, Library, Design]
     roots: [docs]
-    exempt: [docs/index.md] # the reserved OKF root listing (§3.1)
+    # the reserved OKF root listing (§3.1) and the per-directory indexes
+    exempt: [docs/index.md, docs/packages/index.md, docs/skills/index.md]
     resourceExemptTypes: [Design] # Design pages need no backing resource
   # Intra-repo Markdown link integrity for docs pages.
   docs-links:
