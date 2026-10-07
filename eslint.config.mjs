@@ -32,7 +32,7 @@ const importResolver = {
 };
 
 /**
- * Code-style conventions promoted from CLAUDE.md prose to static enforcement, so
+ * Code-style conventions promoted from AGENTS.md prose to static enforcement, so
  * they hold at every model tier instead of relying on a reviewer's eye. Every
  * rule is core ESLint or an already-installed plugin (`typescript-eslint`,
  * `eslint-plugin-import`) — no new dependency. Applied uniformly to first-party
@@ -56,16 +56,16 @@ const STYLE_RULES = {
 const RESTRICTED_SYNTAX = [
   {
     selector: "CallExpression[callee.property.name='then']",
-    message: 'Prefer async/await over .then() chains (CLAUDE.md).',
+    message: 'Prefer async/await over .then() chains (AGENTS.md).',
   },
   {
     selector: 'CallExpression[callee.type=/FunctionExpression|ArrowFunctionExpression/]',
     message:
-      'No IIFEs — extract a named helper or compute the value with a plain expression (CLAUDE.md).',
+      'No IIFEs — extract a named helper or compute the value with a plain expression (AGENTS.md).',
   },
   {
     selector: 'ExportDefaultDeclaration',
-    message: 'Named exports only — no default exports (CLAUDE.md).',
+    message: 'Named exports only — no default exports (AGENTS.md).',
   },
 ];
 
@@ -74,7 +74,7 @@ const TEST_RESTRICTED_SYNTAX = [
   ...RESTRICTED_SYNTAX,
   {
     selector: "CallExpression[callee.name='test']",
-    message: 'Use it() from Vitest, not test() (CLAUDE.md).',
+    message: 'Use it() from Vitest, not test() (AGENTS.md).',
   },
 ];
 

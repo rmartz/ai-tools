@@ -8,7 +8,8 @@ checks:
   okf:
     types: [Skill, Script, Library, Design]
     roots: [docs]
-    exempt: [docs/index.md] # the reserved OKF root listing (§3.1)
+    # the reserved OKF root listing (§3.1) and the per-directory indexes
+    exempt: [docs/index.md, docs/packages/index.md, docs/skills/index.md]
     resourceExemptTypes: [Design] # Design pages need no backing resource
   # Intra-repo Markdown link integrity for docs pages.
   docs-links:
