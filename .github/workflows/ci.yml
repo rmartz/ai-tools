@@ -20,7 +20,9 @@ jobs:
       - run: pnpm run typecheck
 
   lint:
-    name: Lint (incl. layer boundaries + max-lines)
+    # Covers layer boundaries + max-lines too. Named plainly so it matches the
+    # `Lint` required check every other repo's ruleset uses.
+    name: Lint
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -58,21 +60,3 @@ jobs:
       # because the typecheck step's turbo `^build` populated dist/ beforehand.
       - run: pnpm run build
       - run: pnpm run test
-
-  okf:
-    name: OKF docs frontmatter
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/setup
-      - run: pnpm run check:okf
-
-  docs-links:
-    name: Docs link integrity
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/setup
-      - run: pnpm run check:docs-links

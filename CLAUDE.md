@@ -72,9 +72,9 @@ library so PR Shepherd and the harness share one implementation.
   the comment current, but Dependabot is unreliable at bumping a **partial** version
   comment (`# v7`, `# v6.4`), so the full three-part semver is required. Local `./…`
   action refs are exempt (they move with the commit). Enforced by
-  `pnpm run check:actions` (the `action-pins` check in `@rmartz/repo-hygiene`,
-  run via `ai-repo-hygiene action-pins --check` + `.github/workflows/action-pins.yml`),
-  the CI analog of the package.json pin check.
+  the `action-pins` check in `@rmartz/repo-hygiene` — run in CI by
+  `.github/workflows/repo-hygiene.yml` (the single `hygiene` check) and locally
+  by `pnpm run check:actions`.
 - Prettier + ESLint run in CI; there is no separate manual pass. Several
   conventions here are **statically enforced by `eslint.config.mjs`**, not left to
   review: no `any` / `@ts-ignore` (an `@ts-expect-error` _with a description_ is the
