@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.18.0...bootstrap-v0.19.0) (2026-10-08)
+
+
+### Features
+
+* **bootstrap:** seed the pr-lifecycle caller in labels-only mode ([#369](https://github.com/rmartz/ai-tools/issues/369)) ([176e4e4](https://github.com/rmartz/ai-tools/commit/176e4e4210c8087d3e1e500c58b15b5678fe4485))
+
 ## [0.18.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.17.1...bootstrap-v0.18.0) (2026-10-07)
 
 
