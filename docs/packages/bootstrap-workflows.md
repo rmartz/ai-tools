@@ -30,7 +30,8 @@ file**, not a block spliced into user content.
   a new-repo initializer, not an ongoing manager. Every golden workflow is either a
   **self-updating reference** (a SHA-pinned reusable-workflow caller or
   composite-action consumer Dependabot bumps — `bot-automerge.yml`, `merge-safety.yml`,
-  `repo-hygiene.yml`, `pr-policy.yml`) or a **starting config** the repo tailors
+  `repo-hygiene.yml`, `pr-policy.yml`, `pr-lifecycle.yml`) or a **starting config**
+  the repo tailors
   (`dependabot.yml`), or
   an **inline-logic** file seeded once and re-propagated by the checklist audit rather
   than a cron (`commit-convention.yml`). In every case there is nothing for a re-run
@@ -194,6 +195,20 @@ file**, not a block spliced into user content.
     `Validate PR title` context for `pr-policy` (once it has posted), then delete
     `pr-title-lint.yml` (renaming a required context is a lockstep change — see
     below).
+
+  - `pr-lifecycle.yml`: a thin consumer of the SHA-pinned
+    `rmartz/pr-lifecycle-action` composite action (`golden-pr-lifecycle.ts`), which
+    runs the `@rmartz/pr-lifecycle` reconciler: on every relevant PR event it
+    recomputes the PR's lifecycle state from its current facts and converges the
+    lifecycle labels. It is seeded **labels-only**: `arm-auto-merge: false` and no
+    real-actor `token`, so it never arms, merges, disarms, or updates a branch,
+    and `gateChecks: []`. `bot-automerge.yml` keeps arming eligible bot PRs. A repo
+    turns arming on later, after retiring `bot-automerge.yml`, following the fleet
+    cutover in [rmartz/pr-lifecycle#75](https://github.com/rmartz/pr-lifecycle/issues/75).
+    Like pr-policy it runs on `pull_request_target` and never checks out PR code.
+    Its `workflow_run` list must name the Actions workflows behind the repo's
+    required checks. Bootstrap seeds `CI` and the golden `repo-hygiene`, and a repo
+    with other required-check workflows edits its copy.
 
   **Check-name convention (#299).** The check names these templates produce follow
   one fleet-wide rule, and the casing encodes _who owns the check_: a check supplied
