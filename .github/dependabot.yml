@@ -39,29 +39,23 @@ updates:
       prefix: 'chore'
       include: 'scope'
     groups:
-      # `typescript` and `tsup` are declared in EVERY workspace manifest. These groups
-      # give a MAJOR bump — which the `dev-dependencies` catch-all below does not
-      # cover — a single dedicated PR that moves every package in lockstep. minor/patch
-      # bumps are already batched by `dev-dependencies`, so each group covers only the
-      # update types the catch-all leaves out:
-      #   - typescript keeps `minor` as well: a minor can shift type inference and fail
-      #     the typecheck, so (like prettier) it is isolated in its own PR rather than
-      #     batched into dev-dependencies; its patch falls through to dev-dependencies.
-      #   - tsup is `major` only: a bundler minor/patch rarely needs code changes, so
-      #     those ride dev-dependencies.
+      # `typescript` and `tsup` are declared in EVERY workspace manifest. Each is
+      # isolated in its own group so every one of its bumps — major, minor, and patch —
+      # lands in a single dedicated PR that moves every package in lockstep, separate
+      # from unrelated dev-dep bumps:
+      #   - typescript: a minor can shift type inference and fail the typecheck, so
+      #     (like prettier) its bumps are reviewed on their own.
+      #   - tsup: a bundler major can change build output across every package.
+      # No `update-types` filter: an isolated group keeps all of its dependency's bumps
+      # together rather than splitting some into the catch-all.
       # Listed first to win group-assignment precedence (each dependency joins the first
       # group whose patterns match).
       typescript:
         patterns:
           - 'typescript'
-        update-types:
-          - 'major'
-          - 'minor'
       tsup:
         patterns:
           - 'tsup'
-        update-types:
-          - 'major'
       # The ESLint toolchain is a version-locked family. `@typescript-eslint/eslint-plugin`
       # and `@typescript-eslint/parser` ship on an IDENTICAL version line and must move
       # together; `eslint` core, the plugins, and the import resolver track eslint's major.
@@ -85,16 +79,11 @@ updates:
       # minor prettier bump can reformat the whole codebase, so it routinely carries
       # required code changes and fails the Format check until the tree is
       # re-formatted. Splitting those into their own PR — separated from unrelated
-      # dev-dep bumps — makes the reformat reviewable on its own. Only `major`/`minor`
-      # are listed: a trivial `patch` bump is unlikely to reformat anything, so it
-      # falls through to the `dev-dependencies` group below and rides along with the
-      # other minor/patch bumps rather than opening a PR of its own.
+      # dev-dep bumps — makes the reformat reviewable on its own. No `update-types`
+      # filter: every prettier bump, majors included, lands in this one group.
       prettier:
         patterns:
           - 'prettier'
-        update-types:
-          - 'major'
-          - 'minor'
       # Everything else: group only minor/patch bumps. Major bumps fall outside the
       # groups and get individual PRs, since they are more likely to need code
       # changes and are better reviewed in isolation.
@@ -128,8 +117,12 @@ updates:
     commit-message:
       prefix: 'chore'
       include: 'scope'
-    # Group all GitHub Actions updates together (major, minor, and patch).
+    # Group minor/patch GitHub Actions updates together. Major bumps fall outside the
+    # group and get individual PRs, so a pending major never holds routine bumps back.
     groups:
       github-actions:
         patterns:
           - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
