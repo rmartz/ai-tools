@@ -49,6 +49,11 @@ files, **and** the golden whole-file set:
   required-check gate. Require the `pr-policy` context in the repo's ruleset only
   after the check has posted on a PR: a `pull_request_target` caller first runs on
   the PR after the one that adds it.
+- `.github/workflows/pr-lifecycle.yml` — a consumer of
+  `rmartz/pr-lifecycle-action`, seeded **labels-only**: it never arms auto-merge,
+  merges, or updates a branch (`bot-automerge.yml` keeps arming eligible bot PRs).
+  Its `workflow_run` trigger lists `CI` and `repo-hygiene`; a repo edits that list
+  to name the workflows behind its own required checks.
 - `.github/dependabot.yml` — a starting Dependabot config.
 
 Every file is **write-if-absent**: an existing file of the same name is left
