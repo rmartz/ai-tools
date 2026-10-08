@@ -34,6 +34,7 @@ import {
   REPO_HYGIENE,
 } from './golden-workflows.js';
 import { COMMIT_CONVENTION } from './golden-commit-convention.js';
+import { PR_LIFECYCLE } from './golden-pr-lifecycle.js';
 import { PR_POLICY } from './golden-pr-policy.js';
 
 /** Sentinel lines bracketing the managed region in every ignore file. */
@@ -141,6 +142,12 @@ export interface GoldenWorkflowFile {
  *   non-app repos; an app repo deletes that line to keep the UAT gate. A CI check,
  *   not an auto-merger, so `gateChecks: []` (a repo requires `pr-policy` via its
  *   own ruleset, once the check has posted on a PR).
+ * - `pr-lifecycle.yml` — a thin consumer of the SHA-pinned
+ *   `rmartz/pr-lifecycle-action` composite action, seeded **labels-only**: it keeps
+ *   each PR's lifecycle labels in step with its facts but never arms, merges, or
+ *   updates a branch, so `gateChecks: []`. A repo turns arming on (and retires
+ *   `bot-automerge.yml`) later, per rmartz/pr-lifecycle#75. Its `workflow_run` list
+ *   names `CI` and `repo-hygiene`; a repo with other required-check workflows edits it.
  *
  * Retiring a file here only stops seeding it: bootstrap never deletes a workflow a
  * repo already has, so an existing `pr-title-lint.yml` is left for the repo to
@@ -175,6 +182,11 @@ export const goldenWorkflowFiles: readonly GoldenWorkflowFile[] = [
   {
     filename: '.github/workflows/pr-policy.yml',
     content: PR_POLICY,
+    gateChecks: [],
+  },
+  {
+    filename: '.github/workflows/pr-lifecycle.yml',
+    content: PR_LIFECYCLE,
     gateChecks: [],
   },
 ];
