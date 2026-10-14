@@ -25,16 +25,24 @@
 // superseded the reusable-workflow caller form (#282). The consumer carries the
 // real trigger and the write scopes and passes two inputs: `pr` (required — unlike
 // the reusable workflow, the action does not derive it from the event), and
-// `token`. A composite action cannot `secrets: inherit`, so the real-actor
-// `BOT_AUTOMERGE_TOKEN` PAT must be passed explicitly: GitHub fires no `push`
-// workflows for a merge whose auto-merge was enabled with GITHUB_TOKEN, so a merged
-// Dependabot bump or release PR would never re-trigger the consumer's release CD
-// (#236, rmartz/bot-automerge-action#31). The repo stores it as both an Actions and
-// a Dependabot secret, since a Dependabot-triggered run sees only the latter. It is
-// passed unconditionally — where the secret is unset it is empty and the action
-// falls back to `github.token`. v2.x installs its CLI from npmjs, so no
-// `packages: read`. No checkout is needed: the action installs its CLI into its own
-// directory and acts on the PR via the API. The trigger is `pull_request_target`
+// `token`. The token is an installation token for the private `rmartz-merge-bot`
+// GitHub App, minted per run by an `actions/create-github-app-token` step (SHA-pinned
+// like every action) from the `MERGE_BOT_CLIENT_ID` and `MERGE_BOT_PRIVATE_KEY`
+// secrets — never GITHUB_TOKEN. GitHub fires no `push` workflows for a merge whose
+// auto-merge was enabled with GITHUB_TOKEN, so a merged Dependabot bump or release
+// PR would never re-trigger the consumer's release CD (#236,
+// rmartz/bot-automerge-action#31); App-authored events do trigger workflows. The App
+// also draws on its own rate-limit pool rather than the user's, so a coordinator run
+// that exhausts the user's GraphQL quota cannot fail this job, and merges are not
+// attributed to the user's account — the reason it replaced the former
+// `BOT_AUTOMERGE_TOKEN` user PAT (rmartz/scripts#22, rmartz/ai-tools#377). A
+// composite action cannot `secrets: inherit`, so the token is passed as the explicit
+// `token` input. The repo stores both secrets in the Actions **and** the Dependabot
+// store, since a Dependabot-triggered run sees only the latter; with them unset the
+// token step fails, so a new repo must provision them before the workflow runs.
+// v2.x installs its CLI from npmjs, so no `packages: read`. No checkout is needed:
+// the action installs its CLI into its own directory and acts on the PR via the
+// API, and the token step needs none either. The trigger is `pull_request_target`
 // (NOT `pull_request`) — required so Dependabot's read-only-token PRs get
 // base-context write. It stays **gated**: its `goldenWorkflowFiles` entry keeps
 // `gateChecks: ['merge-safety']`, so the hermetic writer withholds its *creation*
@@ -64,10 +72,17 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
+      # The App's Client ID and private key are stored as both Actions and
+      # Dependabot secrets (a Dependabot-triggered run sees only the latter).
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: \${{ secrets.MERGE_BOT_CLIENT_ID }}
+          private-key: \${{ secrets.MERGE_BOT_PRIVATE_KEY }}
       - uses: rmartz/bot-automerge-action@3e26c765f2da6c360fd39ab8aef7a50090a96657 # v2.1.1
         with:
           pr: \${{ github.event.pull_request.number }}
-          token: \${{ secrets.BOT_AUTOMERGE_TOKEN }}
+          token: \${{ steps.app-token.outputs.token }}
 `;
 
 // Consumer-shape `merge-safety` workflow — a thin consumer of the

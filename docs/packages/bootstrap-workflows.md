@@ -60,7 +60,7 @@ file**, not a block spliced into user content.
   write-if-absent then repo-owned:
   - `bot-automerge.yml` (#264): a thin consumer of the SHA-pinned
     `rmartz/bot-automerge-action` **composite action** (#282) — a `bot-automerge` job
-    whose single step is `- uses: rmartz/bot-automerge-action@<sha> # vX.Y.Z`,
+    whose main step is `- uses: rmartz/bot-automerge-action@<sha> # vX.Y.Z`,
     replacing the earlier `rmartz/bot-automerge` reusable-workflow caller. It enables
     GitHub-native auto-merge for trustworthy **bot** PRs — green `semver-patch` /
     `semver-minor` Dependabot bumps (majors stay manual) **and** release-please
@@ -70,16 +70,25 @@ file**, not a block spliced into user content.
     version the action ships in its lockfile, in lockstep). The trigger is
     `pull_request_target` (required, not `pull_request`, so Dependabot's
     read-only-token PRs get base-context write). No checkout is needed — the action
-    installs its CLI into its own directory and acts on the PR via the API. It passes
-    two inputs: the required `pr: ${{ github.event.pull_request.number }}`, and
-    `token: ${{ secrets.BOT_AUTOMERGE_TOKEN }}` — a real-actor PAT the repo stores as
-    both an Actions **and** a Dependabot secret (a Dependabot-triggered run sees only
-    the latter). A composite action cannot `secrets: inherit`, so the PAT must be
-    explicit: GitHub fires no `push` workflows for a merge whose auto-merge was
+    installs its CLI into its own directory and acts on the PR via the API. A first
+    step, `actions/create-github-app-token` (SHA-pinned, `id: app-token`), mints an
+    installation token for the private `rmartz-merge-bot` GitHub App from the
+    `MERGE_BOT_CLIENT_ID` and `MERGE_BOT_PRIVATE_KEY` secrets. The action step then
+    passes two inputs: the required `pr: ${{ github.event.pull_request.number }}`, and
+    `token: ${{ steps.app-token.outputs.token }}`. A composite action cannot
+    `secrets: inherit`, so the token must be explicit, and it must not be
+    `GITHUB_TOKEN`: GitHub fires no `push` workflows for a merge whose auto-merge was
     enabled with `GITHUB_TOKEN`, so a merged Dependabot bump or release PR would never
-    re-trigger the release/CD workflow (#236 / rmartz/bot-automerge-action#31). It is
-    passed unconditionally — empty where the secret is unset, in which case the action
-    falls back to `github.token`. The pin is v2.1.1 or later: v2.x installs its CLI
+    re-trigger the release/CD workflow (#236 / rmartz/bot-automerge-action#31). The
+    App replaced the former `BOT_AUTOMERGE_TOKEN` user PAT (rmartz/scripts#22,
+    following this repo's own switch in #377): GitHub rate-limits per user across all
+    of a user's tokens, so the PAT shared a GraphQL pool with the agent coordinator
+    and attributed merges to the user's account, while the App has its own pool.
+    **Secrets a new repo needs:** both `MERGE_BOT_CLIENT_ID` and
+    `MERGE_BOT_PRIVATE_KEY`, stored in the Actions **and** the Dependabot store (a
+    Dependabot-triggered run sees only the latter), and the App installed on the
+    repo. With them unset the token step fails, so the job fails instead of falling
+    back to `github.token`. The pin is v2.1.1 or later: v2.x installs its CLI
     from npmjs (so there is no `packages: read`) and replaced the deprecated
     `release-please-token` input with `token`. The job's only `if:` is the fork guard
     — there is no `autorelease: pending` label condition, because the CLI detects

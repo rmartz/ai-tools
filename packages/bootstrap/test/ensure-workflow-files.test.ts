@@ -159,11 +159,23 @@ describe('goldenWorkflowFiles — the seeded bot-automerge composite-action cons
     expect(botAutomerge?.content).toContain('pr: ${{ github.event.pull_request.number }}');
   });
 
-  // A composite action cannot `secrets: inherit`, so the real-actor PAT must be an
+  // rmartz/scripts#22: the token comes from the rmartz-merge-bot GitHub App, not a
+  // user PAT, so it draws on the App's own rate-limit pool.
+  it('mints an rmartz-merge-bot App token from the MERGE_BOT secrets', () => {
+    expect(botAutomerge?.content).toMatch(
+      /- uses: actions\/create-github-app-token@[0-9a-f]{40} # v\d+\.\d+\.\d+\n\s+id: app-token\n\s+with:\n\s+client-id: \$\{\{ secrets\.MERGE_BOT_CLIENT_ID \}\}\n\s+private-key: \$\{\{ secrets\.MERGE_BOT_PRIVATE_KEY \}\}/,
+    );
+  });
+
+  // A composite action cannot `secrets: inherit`, so the App token must be an
   // explicit input — a merge enabled with GITHUB_TOKEN fires no push workflows, so
   // release CD would never run (#236, rmartz/bot-automerge-action#31).
-  it('passes BOT_AUTOMERGE_TOKEN as the explicit token input', () => {
-    expect(botAutomerge?.content).toContain('token: ${{ secrets.BOT_AUTOMERGE_TOKEN }}');
+  it('passes the App token as the explicit token input', () => {
+    expect(botAutomerge?.content).toContain('token: ${{ steps.app-token.outputs.token }}');
+  });
+
+  it('no longer references the BOT_AUTOMERGE_TOKEN PAT', () => {
+    expect(botAutomerge?.content).not.toContain('BOT_AUTOMERGE_TOKEN');
   });
 
   it('does not pass the deprecated release-please-token input', () => {
