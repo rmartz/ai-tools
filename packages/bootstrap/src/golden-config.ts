@@ -111,9 +111,11 @@ export interface GoldenWorkflowFile {
  *   `rmartz/bot-automerge-action` **composite action** (#282; Dependabot bumps the
  *   pin, and the CLI version the action ships, in lockstep). GitHub-native auto-merge
  *   for trustworthy bot PRs: green patch/minor Dependabot bumps *and* release-please
- *   release PRs (#264). It passes `pr` and an explicit `token` carrying the
- *   real-actor `BOT_AUTOMERGE_TOKEN` PAT (a composite action cannot
- *   `secrets: inherit`, and a GITHUB_TOKEN-enabled merge fires no push workflows).
+ *   release PRs (#264). It passes `pr` and an explicit `token` carrying an
+ *   installation token for the `rmartz-merge-bot` GitHub App, minted by an
+ *   `actions/create-github-app-token` step from the `MERGE_BOT_CLIENT_ID` /
+ *   `MERGE_BOT_PRIVATE_KEY` secrets (a composite action cannot `secrets: inherit`,
+ *   and a GITHUB_TOKEN-enabled merge fires no push workflows).
  *   Still **gated**: keeps
  *   `gateChecks: ['merge-safety']` so the writer withholds its creation until
  *   merge-safety is a satisfied required check — an ungated `gh pr merge --auto`
