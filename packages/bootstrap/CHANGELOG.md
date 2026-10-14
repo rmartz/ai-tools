@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.19.0...bootstrap-v0.20.0) (2026-10-14)
+
+
+### Features
+
+* **bootstrap:** mint an rmartz-merge-bot App token in the golden bot-automerge workflow ([#379](https://github.com/rmartz/ai-tools/issues/379)) ([8c4c379](https://github.com/rmartz/ai-tools/commit/8c4c379674f1595f0bfa04fa6fbf30a52c608885))
+
 ## [0.19.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.18.0...bootstrap-v0.19.0) (2026-10-08)
 
 
