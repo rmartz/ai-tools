@@ -15,8 +15,8 @@ permissions:
 
 # Serialize release-please across a burst of main merges: run one at a time rather
 # than firing several concurrent, API-heavy invocations that can exhaust the
-# RELEASE_PLEASE_PAT's shared REST rate limit (observed 2026-07-10 — three merges
-# in ~6 min failed the third with "API rate limit already exceeded"). Queue rather
+# token's REST rate limit (observed 2026-07-10, under the former user PAT — three
+# merges in ~6 min failed the third with "API rate limit already exceeded"). Queue rather
 # than cancel: every merge must still be reconciled into the aggregated release PR.
 concurrency:
   group: release-${{ github.ref }}
@@ -28,15 +28,19 @@ jobs:
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
     steps:
+      # GITHUB_TOKEN-created PRs don't trigger CI, so release-please runs under an
+      # installation token for the rmartz-merge-bot GitHub App: App-authored
+      # release PRs run CI, and the App's rate-limit pool is separate from the
+      # user's (rmartz/scripts#22).
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ secrets.MERGE_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.MERGE_BOT_PRIVATE_KEY }}
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
-          # GITHUB_TOKEN-created PRs don't trigger CI. Set a RELEASE_PLEASE_PAT
-          # secret (a PAT with contents + pull-requests write — `repo` scope on a
-          # classic PAT) to run CI on the release PR; falls back to the built-in
-          # token, which still opens the PR and creates releases but leaves the
-          # mechanical release PR without CI.
-          token: ${{ secrets.RELEASE_PLEASE_PAT || github.token }}
+          token: ${{ steps.app-token.outputs.token }}
 
   publish:
     needs: release-please
