@@ -219,6 +219,34 @@ file**, not a block spliced into user content.
     required checks. Bootstrap seeds `CI` and the golden `repo-hygiene`, and a repo
     with other required-check workflows edits its copy.
 
+    It runs with the **`rmartz-merge-bot` App token**, not `GITHUB_TOKEN`
+    (rmartz/scripts#22; reference consumer rmartz/personal-budget#553). An
+    `actions/create-github-app-token` step (SHA-pinned, `id: app-token`) mints it
+    from the same `MERGE_BOT_CLIENT_ID` / `MERGE_BOT_PRIVATE_KEY` secrets as
+    `bot-automerge.yml`, scoped to `pull-requests: write`, `contents: read`,
+    `checks: read`, `statuses: read`, and `actions: write`. The action receives it
+    as `github-token`, the token for reads and label writes, not the real-actor
+    `token`, so the run stays labels-only. The workflow sets `permissions: {}`
+    because `GITHUB_TOKEN` is unused. Labels are then attributed to the bot, and
+    API calls draw on the App's own rate-limit pool rather than the user's.
+    App-authored events, unlike `GITHUB_TOKEN` ones, trigger workflows, so the
+    job's `if:` skips `pull_request_target` `labeled` / `unlabeled` /
+    `review_requested` / `review_request_removed` events whose sender is
+    `rmartz-merge-bot[bot]`. The run that wrote them has already converged, and a
+    follow-up would only cancel it. A label from a person or another workflow
+    still re-reconciles. The login is hard-coded, like the secret names, because
+    the fleet shares one App.
+
+    **No new secrets, and no fallback.** Every bootstrapped repo already needs the
+    `MERGE_BOT_*` secrets (Actions **and** Dependabot store) and the App installed
+    for `bot-automerge.yml`, so bootstrap neither provisions nor checks for them.
+    A repo without them fails the token step closed instead of silently falling
+    back to `GITHUB_TOKEN`, the same contract as `bot-automerge.yml`. To run
+    without the App, a repo deletes the token step and `github-token` input from
+    its copy and restores the job-level `permissions` block. The file is
+    write-if-absent, so a re-run never undoes that edit, and already-seeded repos
+    are not migrated by a re-run; each moves deliberately.
+
   **Check-name convention (#299).** The check names these templates produce follow
   one fleet-wide rule, and the casing encodes _who owns the check_: a check supplied
   by a **shared CI product** is lowercase-kebab (`hygiene`, `merge-safety`,

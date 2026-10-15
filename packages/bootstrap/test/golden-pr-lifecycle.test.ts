@@ -40,10 +40,46 @@ describe('pr-lifecycle — a thin, SHA-pinned consumer of rmartz/pr-lifecycle-ac
     expect(content).not.toContain('actions/checkout');
   });
 
-  it('grants only the read and label scopes a labels-only run needs', () => {
-    expect(content).toContain('pull-requests: write');
-    expect(content).toContain('contents: read');
-    expect(content).not.toContain('contents: write');
+  it('grants GITHUB_TOKEN nothing, since the App token does every read and write', () => {
+    expect(content).toMatch(/^permissions: \{\}$/m);
+  });
+});
+
+// Labels and API calls go through the rmartz-merge-bot App, not GITHUB_TOKEN, so
+// they are attributed to the bot and use the App's own rate-limit pool
+// (rmartz/scripts#22, matching rmartz/personal-budget#553).
+describe('pr-lifecycle — runs with the rmartz-merge-bot App token', () => {
+  it('mints the token from the shared MERGE_BOT secrets with a SHA-pinned step', () => {
+    expect(content).toMatch(
+      /uses: actions\/create-github-app-token@[0-9a-f]{40} # v\d+\.\d+\.\d+\n\s+id: app-token\n/,
+    );
+    expect(content).toContain('client-id: ${{ secrets.MERGE_BOT_CLIENT_ID }}');
+    expect(content).toContain('private-key: ${{ secrets.MERGE_BOT_PRIVATE_KEY }}');
+  });
+
+  it('scopes the token to only the read and label permissions a labels-only run needs', () => {
+    expect(content).toContain('permission-pull-requests: write');
+    expect(content).toContain('permission-contents: read');
+    expect(content).toContain('permission-checks: read');
+    expect(content).toContain('permission-statuses: read');
+    expect(content).toContain('permission-actions: write');
+    expect(content).not.toContain('permission-contents: write');
+  });
+
+  it('passes the App token as github-token', () => {
+    expect(content).toContain('github-token: ${{ steps.app-token.outputs.token }}');
+  });
+
+  it("skips the label and review-request events the App's own writes cause", () => {
+    expect(content).toContain("github.event.sender.login == 'rmartz-merge-bot[bot]'");
+    expect(content).toContain(
+      `contains(fromJSON('["labeled", "unlabeled", "review_requested", "review_request_removed"]'),`,
+    );
+    expect(content).toContain("!(github.event_name == 'pull_request_target' &&");
+  });
+
+  it('keeps the fork-review guard', () => {
+    expect(content).toContain("(github.event_name != 'pull_request_review' ||");
   });
 });
 
