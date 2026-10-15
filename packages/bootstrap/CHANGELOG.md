@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.20.0...bootstrap-v0.21.0) (2026-10-15)
+
+
+### Features
+
+* **bootstrap:** run golden pr-lifecycle with the rmartz-merge-bot App token ([#382](https://github.com/rmartz/ai-tools/issues/382)) ([b583825](https://github.com/rmartz/ai-tools/commit/b58382581911730d9ab93dfd1a5e1c60cb972eac))
+
 ## [0.20.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.19.0...bootstrap-v0.20.0) (2026-10-14)
 
 
