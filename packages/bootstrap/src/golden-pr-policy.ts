@@ -20,6 +20,11 @@
 // its copy (and saying so in the header comment). The flag lives in this
 // default-branch caller so a PR cannot switch off a gate it would otherwise wait on.
 //
+// `retitle-dependabot-ci: true` has the Action rename a Dependabot linter/formatter
+// bump (eslint, prettier, black, ruff, pylint) to the `ci` type the title check
+// demands for it, so those PRs pass without a hand edit. It never demotes a release
+// type and never touches a non-Dependabot PR.
+//
 // The trigger is `pull_request_target` (safe: nothing checks out or runs PR code,
 // the Action reads everything through the API) so fork and Dependabot PRs still get
 // a write token for the check-run, status, and label. A consequence: the caller
@@ -67,8 +72,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: rmartz/pr-policy-action@cdb083960965d0b2cc5033271186ec04020f87f4 # v1.4.5
+      - uses: rmartz/pr-policy-action@15f4b1e32580609854648cf1b330375bf169271a # v1.5.0
         with:
           pr: \${{ github.event.pull_request.number }}
+          # Retitle a Dependabot linter/formatter bump to ci(...), the type the
+          # pr-policy title check requires for it, instead of blocking on a hand edit.
+          retitle-dependabot-ci: true
           skip-uat: true
 `;
