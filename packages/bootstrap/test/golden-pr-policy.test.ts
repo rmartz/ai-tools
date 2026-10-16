@@ -58,6 +58,14 @@ describe('pr-policy — a thin, SHA-pinned consumer of rmartz/pr-policy-action',
   });
 });
 
+describe('pr-policy — Dependabot ci retitle', () => {
+  // The title check blocks a linter/formatter bump unless it is typed `ci`; the
+  // Action retitles Dependabot's `chore(deps…)` so those PRs pass unattended.
+  it('opts in to retitle-dependabot-ci', () => {
+    expect(content).toMatch(/^\s+retitle-dependabot-ci: true$/m);
+  });
+});
+
 describe('pr-policy — UAT variant', () => {
   // Bootstrap has no project-type signal, so it seeds the fleet default; an app
   // repo turns the gate on by deleting this line from its copy.
