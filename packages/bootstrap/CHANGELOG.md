@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.21.0...bootstrap-v0.22.0) (2026-10-16)
+
+
+### Features
+
+* **bootstrap:** seed pr-policy with the Dependabot ci retitle ([#384](https://github.com/rmartz/ai-tools/issues/384)) ([12cd25b](https://github.com/rmartz/ai-tools/commit/12cd25b968fe9c8901a214a2072b6bbc71f95547))
+
 ## [0.21.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.20.0...bootstrap-v0.21.0) (2026-10-15)
 
 
