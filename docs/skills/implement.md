@@ -24,11 +24,13 @@ a completed implementation.
 The run composes the maintained `ai-*` CLIs for its mechanical spine:
 `ai-new-worktree` (`@rmartz/worktree`) to provision the worktree and
 `ai-pre-push-verify` (`@rmartz/verify`) to re-run the project's CI-derived checks.
-For the GitHub writes it prefers the first-party MCP tool in the agent turn —
+For the GitHub writes it uses the first-party MCP tools —
 `mcp__github__create_pull_request` to open the PR, `mcp__github__issue_write` to
-create an issue (thin 1:1 ops the desktop app detects, so the PR chip attaches to
-the session) — with `ai-create-pr` / `ai-create-issue` (`@rmartz/github`) as the
-fallback when MCP is unavailable and the path scripted callers use. The skill never
+create an issue — which the desktop app detects, so the PR is associated with the
+session (PR chip, CI monitor). The fallback when MCP is unavailable is `gh pr
+create` / `gh issue create` run directly in Bash, which the app also detects. It
+never opens a PR through `ai-create-pr` / `ai-create-issue`: a create inside a
+wrapper subprocess is invisible to the app. The skill never
 names a gate/verdict label and never bakes in a coordinator's PR lifecycle.
 
 Early in Step 1, once the issue's title is known, the run **names the session**

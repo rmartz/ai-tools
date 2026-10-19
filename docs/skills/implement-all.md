@@ -15,8 +15,9 @@ work; this skill never reimplements the TDD workflow.
 It composes `ai-repo-status` (`@rmartz/github` — issues, milestones, and the
 open-PR/closing-issue map that drives partitioning) and `ai-new-worktree`
 (`@rmartz/worktree` — `/implement` stacks a child off an in-flight dep's branch
-with `--base`); direct-run issue/PR writes go through `ai-create-issue` /
-`ai-create-pr`.
+with `--base`). Issue/PR writes go through the GitHub MCP tools (fallback: `gh pr
+create` / `gh issue create` in Bash), never the `ai-create-*` wrappers, so the
+desktop app associates each PR with the session.
 
 It **stops once every actionable issue has a PR opened** — review, fix-review, and
 merge belong to the coordinator (PR Shepherd). The stacking _intent_ (a child PR

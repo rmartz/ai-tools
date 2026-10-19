@@ -17,13 +17,16 @@ Implement the GitHub issue(s): $ARGUMENTS
 > (`@rmartz/worktree`) to provision the isolated worktree, `ai-pre-push-verify`
 > (`@rmartz/verify`) to re-run the project's own CI-derived checks before
 > hand-off. For the GitHub writes themselves — opening the PR, writing any issue —
-> **prefer the first-party MCP tool in this agent turn**: `mcp__github__create_pull_request`
-> to open the PR and `mcp__github__issue_write` to create an issue (both are thin
-> 1:1 operations the desktop app detects, so the PR chip attaches to the session).
-> The `ai-create-pr` / `ai-create-issue` (`@rmartz/github`) CLIs are the **fallback**
-> when the MCP tool is unavailable (and the path a purely scripted/sub-shell caller
-> uses). Prefer a GitHub MCP tool for reads too (e.g. reading an issue body); fall
-> back to `gh` only where neither an MCP tool nor a CLI fits.
+> **use the first-party MCP tool**: `mcp__github__create_pull_request` to open the
+> PR and `mcp__github__issue_write` to create an issue. The Claude desktop app
+> detects these calls and attaches the PR to the session (PR chip, CI monitor).
+> If the MCP tool is unavailable, fall back to `gh pr create` / `gh issue create`
+> run directly in Bash — the app detects those too. **Never open a PR through a
+> wrapper script** (`ai-create-pr`, `ai-create-issue`, a raw `gh api POST`): the
+> app cannot see a create hidden inside a subprocess, so the PR is never
+> associated with the session. Those CLIs exist for non-agent callers only.
+> Prefer a GitHub MCP tool for reads too (e.g. reading an issue body); fall back
+> to `gh` only where no MCP tool fits.
 >
 > **Assumption**: the project tests with **Vitest**. This skill designs the
 > approach, then writes tests that validate that design, then implements until
@@ -32,9 +35,9 @@ Implement the GitHub issue(s): $ARGUMENTS
 > **Emission (read this first).** This skill produces a **working branch and an
 > outcome** — implemented-and-ready, or stuck-with-a-diagnosis — and opens the PR
 > itself. Provision the worktree with `ai-new-worktree`, commit in it, and open
-> the PR with `mcp__github__create_pull_request` (preferred in agent turns; the
-> desktop app attaches the PR chip); fall back to `ai-create-pr` when the MCP
-> tool is unavailable. You open the PR only **once the implementation is done**,
+> the PR with `mcp__github__create_pull_request` (the desktop app attaches the
+> PR chip); fall back to `gh pr create` only when the MCP tool is unavailable —
+> never `ai-create-pr`. You open the PR only **once the implementation is done**,
 > so **open it ready for review** (no `--draft`) — a finished implementation is
 > ready for another agent to pick up for review/fix-review/merge, and there is no
 > draft step to remember. **Draft is a
@@ -249,11 +252,15 @@ survey missed; it is cheaper to catch here than in review.
 
 Then hand off. Commit the work in the worktree and open the PR yourself —
 **ready for review**, no `--draft` — with a Conventional-Commit title
-summarizing the change and a body (written to a file) stating the purpose, the
+summarizing the change and a body stating the purpose, the
 reuse/extend/new decision from Step 3b, which criteria pass, and the issue it
-closes. Prefer `mcp__github__create_pull_request` in this agent turn (the
-desktop app attaches the PR chip); fall back to `ai-create-pr` when the MCP
-tool is unavailable. The body becomes the squash-commit message, so keep
+closes. Open it with `mcp__github__create_pull_request` (pass the body as its
+`body` parameter); fall back to `gh pr create --body-file <file>` run directly
+in Bash only when the MCP tool is unavailable. Never use `ai-create-pr` or a raw
+`gh api` POST here — the desktop app only associates a PR with the session when
+it sees the create itself. When the session has the desktop app's PR tools
+(`mcp__ccd_pr__get_status`) and they do not report the new PR, bind it with
+`mcp__ccd_pr__bind_pr`. The body becomes the squash-commit message, so keep
 process status out of it: when the PR is stacked on another PR or waits on an
 external dependency, say so in a signed **PR comment**
 (`mcp__github__add_issue_comment`) posted right after opening, not in the body. You reached this step because the

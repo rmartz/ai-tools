@@ -214,9 +214,12 @@ flag or `GH_REPO` and **never needs `cd <dir> && ai-*`**. (`ai-resolve-thread` /
 `ai-dismiss-thread` are repo-agnostic — they act on `PRRT_` GraphQL node IDs.)
 
 `ai-create-pr` / `ai-create-issue` read a file-or-literal body and print the new
-URL. They are the write path a direct (non-coordinator) run of `/implement`,
-`/weekly-tech-debt`, and `/weekly-tune-up` composes; label/milestone/lifecycle
-policy stays with the coordinator.
+URL. They are for **non-agent** callers (shell steps, CI jobs, scripted
+pipelines); label/milestone/lifecycle policy stays with the coordinator. Skills
+running in an agent turn do not use them: they open PRs and issues with the
+GitHub MCP tools (or `gh pr create` / `gh issue create` directly), because the
+Claude desktop app only associates a PR with the session when it sees the create
+call itself, and a create inside a wrapper subprocess is invisible to it.
 
 Discussions (default repo `rmartz/ai`, category `q-a`) — the no-code path for the
 `discuss` / `discuss-curate` skills:
