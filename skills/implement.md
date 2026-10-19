@@ -258,7 +258,8 @@ reuse/extend/new decision from Step 3b, which criteria pass, and the issue it
 closes. Write the body with the `Write` tool to a file in the worktree and open
 the PR with `gh pr create --base <base> --title <title> --body-file <file>` run
 directly in Bash — the desktop app binds a PR to the session when it sees that
-command. If `gh pr create` fails, fall back to `mcp__github__create_pull_request`
+command. Delete the body file as soon as `gh pr create` succeeds, so a later
+`git add` cannot commit it to the branch. If `gh pr create` fails, fall back to `mcp__github__create_pull_request`
 (body as its `body` parameter), then, when the session has the app's PR tools,
 bind it with `mcp__ccd_pr__bind_pr` (the app does not bind an MCP-created PR on
 its own). Never use `ai-create-pr` or a raw `gh api` POST here — the app cannot

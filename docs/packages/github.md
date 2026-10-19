@@ -130,9 +130,11 @@ Stamps the agent's **origin repo** (the repository its session is anchored to)
 onto a PR or issue it just created, so a cross-repo create — an agent working in
 repo A opening an artifact in repo B — is visible on the artifact itself. Runs as
 a Claude Code `PostToolUse` hook _behind_ MCP creation (`mcp__github__create_pull_request`,
-`mcp__github__issue_write`), not as a create-wrapper, because agents create through
-the GitHub MCP tools (which the desktop app watches to relate merged PRs back to
-their session) — a wrapper would be bypassed exactly when it matters.
+`mcp__github__issue_write`), not as a create-wrapper, because agents create
+directly rather than through a wrapper — a wrapper would be bypassed exactly when
+it matters. It currently covers MCP creates only: agents open PRs with
+`gh pr create` in Bash (the command the desktop app binds to the session), and
+those PRs are not stamped yet (#389).
 
 - `parseHookPayload(raw)` — a `PostToolUse` payload → `StampContext`
   (`{ kind, targetRepo, number }`), or `null` when it is not a handled create (wrong
