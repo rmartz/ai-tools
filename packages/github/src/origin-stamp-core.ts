@@ -2,6 +2,12 @@ import { issueNumber } from './gh-call.js';
 
 const PR_CREATE_TOOL = 'mcp__github__create_pull_request';
 const ISSUE_WRITE_TOOL = 'mcp__github__issue_write';
+const BASH_TOOL = 'Bash';
+
+/** A `gh pr create` / `gh issue create` invocation inside a Bash command. */
+const GH_CREATE_COMMAND = /\bgh\s+(pr|issue)\s+create\b/;
+/** A created artifact's URL as `gh` prints it: `https://<host>/<owner>/<repo>/(pull|issues)/<N>`. */
+const ARTIFACT_URL = /https?:\/\/[^/\s]+\/([^/\s]+)\/([^/\s]+)\/(pull|issues)\/(\d+)/g;
 
 /** Hidden marker that makes the stamp idempotent (a re-fired hook won't double-stamp). */
 const ORIGIN_MARKER_PREFIX = '<!-- agent-origin:';
@@ -94,6 +100,30 @@ export function extractCreatedNumber(response: unknown): string | null {
   return null;
 }
 
+/**
+ * Resolve a Bash `gh pr create` / `gh issue create` to a {@link StampContext}.
+ * The target repo and number come from the artifact URL `gh` prints on success
+ * (the last one in stdout), so `--repo` and cwd resolution need no parsing.
+ * Returns `null` for any other command, or a failed create that printed no URL.
+ */
+function parseBashCreate(input: Record<string, unknown>, response: unknown): StampContext | null {
+  const command = typeof input.command === 'string' ? input.command : '';
+  const verb = GH_CREATE_COMMAND.exec(command)?.[1];
+  if (!verb) return null;
+  const kind: CreatedArtifactKind = verb === 'pr' ? 'pr' : 'issue';
+  const stdout =
+    typeof response === 'string'
+      ? response
+      : isRecord(response) && typeof response.stdout === 'string'
+        ? response.stdout
+        : '';
+  const segment = kind === 'pr' ? 'pull' : 'issues';
+  const match = [...stdout.matchAll(ARTIFACT_URL)].filter((m) => m[3] === segment).pop();
+  const [, owner, repo, , number] = match ?? [];
+  if (!owner || !repo || !number) return null;
+  return { kind, targetRepo: `${owner}/${repo}`, number };
+}
+
 interface RawHookPayload {
   tool_name?: unknown;
   tool_input?: unknown;
@@ -102,8 +132,9 @@ interface RawHookPayload {
 
 /**
  * Parse a `PostToolUse` hook payload into a {@link StampContext}, or `null` when
- * it is not a handled create (wrong tool, an `issue_write` update, a failed
- * create with no number, or missing target repo). Soft-fails on malformed JSON.
+ * it is not a handled create (wrong tool, an `issue_write` update, a Bash command
+ * that is not `gh pr|issue create`, a failed create with no number, or missing
+ * target repo). Soft-fails on malformed JSON.
  */
 export function parseHookPayload(raw: string): StampContext | null {
   let payload: RawHookPayload;
@@ -114,6 +145,7 @@ export function parseHookPayload(raw: string): StampContext | null {
   }
   const toolName = typeof payload.tool_name === 'string' ? payload.tool_name : '';
   const input = isRecord(payload.tool_input) ? payload.tool_input : {};
+  if (toolName === BASH_TOOL) return parseBashCreate(input, payload.tool_response);
   const kind = classifyTool(toolName, input);
   if (!kind) return null;
   const targetRepo = extractTargetRepo(input);
