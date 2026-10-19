@@ -132,7 +132,7 @@ jobs:
           permission-checks: read # the CI gate
           permission-statuses: read # the CI gate
           permission-actions: write # report a transient failure as a cancelled run
-      - uses: rmartz/pr-lifecycle-action@1916e94c1956f3cef31ac6496a03ffb3d4824f33 # v4.2.1
+      - uses: rmartz/pr-lifecycle-action@dde7cfcc50817551ff06523dff0497609127c027 # v4.2.2
         with:
           github-token: \${{ steps.app-token.outputs.token }}
           arm-auto-merge: false
