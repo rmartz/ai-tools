@@ -16,9 +16,11 @@ those are the coordinator's job.
 > composes `ai-repo-status` (`@rmartz/github` — issues, milestones, and the
 > open-PR/closing-issue map that drives partitioning), `ai-new-worktree`
 > (`@rmartz/worktree` — `/implement` uses `--base <branch>` to stack a child off
-> an in-flight dep), and, on a direct run, `ai-create-issue` / `ai-create-pr`
-> (`@rmartz/github`) for the issue/PR writes; prefer a GitHub MCP tool
-> (`mcp__github__*`) where richer. It **stops once every actionable issue has a PR
+> an in-flight dep). PRs are opened with `gh pr create` run directly in Bash,
+> which the desktop app binds to the session; the fallback is
+> `mcp__github__create_pull_request` followed by `mcp__ccd_pr__bind_pr`. Issues
+> go through `mcp__github__issue_write`. Never use the `ai-create-pr` /
+> `ai-create-issue` wrappers: the app cannot see a create inside them. It **stops once every actionable issue has a PR
 > opened** — driving those PRs through review and merge is the coordinator's job.
 
 > **Runner-agnostic emission.** This skill produces a set of **opened PRs** (plus
@@ -139,15 +141,16 @@ origin/main..HEAD`). A Conventional-Commits subject → a ready-for-review PR;
      a non-default branch still backing an open PR, open with `--base <that-branch>`
      so the coordinator orders parent-before-child; otherwise target `main` (covers
      the normal case and a since-merged/deleted base — GitHub retargets to `main`).
-  4. **Open the PR** with `ai-create-pr` (or `mcp__github__create_pull_request`)
-     against the resolved base, with the draft/ready state + title. When the base
+  4. **Open the PR** with `gh pr create` in Bash (fallback:
+     `mcp__github__create_pull_request` + `mcp__ccd_pr__bind_pr`; never
+     `ai-create-pr`) against the resolved base, with the draft/ready state + title. When the base
      is a non-default branch, keep the body free of stacking notes and post the
      stacking status as a PR comment instead (see **Stacking** above).
   5. **Success** → move the issue `actionable` → `in_flight`; log
      `"issue #N: stale worktree recovered — pushed and opened PR <url>"`.
   6. **Failure** → preserve the worktree, drop from `actionable`, and note for the
      user (push failed → "branch not yet on origin — retry `git push`"; PR-create
-     failed → "branch already pushed — retry `ai-create-pr`"). Don't re-run
+     failed → "branch already pushed — retry opening the PR"). Don't re-run
      `/implement`.
 - **Only uncommitted scratch / empty** → force-remove (two calls:
   `git worktree remove --force <wt>`, then `git branch -D` the branch if it

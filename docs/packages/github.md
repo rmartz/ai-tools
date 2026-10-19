@@ -130,9 +130,11 @@ Stamps the agent's **origin repo** (the repository its session is anchored to)
 onto a PR or issue it just created, so a cross-repo create — an agent working in
 repo A opening an artifact in repo B — is visible on the artifact itself. Runs as
 a Claude Code `PostToolUse` hook _behind_ MCP creation (`mcp__github__create_pull_request`,
-`mcp__github__issue_write`), not as a create-wrapper, because agents create through
-the GitHub MCP tools (which the desktop app watches to relate merged PRs back to
-their session) — a wrapper would be bypassed exactly when it matters.
+`mcp__github__issue_write`), not as a create-wrapper, because agents create
+directly rather than through a wrapper — a wrapper would be bypassed exactly when
+it matters. It currently covers MCP creates only: agents open PRs with
+`gh pr create` in Bash (the command the desktop app binds to the session), and
+those PRs are not stamped yet (#389).
 
 - `parseHookPayload(raw)` — a `PostToolUse` payload → `StampContext`
   (`{ kind, targetRepo, number }`), or `null` when it is not a handled create (wrong
@@ -214,9 +216,12 @@ flag or `GH_REPO` and **never needs `cd <dir> && ai-*`**. (`ai-resolve-thread` /
 `ai-dismiss-thread` are repo-agnostic — they act on `PRRT_` GraphQL node IDs.)
 
 `ai-create-pr` / `ai-create-issue` read a file-or-literal body and print the new
-URL. They are the write path a direct (non-coordinator) run of `/implement`,
-`/weekly-tech-debt`, and `/weekly-tune-up` composes; label/milestone/lifecycle
-policy stays with the coordinator.
+URL. They are for **non-agent** callers (shell steps, CI jobs, scripted
+pipelines); label/milestone/lifecycle policy stays with the coordinator. Skills
+running in an agent turn do not use them: they open PRs with `gh pr create` run
+directly in Bash (which the Claude desktop app binds to the session) and issues
+with the GitHub MCP tools. A create inside a wrapper subprocess is invisible to
+the app, so the PR would never be associated with the session.
 
 Discussions (default repo `rmartz/ai`, category `q-a`) — the no-code path for the
 `discuss` / `discuss-curate` skills:
