@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.1](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.0...bootstrap-v0.22.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* **bootstrap:** seed rmartz/pr-lifecycle-action v4.2.2 ([#386](https://github.com/rmartz/ai-tools/issues/386)) ([4adf2a7](https://github.com/rmartz/ai-tools/commit/4adf2a7d534fb102c56f3e821872d1dfab57e671))
+
 ## [0.22.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.21.0...bootstrap-v0.22.0) (2026-10-16)
 
 
