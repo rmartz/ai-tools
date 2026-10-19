@@ -28,8 +28,8 @@ improvements — each one routed to the repository that owns its artifact type.
 > those proposals are _recorded_ depends on the runner:
 >
 > - **Run directly by the harness**: you carry them out yourself — edit the
->   dotfiles-destined artifacts in a worktree, and for every proposal destined for
->   another repo, file a linked issue there with
+>   artifacts destined for the repo you are working in (in a worktree), and for
+>   every proposal destined for another repo, file a linked issue there with
 >   `ai-create-issue --repo <owner/repo> --title <t> --body <file>`.
 > - **Coordinator-dispatched run**: your GitHub credentials are scrubbed and you
 >   **must not** edit or file anything. You only _express_ the routed proposals;
@@ -77,13 +77,14 @@ The tooling is split across repos — dotfiles is no longer the home for
 everything. Deciding **where** a change belongs is core craft: every proposal is
 routed to the repo that owns its artifact type before it goes any further.
 
-| Proposed-change type                                                      | Destination repo                             |
-| ------------------------------------------------------------------------- | -------------------------------------------- |
-| System config: `settings.json`, shell config, global CLAUDE.md directives | `rmartz/dotfiles`                            |
-| Skills / packages / CLIs                                                  | `rmartz/ai-tools` (`skills/*`, `packages/*`) |
-| Base directives & curated guidance                                        | `rmartz/ai` (guidance docs, Discussions)     |
-| Reports / ledgers / metrics                                               | `rmartz/ai-reports`                          |
-| Project-specific conventions                                              | that project's own repo                      |
+| Proposed-change type                                                                 | Destination repo                                                                       |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| System config: `settings.json`, hooks, `mcp.json`, shell config, `~/.claude/scripts` | `rmartz/dotfiles`                                                                      |
+| Global CLAUDE.md directives, ai-tracked skills (`commands/`), scheduled-task prompts | `rmartz/ai` (`global/CLAUDE.md` + `docs/directives/`, `commands/`, `scheduled-tasks/`) |
+| Skills / packages / CLIs (any skill ai-tools owns or should own)                     | `rmartz/ai-tools` (`skills/*`, `packages/*`)                                           |
+| Base directives & curated guidance                                                   | `rmartz/ai` (guidance docs, Discussions)                                               |
+| Reports / ledgers / metrics                                                          | `rmartz/ai-reports`                                                                    |
+| Project-specific conventions                                                         | that project's own repo                                                                |
 
 Tag every proposal with its destination as part of diagnosis — no proposal
 reaches Step 5 untagged. If a single proposal spans more than one destination,
@@ -95,7 +96,9 @@ across repos as a single unit.
 ### 3a — Read what defines current behavior
 
 Read the files that define current behavior so you can spot the gaps: the global
-directives, the dotfiles project notes, every skill, and the scripts/packages
+directives (`~/.claude/CLAUDE.md` and the `~/.claude/knowledge/directives/` pages
+it points to), the dotfiles project notes, every skill in `~/.claude/commands`
+(ai-tracked files and ai-tools overlay links alike), and the scripts/packages
 that back them. You cannot diagnose a missing or weak directive without the
 directive set in front of you.
 

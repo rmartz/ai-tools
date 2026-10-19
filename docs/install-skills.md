@@ -1,7 +1,7 @@
 ---
 type: Script
 title: install-skills
-description: Symlink ai-tools skills into ~/.claude/commands so they are invocable as slash commands — the durable overlay that lets ai-tools skills take over from the dotfiles versions during the cutover.
+description: Symlink ai-tools skills into ~/.claude/commands so they are invocable as slash commands — the durable overlay that lets ai-tools skills take over from the agent-config repo's versions during the cutover.
 resource: scripts/install-skills.ts
 tags: [setup, skills, harness, symlink]
 ---
@@ -10,8 +10,9 @@ tags: [setup, skills, harness, symlink]
 
 `scripts/install-skills.ts` makes ai-tools' skills runnable by the Claude harness:
 it symlinks each `skills/<name>.md` into `~/.claude/commands/<name>.md`, where the
-harness discovers slash commands. This is the ai-tools replacement for the
-dotfiles `install.sh` symlink step that the repo split retired.
+harness discovers slash commands. The agent-config repo's `install.sh` links
+`~/.claude/commands` itself and then runs this script, so a fresh machine gets
+both sets of skills in one step.
 
 Run it after cloning (or after adding a skill):
 
@@ -34,31 +35,36 @@ Behaviour:
 - `--commands-dir <dir>` / `--skills-dir <dir>` override the defaults (the tests
   use them so no real `~/.claude` is touched).
 
-## Precedence & the dotfiles overlay
+## Precedence & the agent-config overlay
 
-`~/.claude/commands` is a symlink to the **dotfiles** `claude/commands/`
-directory, so this script writes its overlay symlinks _into the dotfiles working
-tree_. Precedence therefore works by which names dotfiles leaves free:
+`~/.claude/commands` is a symlink to the agent-config repo's `commands/`
+directory (linked by that repo's `install.sh`), so this script writes its overlay
+symlinks _into that working tree_. Precedence therefore works by which names the
+agent-config repo leaves free:
 
-- A command name dotfiles still **tracks** as a real file (e.g. `review.md`) is
-  foreign, so `install:skills` **skips** it — the dotfiles version stays live.
-- A name dotfiles has **vacated** (removed + `.gitignore`d in `claude/commands/`)
-  is absent, so `install:skills` **links** the ai-tools version — it takes over.
+- A command name it still **tracks** as a real file (e.g. `review.md`) is
+  foreign, so `install:skills` **skips** it — its version stays live.
+- A name it has **vacated** (removed + `.gitignore`d in `commands/`) is absent,
+  so `install:skills` **links** the ai-tools version — it takes over.
 
 Cutting a skill over is thus a two-repo step: ai-tools ships the craft skill, and
-dotfiles vacates the name. The dotfiles `.gitignore` also stops a `git clean` from
-wiping the overlay symlinks (the fragility that previously un-installed them), and
-a **SessionStart hook** re-runs `install:skills` each session so the overlay is
-re-created if ever lost:
+the agent-config repo vacates the name. Its `commands/.gitignore` also stops a
+`git clean` from wiping the overlay symlinks (the fragility that previously
+un-installed them), and a **SessionStart hook** re-runs `install:skills` each
+session so the overlay is re-created if ever lost:
 
 ```
 pnpm -C <ai-tools> run install:skills >/dev/null 2>&1 &
 ```
 
-During the cutover, orchestration-coupled skills (`review`, `fix-review`) stay on
-dotfiles until **PR Shepherd** is live to own their label/verdict/merge mechanics;
-the self-contained craft skills (`implement`, `weekly-tech-debt`, `weekly-tune-up`,
-`create-issue`) overlay first.
+Re-linking `~/.claude/commands` to a different directory drops the overlay, which
+is why the agent-config `install.sh` re-runs `install:skills` right after it
+links.
+
+During the cutover, orchestration-coupled skills (`review`, `fix-review`,
+`drive-to-merge`) stay in the agent-config repo until **PR Shepherd** is live to
+own their label/verdict/merge mechanics; the self-contained craft skills
+(`implement`, `weekly-tech-debt`, `weekly-tune-up`, `create-issue`) overlay first.
 
 The importable `installSkills(opts)` holds the logic (hermetically tested over a
 temp dir); the CLI `main` only parses args and prints. The `ai-*` package CLIs are
