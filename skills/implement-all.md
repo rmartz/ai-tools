@@ -16,11 +16,11 @@ those are the coordinator's job.
 > composes `ai-repo-status` (`@rmartz/github` — issues, milestones, and the
 > open-PR/closing-issue map that drives partitioning), `ai-new-worktree`
 > (`@rmartz/worktree` — `/implement` uses `--base <branch>` to stack a child off
-> an in-flight dep). Issue/PR writes go through the GitHub MCP tools
-> (`mcp__github__create_pull_request`, `mcp__github__issue_write`), falling back
-> to `gh pr create` / `gh issue create` run directly in Bash — never the
-> `ai-create-pr` / `ai-create-issue` wrappers, whose creates the desktop app
-> cannot see, so the PR is never associated with the session. It **stops once every actionable issue has a PR
+> an in-flight dep). PRs are opened with `gh pr create` run directly in Bash,
+> which the desktop app binds to the session; the fallback is
+> `mcp__github__create_pull_request` followed by `mcp__ccd_pr__bind_pr`. Issues
+> go through `mcp__github__issue_write`. Never use the `ai-create-pr` /
+> `ai-create-issue` wrappers: the app cannot see a create inside them. It **stops once every actionable issue has a PR
 > opened** — driving those PRs through review and merge is the coordinator's job.
 
 > **Runner-agnostic emission.** This skill produces a set of **opened PRs** (plus
@@ -141,8 +141,9 @@ origin/main..HEAD`). A Conventional-Commits subject → a ready-for-review PR;
      a non-default branch still backing an open PR, open with `--base <that-branch>`
      so the coordinator orders parent-before-child; otherwise target `main` (covers
      the normal case and a since-merged/deleted base — GitHub retargets to `main`).
-  4. **Open the PR** with `mcp__github__create_pull_request` (fallback:
-     `gh pr create` in Bash; never `ai-create-pr`) against the resolved base, with the draft/ready state + title. When the base
+  4. **Open the PR** with `gh pr create` in Bash (fallback:
+     `mcp__github__create_pull_request` + `mcp__ccd_pr__bind_pr`; never
+     `ai-create-pr`) against the resolved base, with the draft/ready state + title. When the base
      is a non-default branch, keep the body free of stacking notes and post the
      stacking status as a PR comment instead (see **Stacking** above).
   5. **Success** → move the issue `actionable` → `in_flight`; log
