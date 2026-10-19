@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/rmartz/ai-tools/compare/github-v0.5.0...github-v0.6.0) (2026-10-19)
+
+
+### Features
+
+* **github:** stamp origin repo on gh pr|issue create ([#390](https://github.com/rmartz/ai-tools/issues/390)) ([d449fda](https://github.com/rmartz/ai-tools/commit/d449fda0c4315e0f67d9ef0e85bb8bda673bc2c8))
+
 ## [0.5.0](https://github.com/rmartz/ai-tools/compare/github-v0.4.2...github-v0.5.0) (2026-09-21)
 
 
