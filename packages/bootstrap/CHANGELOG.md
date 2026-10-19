@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.2](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.1...bootstrap-v0.22.2) (2026-10-19)
+
+
+### Bug Fixes
+
+* **bootstrap:** grant actions: write in the golden repo-hygiene workflow ([#392](https://github.com/rmartz/ai-tools/issues/392)) ([6cab5a0](https://github.com/rmartz/ai-tools/commit/6cab5a0cb55ea4ad6e585c243005fe4482ef8491))
+
 ## [0.22.1](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.0...bootstrap-v0.22.1) (2026-10-19)
 
 
