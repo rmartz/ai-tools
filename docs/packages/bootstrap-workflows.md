@@ -140,7 +140,9 @@ file**, not a block spliced into user content.
     (the universally-safe checks); a repo opts into repo-specific checks (`okf`,
     `docs-links`) and points `config:` at its `.repo-hygiene.yml` by adding those
     inputs to its own copy. The job grants `statuses: write` (v3.2.0+ posts one
-    commit status per check, `repo-hygiene / <check>`) and **no** `packages: read` —
+    commit status per check, `repo-hygiene / <check>`), `actions: write` (v4.1.0+
+    cancels rather than fails a run left inconclusive by a transient error —
+    `on-inconclusive: cancel`), and **no** `packages: read` —
     since v3.1.0 the action installs the public `@rmartz/repo-hygiene` from npmjs
     with no auth, so no Dependabot PAT either. A self-updating reference: bootstrap writes
     it once and Dependabot owns the pin thereafter, so it is never overwritten.
