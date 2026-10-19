@@ -98,6 +98,77 @@ describe('parseHookPayload', () => {
   });
 });
 
+describe('parseHookPayload (Bash gh create)', () => {
+  it('resolves a gh pr create from the PR URL it printed', () => {
+    const payload = makePayload(
+      'Bash',
+      { command: 'gh pr create --base main --title "t" --body-file ./pr-body.md' },
+      { stdout: 'https://github.com/rmartz/other/pull/42\n', stderr: '', interrupted: false },
+    );
+    expect(parseHookPayload(payload)).toEqual({
+      kind: 'pr',
+      targetRepo: 'rmartz/other',
+      number: '42',
+    });
+  });
+
+  it('resolves a gh issue create', () => {
+    const payload = makePayload(
+      'Bash',
+      { command: 'gh issue create --repo rmartz/ai-tools --title t --body-file b.md' },
+      {
+        stdout:
+          'Creating issue in rmartz/ai-tools\n\nhttps://github.com/rmartz/ai-tools/issues/7\n',
+      },
+    );
+    expect(parseHookPayload(payload)).toEqual({
+      kind: 'issue',
+      targetRepo: 'rmartz/ai-tools',
+      number: '7',
+    });
+  });
+
+  it('accepts a raw string response', () => {
+    const payload = makePayload(
+      'Bash',
+      { command: 'gh pr create --fill' },
+      'https://github.com/rmartz/ai-tools/pull/9',
+    );
+    expect(parseHookPayload(payload)).toEqual({
+      kind: 'pr',
+      targetRepo: 'rmartz/ai-tools',
+      number: '9',
+    });
+  });
+
+  it('skips a failed gh pr create that printed no PR URL', () => {
+    const payload = makePayload(
+      'Bash',
+      { command: 'gh pr create --fill' },
+      { stdout: '', stderr: 'pull request create failed: GraphQL: No commits between main and x' },
+    );
+    expect(parseHookPayload(payload)).toBeNull();
+  });
+
+  it('skips a Bash command that is not a gh create', () => {
+    const payload = makePayload(
+      'Bash',
+      { command: 'gh pr view 42 --json url' },
+      { stdout: 'https://github.com/rmartz/ai-tools/pull/42' },
+    );
+    expect(parseHookPayload(payload)).toBeNull();
+  });
+
+  it('skips when the printed URL is for the other artifact kind', () => {
+    const payload = makePayload(
+      'Bash',
+      { command: 'gh pr create --fill' },
+      { stdout: 'see https://github.com/rmartz/ai-tools/issues/3' },
+    );
+    expect(parseHookPayload(payload)).toBeNull();
+  });
+});
+
 describe('extractCreatedNumber', () => {
   it('reads a structured number field', () => {
     expect(extractCreatedNumber({ number: 42 })).toBe('42');

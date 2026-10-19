@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Thin CLI wrapper over `stampOriginRepo`, invoked as a Claude Code `PostToolUse`
-// hook matched on `mcp__github__create_pull_request` and `mcp__github__issue_write`.
+// hook matched on `Bash` (for `gh pr|issue create`), `mcp__github__create_pull_request`,
+// and `mcp__github__issue_write`.
 // It reads the hook payload as JSON on stdin and resolves the origin repo from
 // `CLAUDE_PROJECT_DIR` (available in hook execution); all logic stays in the library.
 //

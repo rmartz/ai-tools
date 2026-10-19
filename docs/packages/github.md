@@ -129,16 +129,19 @@ in `gh-call.ts`.
 Stamps the agent's **origin repo** (the repository its session is anchored to)
 onto a PR or issue it just created, so a cross-repo create — an agent working in
 repo A opening an artifact in repo B — is visible on the artifact itself. Runs as
-a Claude Code `PostToolUse` hook _behind_ MCP creation (`mcp__github__create_pull_request`,
-`mcp__github__issue_write`), not as a create-wrapper, because agents create
-directly rather than through a wrapper — a wrapper would be bypassed exactly when
-it matters. It currently covers MCP creates only: agents open PRs with
-`gh pr create` in Bash (the command the desktop app binds to the session), and
-those PRs are not stamped yet (#389).
+a Claude Code `PostToolUse` hook _behind_ the create itself, not as a
+create-wrapper, because agents create directly rather than through a wrapper — a
+wrapper would be bypassed exactly when it matters. It handles both create paths
+agents use: `gh pr create` / `gh issue create` run in Bash (how agents open PRs,
+since that is the command the desktop app binds to the session) and the MCP
+creates (`mcp__github__create_pull_request`, `mcp__github__issue_write`).
 
 - `parseHookPayload(raw)` — a `PostToolUse` payload → `StampContext`
   (`{ kind, targetRepo, number }`), or `null` when it is not a handled create (wrong
-  tool, an `issue_write` update, a failed create, or a missing target repo).
+  tool, an `issue_write` update, a Bash command that is not `gh pr|issue create`, a
+  failed create, or a missing target repo). For a Bash create, the target repo and
+  number come from the artifact URL `gh` prints to stdout (the last matching one),
+  so `--repo` and cwd resolution need no parsing.
 - `extractCreatedNumber(toolResponse)` — the created number across the shapes the
   response can take: a structured object, an MCP `{ content: [{ text }] }` envelope, or
   a raw string carrying a `/pull|issues/N` URL.
@@ -206,8 +209,11 @@ a record as a hidden marker), `ai-read-json-marker [--repo <owner/repo>]
 resolves the origin repo from `CLAUDE_PROJECT_DIR`, and edits the just-created
 PR/issue to stamp its origin (and warn on a cross-repo create). It takes no args,
 writes only a one-line status to stderr, and always exits 0. Wire it in the
-harness `settings.json` as a `PostToolUse` hook matched on
-`mcp__github__create_pull_request` and `mcp__github__issue_write`.
+harness `settings.json` as a `PostToolUse` hook matched on `Bash`,
+`mcp__github__create_pull_request`, and `mcp__github__issue_write` (a matcher of
+`Bash|mcp__github__create_pull_request|mcp__github__issue_write`). Every Bash
+call reaches it, but anything other than `gh pr|issue create` is skipped at parse
+time without touching the network.
 
 Every repo-scoped CLI here resolves its target through `resolveRepoTarget`
 (explicit `--repo`/positional `owner/repo` → `GH_REPO` → cwd `gh repo view`), so a
