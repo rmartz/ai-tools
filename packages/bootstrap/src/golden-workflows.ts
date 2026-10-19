@@ -212,7 +212,10 @@ updates:
 // is no `packages: read` and no Dependabot PAT. Since v3.2.0 it posts one commit
 // status per check (`repo-hygiene / <check>`) with the default `github.token`, which
 // needs `statuses: write` — without it the action only warns, but the golden grants
-// it so the per-check breakdown works out of the box.
+// it so the per-check breakdown works out of the box. Since v4.1.0 the action
+// cancels (rather than fails) a run whose checks are inconclusive on a transient
+// external error (`on-inconclusive: cancel`, the default), which needs
+// `actions: write` — without it the cancel 403s and the run hard-fails.
 //
 // CHECK-NAME CONVENTION (fleet-wide, #299) — the `hygiene` job deliberately sets no
 // `name:`, so GitHub posts the check under the bare job id, `hygiene`. That is the
@@ -246,6 +249,7 @@ jobs:
     permissions:
       contents: read
       statuses: write
+      actions: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: rmartz/repo-hygiene-action@bca5c484060d5d608333810b4e042cd39c59f7a9 # v3.2.0

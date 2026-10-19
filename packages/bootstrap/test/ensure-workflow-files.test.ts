@@ -347,6 +347,10 @@ describe('goldenWorkflowFiles — the seeded repo-hygiene composite-action consu
     expect(repoHygiene?.content).toContain('statuses: write');
   });
 
+  it('grants actions: write so an inconclusive run can cancel itself instead of failing', () => {
+    expect(repoHygiene?.content).toContain('actions: write');
+  });
+
   it('does not grant packages: read (the action installs the CLI from npmjs with no auth)', () => {
     expect(repoHygiene?.content).not.toContain('packages: read');
   });
