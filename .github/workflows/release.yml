@@ -32,7 +32,7 @@ jobs:
       # installation token for the rmartz-merge-bot GitHub App: App-authored
       # release PRs run CI, and the App's rate-limit pool is separate from the
       # user's (rmartz/scripts#22).
-      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         id: app-token
         with:
           client-id: ${{ secrets.MERGE_BOT_CLIENT_ID }}
