@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.3](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.2...bootstrap-v0.22.3) (2026-10-21)
+
+
+### Bug Fixes
+
+* **bootstrap:** drop the private-repo reference from the golden pr-lifecycle caller ([#399](https://github.com/rmartz/ai-tools/issues/399)) ([0a04b88](https://github.com/rmartz/ai-tools/commit/0a04b88a9aa3f4c52bf238d490184db31874fb61))
+
 ## [0.22.2](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.1...bootstrap-v0.22.2) (2026-10-19)
 
 
