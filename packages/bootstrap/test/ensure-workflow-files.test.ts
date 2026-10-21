@@ -466,3 +466,29 @@ describe('goldenWorkflowFiles — no ongoing-manager machinery', () => {
     ).toBeUndefined();
   });
 });
+
+// The golden files land in public repos, where repo-hygiene's `private-repo-refs`
+// check fails on any reference to a private repo (the pr-lifecycle caller once cited
+// one in a comment). An allowlist of public repos, rather than a list of private
+// ones, keeps private repo names out of this public repo too.
+describe('goldenWorkflowFiles — reference only public repos', () => {
+  const PUBLIC_REPOS = new Set([
+    'bot-automerge-action',
+    'merge-safety',
+    'merge-safety-action',
+    'pr-lifecycle',
+    'pr-lifecycle-action',
+    'pr-policy',
+    'pr-policy-action',
+    'repo-hygiene',
+    'repo-hygiene-action',
+  ]);
+
+  it.each(goldenWorkflowFiles.map((w) => [w.filename, w.content] as const))(
+    '%s cites no repo outside the public allowlist',
+    (_filename, content) => {
+      const cited = [...content.matchAll(/\brmartz\/([A-Za-z0-9._-]+)/g)].map((m) => m[1]);
+      expect(cited.filter((repo) => !PUBLIC_REPOS.has(repo))).toEqual([]);
+    },
+  );
+});
