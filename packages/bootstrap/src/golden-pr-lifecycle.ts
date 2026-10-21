@@ -36,6 +36,9 @@
 // back to GITHUB_TOKEN. App-authored events, unlike GITHUB_TOKEN ones, trigger
 // workflows, so the job skips the label and review-request events the App itself
 // sends; the login is hard-coded like the secret names, since the fleet shares one App.
+//
+// The emitted YAML cites no private repo: it lands in public repos, where
+// repo-hygiene's `private-repo-refs` check fails on any reference to one.
 export const PR_LIFECYCLE = `name: pr-lifecycle
 # Shows which event and action started each run (e.g. pull_request_target /
 # review_requested), so the run list says what re-reconciled a PR.
@@ -54,7 +57,7 @@ run-name: pr-lifecycle (\${{ github.event_name }}\${{ github.event.action && for
 # Every read and write goes through an installation token for the
 # rmartz-merge-bot GitHub App, not GITHUB_TOKEN, so labels are attributed to the
 # bot and API calls draw on the App's own rate-limit pool rather than the
-# user's (rmartz/scripts#22). Unlike GITHUB_TOKEN, App-authored events trigger
+# user's. Unlike GITHUB_TOKEN, App-authored events trigger
 # workflows, so the job skips the label and review-request events the App
 # itself causes; see the job's \`if\`.
 
