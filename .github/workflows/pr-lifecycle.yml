@@ -4,16 +4,20 @@ name: pr-lifecycle
 run-name: pr-lifecycle (${{ github.event_name }}${{ github.event.action && format('/{0}', github.event.action) || '' }})
 
 # Runs the @rmartz/pr-lifecycle reconciler via rmartz/pr-lifecycle-action: on every
-# relevant event it recomputes each PR's lifecycle state and converges its labels.
+# relevant event it recomputes each PR's lifecycle state and converges its
+# lifecycle and UAT labels (rmartz/pr-lifecycle-action#63).
 #
-# Labels only: arm-auto-merge is off and no real-actor token is passed, so this
-# never arms, merges, disarms, or updates a branch. Turning arming on is a later,
-# per-repo step; see rmartz/pr-lifecycle-action docs/consuming.md.
+# No arming: arm-auto-merge is off, so this never arms, merges, disarms, or
+# updates a branch. The real-actor token the action creates from the
+# rmartz-pr-lifecycle App only posts the `pr-lifecycle/sign-off` status, which
+# the pr-policy caller trusts from rmartz-pr-lifecycle[bot]. bot-automerge.yml
+# keeps arming eligible bot PRs. Turning arming on is a later, per-repo step; see
+# rmartz/pr-lifecycle-action docs/consuming.md.
 #
 # pull_request_target is safe here only because nothing checks out or runs the
 # PR's code; the Action reads everything through the API.
 #
-# Every read and write goes through an installation token for the
+# Every read and label write goes through an installation token for the
 # rmartz-merge-bot GitHub App, not GITHUB_TOKEN, so labels are attributed to the
 # bot and API calls draw on the App's own rate-limit pool rather than the
 # user's. Unlike GITHUB_TOKEN, App-authored events trigger
@@ -29,6 +33,8 @@ on:
       - converted_to_draft
       - synchronize
       - edited
+      # A person's sign-off label (`no UAT needed`, `UAT passed`, `CI change
+      # approved`) is reconciled straight away.
       - labeled
       - unlabeled
       - review_requested
@@ -55,6 +61,7 @@ permissions: {}
 
 jobs:
   reconcile:
+    name: Reconcile PR lifecycle
     # A review on a fork PR runs with a read-only token and no secrets, so it
     # cannot write labels; skip it. The fork PR is reconciled on its next
     # pull_request_target event, or on demand via workflow_dispatch.
@@ -94,13 +101,16 @@ jobs:
           permission-checks: read # the CI gate
           permission-statuses: read # the CI gate
           permission-actions: write # report a transient failure as a cancelled run
-      - uses: rmartz/pr-lifecycle-action@cb58fb834f4761dcf691d6801b8ba2e23316a04a # v4.3.0
+      - uses: rmartz/pr-lifecycle-action@056397621b976d9279b562f232adeab60e281624 # v4.4.0
         with:
           github-token: ${{ steps.app-token.outputs.token }}
+          # The action creates its real-actor token from the rmartz-pr-lifecycle
+          # App to post the pr-lifecycle/sign-off status (arming is off). Both are
+          # Actions and Dependabot secrets; until they are set, the run reconciles
+          # labels only.
+          app-client-id: ${{ secrets.PR_LIFECYCLE_CLIENT_ID }}
+          app-private-key: ${{ secrets.PR_LIFECYCLE_PRIVATE_KEY }}
           arm-auto-merge: false
-          # Mirrors pr-policy's skip-uat: true (this repo has nothing to user-test).
+          # Nothing here to user-test (matches pr-policy.yml's skip-uat): every
+          # PR is `no UAT needed`. Quoted: YAML 1.1 reads a bare off as false.
           uat: 'off'
-          # Labels-only passes no real-actor `token`, so the sign-off status is
-          # intentionally not posted yet (pr-policy-action <= v1.5.0 ignores it),
-          # and the token advisory comment would be noise on every PR.
-          token-advisory: false
