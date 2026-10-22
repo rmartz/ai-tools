@@ -101,7 +101,7 @@ jobs:
           permission-checks: read # the CI gate
           permission-statuses: read # the CI gate
           permission-actions: write # report a transient failure as a cancelled run
-      - uses: rmartz/pr-lifecycle-action@056397621b976d9279b562f232adeab60e281624 # v4.4.0
+      - uses: rmartz/pr-lifecycle-action@d3718d69a1e5970d99238c50d3262da5c8647fa4 # v4.4.1
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           # The action creates its real-actor token from the rmartz-pr-lifecycle
