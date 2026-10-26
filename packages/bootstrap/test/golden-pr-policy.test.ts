@@ -72,4 +72,14 @@ describe('pr-policy — UAT variant', () => {
   it('seeds skip-uat: true by default', () => {
     expect(content).toMatch(/^\s+skip-uat: true$/m);
   });
+
+  // What a non-app repo ships is still user-facing to its consumers, so the
+  // header must call skipping UAT a choice, not claim there is nothing to test.
+  it('justifies skip-uat as a choice', () => {
+    expect(content).toContain('# skip-uat: this repo turns the UAT gate off by choice.');
+  });
+
+  it('does not claim the repo has nothing to user-test', () => {
+    expect(content).not.toContain('this repo has nothing to user-test');
+  });
 });

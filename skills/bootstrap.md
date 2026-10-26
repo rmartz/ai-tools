@@ -44,8 +44,9 @@ files, **and** the golden whole-file set:
   when a non-conventional subject reaches `main`.
 - `.github/workflows/pr-policy.yml` — a consumer of `rmartz/pr-policy-action`,
   posting the `pr-policy` check; its `title` check is the pre-merge counterpart of
-  the tripwire. It is seeded with `skip-uat: true` (nothing to user-test); a
-  Next.js/Vercel app repo deletes that line to keep the UAT gate. It seeds no
+  the tripwire. It is seeded with `skip-uat: true`, so the repo skips UAT by
+  choice (what it ships is still user-facing); a Next.js/Vercel app repo deletes
+  that line to keep the UAT gate. It seeds no
   required-check gate. Require the `pr-policy` context in the repo's ruleset only
   after the check has posted on a PR: a `pull_request_target` caller first runs on
   the PR after the one that adds it.

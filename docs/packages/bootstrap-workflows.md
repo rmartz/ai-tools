@@ -184,8 +184,10 @@ file**, not a block spliced into user content.
     entry. A CI check, not an auto-merger, so `gateChecks: []`.
 
     **UAT variant.** Bootstrap has no project-type signal, so it seeds the fleet
-    default, `skip-uat: true`: the right setting for npm packages, Actions, reusable
-    workflows, and tooling, which have nothing to user-test. A **Next.js/Vercel app**
+    default, `skip-uat: true`, which npm packages, Actions, reusable workflows, and
+    tooling set by choice: what they ship is still user-facing to their consumers,
+    so skipping UAT is a decision, not a claim that there is nothing to user-test.
+    A **Next.js/Vercel app**
     repo keeps the UAT gate: delete the `skip-uat` line from its copy and change the
     header comment to say the repo keeps the gate (a PR then stays pending until it
     carries `no UAT needed` or a person's `UAT passed`). The flag lives in the

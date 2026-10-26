@@ -14,8 +14,10 @@
 // with no per-repo edit; bootstrap seeds it once and the repo owns it thereafter.
 //
 // UAT variant. Bootstrap has no project-type signal (it never inspects the repo for
-// Next.js or Vercel), so it seeds the fleet default: `skip-uat: true`, for repos
-// with nothing to user-test (npm packages, Actions, reusable workflows, tooling).
+// Next.js or Vercel), so it seeds the fleet default: `skip-uat: true`, which npm
+// packages, Actions, reusable workflows, and tooling turn on by choice. What they
+// ship is still user-facing to consumers; skipping UAT is a decision, not a claim
+// that there is nothing to user-test.
 // A Next.js/Vercel app repo keeps the UAT gate by deleting the `skip-uat` line in
 // its copy (and saying so in the header comment). The flag lives in this
 // default-branch caller so a PR cannot switch off a gate it would otherwise wait on.
@@ -42,9 +44,10 @@ export const PR_POLICY = `name: pr-policy
 # matching commit status) and owns the \`CI approval needed\` label. The checks are
 # listed in rmartz/pr-policy's docs/checks/index.md.
 #
-# skip-uat: this repo has nothing to user-test, so the UAT gate is off. It is set
-# here, in the default-branch caller, so a PR can't switch off a gate it would
-# otherwise wait on.
+# skip-uat: this repo turns the UAT gate off by choice. What it ships is
+# user-facing to its consumers; this is a decision to skip UAT, not a claim that
+# there is nothing to user-test. It is set here, in the default-branch caller, so
+# a PR can't switch off a gate it would otherwise wait on.
 #
 # pull_request_target is safe here only because nothing checks out or runs the
 # PR's code; the Action reads everything through the API. It is needed so fork
