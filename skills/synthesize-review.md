@@ -155,6 +155,16 @@ terminal action:
   bullet each), `## Verdict` (one sentence), `## Deferred` (optional, each linked to
   its filed issue).
 - **`uat.status`** — `exempt` / `pending` / `ready`, for the runner's UAT labelling.
+  UAT is only for the product's user-facing functional behavior, what its users
+  can observe it do. Tooling is never user-facing: CI workflows and composite
+  actions, the repo's own scripts (audits, CI check scripts, release helpers),
+  lint/format/test-runner/repo-hygiene config, Dependabot config, dev/tooling
+  dependency bumps, tests, and docs. A PR made only of these is `exempt`. CI is
+  not user-facing: whether it changes what a check lets through is a CI-governance
+  concern (the review and the `CI approval needed` / `CI change approved`
+  sign-off), never UAT. The exception is a repo whose product is a reusable
+  workflow or Action: a shipped `workflow_call`-only workflow or the shipped
+  action is product behavior, not the repo's own CI.
 
 **Emit it — do not post, resolve, edit, or label anything.** Write the record to a
 JSON file and hand it to the runner with
