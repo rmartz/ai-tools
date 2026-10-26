@@ -92,11 +92,17 @@ describe('listPrReviews', () => {
 });
 
 describe('listIssueComments', () => {
-  it('maps id/author/body', async () => {
+  it('maps id/author/body/createdAt', async () => {
     boundedRun.mockResolvedValueOnce(
-      result({ stdout: JSON.stringify([{ id: 9, user: { login: 'rmartz' }, body: 'hi' }]) }),
+      result({
+        stdout: JSON.stringify([
+          { id: 9, user: { login: 'rmartz' }, body: 'hi', created_at: '2026-10-26T12:00:00Z' },
+        ]),
+      }),
     );
-    expect(await listIssueComments('o/r', 3)).toEqual([{ id: 9, author: 'rmartz', body: 'hi' }]);
+    expect(await listIssueComments('o/r', 3)).toEqual([
+      { id: 9, author: 'rmartz', body: 'hi', createdAt: '2026-10-26T12:00:00Z' },
+    ]);
   });
 
   it('paginates the issue-comments endpoint', async () => {
@@ -107,9 +113,11 @@ describe('listIssueComments', () => {
     expect(argv).toContain('repos/o/r/issues/3/comments');
   });
 
-  it('tolerates a missing user and body', async () => {
+  it('tolerates a missing user, body and timestamp', async () => {
     boundedRun.mockResolvedValueOnce(result({ stdout: JSON.stringify([{ id: 1, user: null }]) }));
-    expect(await listIssueComments('o/r', 3)).toEqual([{ id: 1, author: '', body: '' }]);
+    expect(await listIssueComments('o/r', 3)).toEqual([
+      { id: 1, author: '', body: '', createdAt: '' },
+    ]);
   });
 
   it('soft-fails to [] when gh fails', async () => {
