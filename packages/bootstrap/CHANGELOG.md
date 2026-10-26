@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.4](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.3...bootstrap-v0.22.4) (2026-10-26)
+
+
+### Bug Fixes
+
+* say UAT is skipped by choice, not for lack of anything to test ([#404](https://github.com/rmartz/ai-tools/issues/404)) ([a02b44d](https://github.com/rmartz/ai-tools/commit/a02b44d34a36951eda618b82207fe3f06529a6e6))
+
 ## [0.22.3](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.2...bootstrap-v0.22.3) (2026-10-21)
 
 
