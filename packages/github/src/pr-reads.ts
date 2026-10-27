@@ -67,12 +67,14 @@ export interface IssueComment {
   id: number;
   author: string;
   body: string;
+  createdAt: string;
 }
 
 interface RawIssueComment {
   id: number;
   user: { login: string } | null;
   body: string;
+  created_at: string;
 }
 
 /**
@@ -96,5 +98,10 @@ export async function listIssueComments(
   } catch {
     return [];
   }
-  return raw.map((c) => ({ id: c.id, author: c.user?.login ?? '', body: c.body ?? '' }));
+  return raw.map((c) => ({
+    id: c.id,
+    author: c.user?.login ?? '',
+    body: c.body ?? '',
+    createdAt: c.created_at ?? '',
+  }));
 }

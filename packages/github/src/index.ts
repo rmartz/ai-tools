@@ -48,6 +48,29 @@ export type {
   MergeMethod,
 } from './pr-ops.js';
 
+export { refreshPr, PR_REFRESH_OUTCOMES } from './pr-refresh.js';
+export type { PrRefreshOutcome, PrRefreshResult, RefreshPrOptions } from './pr-refresh.js';
+
+export {
+  decideDependabotRefresh,
+  bodyRebaseMarker,
+  parseDependabotCommand,
+  isRebaseRefusal,
+  DEFAULT_DEPENDABOT_REFRESH_POLICY,
+  DEPENDABOT_LOGIN,
+} from './dependabot-refresh.js';
+export type {
+  DependabotCommand,
+  DependabotRequest,
+  DependabotReply,
+  DependabotTimeline,
+  DependabotRefreshPolicy,
+  DependabotDecision,
+  RebaseMarker,
+} from './dependabot-refresh.js';
+
+export { readDependabotTimeline } from './pr-refresh-reads.js';
+
 export { findOpenIssue, createIssue, addIssueComment, addAssignees } from './issue-ops.js';
 export type { FindOpenIssueOptions, CreateIssueOptions } from './issue-ops.js';
 
