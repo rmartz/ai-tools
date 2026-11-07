@@ -66,7 +66,8 @@ in `gh-call.ts`.
   `{id, state, submittedAt, commitId, user}`), sorted most-recent first. REST-only
   (review history has no clean `gh` subcommand fallback); soft-fails to `[]`.
 - `listIssueComments(repo, prNumber)` — the PR's conversation comments
-  (`{id, author, body}`) across all pages (`gh api --paginate`); soft-fails to `[]`.
+  (`{id, author, body, createdAt}`) across all pages (`gh api --paginate`);
+  soft-fails to `[]`.
 - `computePrDiff(baseSha, headSha, repo?, { warn? })` — the review diff between
   two commits, returned as formatted patch text. When the range contains a merge
   commit it walks the branch's **first-parent chain** so a `main` pull doesn't
@@ -123,6 +124,47 @@ in `gh-call.ts`.
   `sha` (or `true` when absent). The **gated, serialized** merge path (mutex,
   idempotency, re-validation) is PR Shepherd's; this is only the primitive it
   composes. All three are thin, label-free, gate-free client wrappers.
+
+### PR refresh (`pr-refresh.ts`, `dependabot-refresh.ts`, `pr-refresh-reads.ts`)
+
+One entry point for "bring this PR current against its base": the caller states
+the goal and the strategy is chosen by the PR's author. It is **stateless** — every
+call re-derives its decision from the PR, so concurrent agents converge.
+
+- `refreshPr(repo, pr, { force?, policy?, now? })` → `{ outcome, reason }`, where
+  `outcome` is one of `PR_REFRESH_OUTCOMES`: `already-current`, `requested-rebase`,
+  `requested-recreate`, `updated`, `pending`, `escalate`, `closed`, `failed`. A
+  branch that is not behind its base (compare `behind_by == 0`) and not conflicting
+  is `already-current` with nothing posted; `force` skips that check (for when
+  Dependabot wrongly claims a branch is current).
+- **Dependabot PRs** are only ever updated by comment command, never by
+  `update-branch` or a push. `decideDependabotRefresh(timeline, now, policy?)` is
+  the pure state machine over the PR's timeline since Dependabot's last
+  force-push:
+
+  | Observed on the latest request                                              | Decision                     |
+  | --------------------------------------------------------------------------- | ---------------------------- |
+  | No request since the last Dependabot push                                   | post `rebase`                |
+  | Body says "Dependabot is rebasing this PR", or request inside its window    | wait (`pending`)             |
+  | Refusal reply ("edited by someone other than…", "already up-to-date with…") | `rebase` → post `recreate`   |
+  | Body says "Dependabot rebase failed"                                        | `rebase` → post `recreate`   |
+  | `recreate` refused or failed, or an unrecognised Dependabot reply           | `escalate`                   |
+  | No response after the window                                                | re-post the **same** command |
+  | That command already posted `maxAttempts` times this cycle                  | `escalate`                   |
+
+  Dependabot 👍-reacts to every command it picks up — refused ones too — so the
+  reaction only marks a request **acknowledged**, which switches it to the longer
+  wait window. Defaults (`DEFAULT_DEPENDABOT_REFRESH_POLICY`): 10 minutes
+  unacknowledged, 30 minutes acknowledged, 3 attempts per command.
+  `readDependabotTimeline(repo, pr, body)` assembles the timeline from the PR's
+  commits, comments and the newest request's reactions.
+
+- **Every other PR** goes through GitHub's `update-branch` API, pinned to the head
+  SHA that was read (`expected_head_sha`). A conflicting PR is `escalate` instead:
+  `update-branch` cannot resolve conflicts.
+
+This is the single-PR primitive. Deciding _which_ PRs to refresh, and when, is
+orchestration (PR Shepherd's branch-currency, the `/dependabot` skill).
 
 ### Origin-repo provenance stamp (`origin-stamp.ts`)
 
@@ -202,7 +244,10 @@ Thin `bin/` wrappers; all logic stays in the library:
 `ai-resolve-thread <id>…`, `ai-dismiss-thread <id> <reply>`,
 `ai-post-json-marker [--repo <owner/repo>] <pr> <kind> <json-file-or-literal>` (post
 a record as a hidden marker), `ai-read-json-marker [--repo <owner/repo>]
-[--match-pr-head <sha>] <pr> <kind>` (print the latest such record, exit 1 if none).
+[--match-pr-head <sha>] <pr> <kind>` (print the latest such record, exit 1 if none),
+`ai-pr-refresh [--repo <owner/repo>] [--force] [--json] <pr>` (bring a PR current;
+prints the outcome and reason, exits 0 for a settled outcome, 1 for `failed`, 3 for
+`escalate`).
 
 `ai-origin-stamp` is the odd one out — not an interactive command but a
 `PostToolUse` **hook** entrypoint. It reads the hook payload as JSON on stdin,

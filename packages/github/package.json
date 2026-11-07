@@ -24,7 +24,8 @@
     "ai-discussion-comment": "./dist/bin/discussion-comment.js",
     "ai-post-json-marker": "./dist/bin/post-json-marker.js",
     "ai-read-json-marker": "./dist/bin/read-json-marker.js",
-    "ai-origin-stamp": "./dist/bin/origin-stamp.js"
+    "ai-origin-stamp": "./dist/bin/origin-stamp.js",
+    "ai-pr-refresh": "./dist/bin/pr-refresh.js"
   },
   "files": [
     "dist"
