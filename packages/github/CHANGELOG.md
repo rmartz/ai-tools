@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/rmartz/ai-tools/compare/github-v0.6.0...github-v0.7.0) (2026-11-11)
+
+
+### Features
+
+* **github:** port wait-for-dependabot with missed-request detection ([#421](https://github.com/rmartz/ai-tools/issues/421)) ([8444f9b](https://github.com/rmartz/ai-tools/commit/8444f9b7228ffdb059dcdc3a4e5419c386bca884))
+
 ## [0.6.0](https://github.com/rmartz/ai-tools/compare/github-v0.5.0...github-v0.6.0) (2026-10-19)
 
 

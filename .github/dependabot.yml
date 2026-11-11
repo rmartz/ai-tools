@@ -38,6 +38,14 @@ updates:
     commit-message:
       prefix: 'chore'
       include: 'scope'
+    ignore:
+      # @types/node tracks the Node runtime's major, which Dependabot never bumps
+      # (the setup action's and release.yml's `node-version`, the repo-hygiene
+      # action's `node-version` default, `engines`). A lone types major would
+      # type-check APIs the runtime lacks, so it moves by hand with the runtime
+      # upgrade. Minors and patches still flow through the groups below.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
       # `typescript` and `tsup` are declared in EVERY workspace manifest. Each is
       # isolated in its own group so every one of its bumps — major, minor, and patch —
