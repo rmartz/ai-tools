@@ -32,7 +32,7 @@ inputs:
   node-version:
     description: 'Node.js version for setup-node.'
     required: false
-    default: '24'
+    default: '26'
   token:
     description: 'Token with packages:read for GitHub Packages. Defaults to the job token.'
     required: false

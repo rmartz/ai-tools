@@ -18,6 +18,7 @@ export default defineConfig({
     'src/bin/discussion-comment.ts',
     'src/bin/post-json-marker.ts',
     'src/bin/read-json-marker.ts',
+    'src/bin/wait-for-dependabot.ts',
   ],
   format: ['esm'],
   dts: { entry: 'src/index.ts' },
