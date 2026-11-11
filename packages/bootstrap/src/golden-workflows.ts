@@ -165,6 +165,13 @@ jobs:
 // own PR for review instead of holding the whole group (rmartz/ai
 // repository-checklist §Supply chain). A repo without an npm manifest, or wanting
 // other ecosystems, edits its copy — which the `seed` policy then leaves untouched.
+//
+// The npm entry ignores semver-major `@types/node` bumps: the types' major must
+// match the Node runtime's, and Dependabot never bumps the runtime (`node-version:`
+// inputs, `engines`, `.nvmrc`, `runs.using: nodeNN`, a hosting runtime), so a lone
+// types major (e.g. 24 → 26) would type-check APIs the runtime lacks. Minors and
+// patches still flow through the groups; the types major moves with the runtime,
+// by hand (rmartz/pr-lifecycle-app#50).
 export const DEPENDABOT_CONFIG = `version: 2
 updates:
   - package-ecosystem: github-actions
@@ -193,6 +200,10 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      - dependency-name: "@types/node"
+        update-types:
+          - "version-update:semver-major"
 `;
 
 // Generic repo-hygiene CI, consumer shape — a thin consumer of the

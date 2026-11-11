@@ -124,7 +124,10 @@ file**, not a block spliced into user content.
     `github-actions` ecosystem (the minimum every repo wants; it keeps pinned
     action SHAs, including the `bot-automerge` consumer's composite-action pin, fresh)
     plus the `npm` ecosystem (the ideal for the JS repos this toolkit targets), both
-    grouped. Written only if absent; a repo then owns and tailors it.
+    grouped. The `npm` entry ignores semver-major `@types/node` bumps: the types'
+    major must match the Node runtime's, which Dependabot never bumps, so that
+    major moves with the runtime by hand (minors and patches still flow through the
+    groups). Written only if absent; a repo then owns and tailors it.
   - `repo-hygiene.yml`: a thin consumer of the SHA-pinned
     `rmartz/repo-hygiene-action` **composite action** (#278) — a `hygiene` job that
     `actions/checkout`s then `- uses: rmartz/repo-hygiene-action@<sha> # vX.Y.Z`,
