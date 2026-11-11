@@ -60,6 +60,17 @@ describe('classifyDependabotResponse', () => {
     });
   });
 
+  it('answers an acknowledged request whose rebase failed', () => {
+    const snapshot = makeSnapshot({
+      rebaseMarker: 'failed',
+      request: { commentId: 1, createdAt: REQUESTED_AT, acknowledged: true },
+    });
+    expect(classifyDependabotResponse(snapshot, at(60))).toEqual({
+      status: 'answered',
+      reason: 'Dependabot rebase failed (see the PR)',
+    });
+  });
+
   it('stays pending on a self-started rebase with no request', () => {
     const snapshot = makeSnapshot({ request: null, rebaseMarker: 'in_progress' });
     expect(classifyDependabotResponse(snapshot, at(5))).toEqual({ status: 'pending' });

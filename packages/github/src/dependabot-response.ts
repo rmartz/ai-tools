@@ -4,8 +4,8 @@ import type { DependabotSnapshot } from './dependabot-state.js';
  * Classify how Dependabot has answered a PR's latest rebase/recreate request.
  *
  * - `answered` — it closed/merged the PR, pushed a regenerated branch after the
- *   request, commented after it (usually a refusal), or finished/failed a rebase
- *   it started on its own.
+ *   request, commented after it (usually a refusal), marked the rebase failed in
+ *   the PR body, or finished a rebase it started on its own.
  * - `missed` — the request is older than the ack grace period and Dependabot
  *   never reacted to it. Dependabot acks a command it picks up with a 👍 within
  *   seconds, so no ack means it dropped the request and waiting longer is futile.
@@ -50,6 +50,10 @@ export function classifyDependabotResponse(
   }
   if (snapshot.lastBotCommentAt > request.createdAt) {
     return { status: 'answered', reason: 'Dependabot commented (likely a refusal; see the PR)' };
+  }
+  // A rebase Dependabot accepted but could not finish only rewrites the PR body.
+  if (snapshot.rebaseMarker === 'failed') {
+    return { status: 'answered', reason: 'Dependabot rebase failed (see the PR)' };
   }
   if (request.acknowledged) return { status: 'pending' };
   const waitedMs = now - Date.parse(request.createdAt);

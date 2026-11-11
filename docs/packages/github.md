@@ -167,8 +167,8 @@ TS port of dotfiles' `wait-for-dependabot.py` + `lib/dependabot_state.py`, plus
   it), and the latest `dependabot[bot]` commit and comment times. `null` on a
   failed read.
 - `classifyDependabotResponse(snapshot, { now, ackGraceMs? })` — pure. `answered`
-  when the PR closed, Dependabot pushed or commented after the request, or a
-  self-started rebase finished/failed; `missed` when the request is older than the
+  when the PR closed, Dependabot pushed or commented after the request, the body
+  shows `Dependabot rebase failed`, or a self-started rebase finished; `missed` when the request is older than the
   ack grace (default 180 s) and Dependabot never reacted; otherwise `pending`.
   Dependabot acks a command it picks up with a 👍 within seconds, so no reaction
   means it dropped the request. An acknowledged request stays `pending`.
