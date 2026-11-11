@@ -2,10 +2,10 @@ import { ghCall, issueNumber, type GhCallOptions } from './gh-call.js';
 import { addIssueComment } from './issue-ops.js';
 import {
   DEFAULT_DEPENDABOT_REFRESH_POLICY,
-  DEPENDABOT_LOGIN,
   decideDependabotRefresh,
   type DependabotRefreshPolicy,
 } from './dependabot-refresh.js';
+import { DEPENDABOT_LOGIN } from './dependabot-state.js';
 import {
   readBehindBy,
   readDependabotTimeline,

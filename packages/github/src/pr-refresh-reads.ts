@@ -1,11 +1,11 @@
 import { ghCall, type GhCallOptions } from './gh-call.js';
 import { listIssueComments } from './pr-reads.js';
 import {
-  DEPENDABOT_LOGIN,
   parseDependabotCommand,
-  type DependabotRequest,
+  type DependabotCommandRequest,
   type DependabotTimeline,
 } from './dependabot-refresh.js';
+import { DEPENDABOT_LOGIN } from './dependabot-state.js';
 
 /**
  * The GitHub reads behind `refreshPr`: the PR's freshness against its base, and
@@ -150,7 +150,7 @@ export async function readDependabotTimeline(
   });
   const newest = [...requestComments].sort((a, b) => a.at.localeCompare(b.at)).at(-1);
   const ackOfNewest = newest ? await acknowledgedAt(repo, newest.id, call) : null;
-  const requests: DependabotRequest[] = requestComments.map((c) => ({
+  const requests: DependabotCommandRequest[] = requestComments.map((c) => ({
     command: c.command,
     at: c.at,
     acknowledgedAt: c === newest ? ackOfNewest : null,

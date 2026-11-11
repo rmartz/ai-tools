@@ -10,12 +10,12 @@
  * The response patterns are a TS port of dotfiles' `lib/dependabot_state.py`.
  */
 
-export const DEPENDABOT_LOGIN = 'dependabot[bot]';
+import { bodyRebaseMarker } from './dependabot-state.js';
 
 export type DependabotCommand = 'rebase' | 'recreate';
 
 /** A `@dependabot rebase|recreate` request comment, with Dependabot's 👍 acknowledgement time. */
-export interface DependabotRequest {
+export interface DependabotCommandRequest {
   command: DependabotCommand;
   at: string;
   acknowledgedAt: string | null;
@@ -30,7 +30,7 @@ export interface DependabotReply {
 /** Everything the state machine reads. Timestamps are ISO-8601 UTC strings. */
 export interface DependabotTimeline {
   body: string;
-  requests: DependabotRequest[];
+  requests: DependabotCommandRequest[];
   replies: DependabotReply[];
   /** Committer date of the newest `dependabot[bot]` commit — the last force-push. */
   lastPushAt: string | null;
@@ -57,15 +57,6 @@ export type DependabotDecision =
   | { action: 'escalate'; reason: string };
 
 const REFUSAL_PATTERNS = ['edited by someone other than Dependabot', 'already up-to-date with'];
-
-export type RebaseMarker = 'in-progress' | 'failed' | null;
-
-/** Classify the rebase-status line Dependabot writes into its own PR body. */
-export function bodyRebaseMarker(body: string): RebaseMarker {
-  if (/Dependabot rebase failed/i.test(body)) return 'failed';
-  if (/Dependabot is rebasing this PR/i.test(body)) return 'in-progress';
-  return null;
-}
 
 /** The command a comment body issues, or `null` when it is not a Dependabot command. */
 export function parseDependabotCommand(body: string): DependabotCommand | null {
@@ -107,7 +98,7 @@ export function decideDependabotRefresh(
   const latest = cycle.at(-1);
   const marker = bodyRebaseMarker(timeline.body);
 
-  if (marker === 'in-progress') return { action: 'wait', reason: 'Dependabot is rebasing this PR' };
+  if (marker === 'in_progress') return { action: 'wait', reason: 'Dependabot is rebasing this PR' };
   if (!latest)
     return { action: 'post', command: 'rebase', reason: 'no request since the last push' };
 

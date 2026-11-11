@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
-  bodyRebaseMarker,
   decideDependabotRefresh,
   isRebaseRefusal,
   parseDependabotCommand,
-  type DependabotRequest,
+  type DependabotCommandRequest,
   type DependabotTimeline,
 } from '../src/dependabot-refresh.js';
 
@@ -13,7 +12,7 @@ const NOW = new Date('2026-10-26T12:00:00Z');
 /** An ISO timestamp `minutes` before NOW. */
 const ago = (minutes: number) => new Date(NOW.getTime() - minutes * 60_000).toISOString();
 
-const makeRequest = (over: Partial<DependabotRequest> = {}): DependabotRequest => ({
+const makeRequest = (over: Partial<DependabotCommandRequest> = {}): DependabotCommandRequest => ({
   command: 'rebase',
   at: ago(2),
   acknowledgedAt: null,
@@ -66,20 +65,6 @@ describe('isRebaseRefusal', () => {
 
   it('does not match an unrelated reply', () => {
     expect(isRebaseRefusal('Sorry, only users with push access can use that command.')).toBe(false);
-  });
-});
-
-describe('bodyRebaseMarker', () => {
-  it('detects a rebase in progress', () => {
-    expect(bodyRebaseMarker('> **Dependabot is rebasing this PR**')).toBe('in-progress');
-  });
-
-  it('detects a failed rebase', () => {
-    expect(bodyRebaseMarker('Dependabot rebase failed. See logs.')).toBe('failed');
-  });
-
-  it('returns null for a plain body', () => {
-    expect(bodyRebaseMarker('Bumps foo.')).toBeNull();
   });
 });
 
