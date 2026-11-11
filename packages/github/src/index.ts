@@ -53,12 +53,10 @@ export type { PrRefreshOutcome, PrRefreshResult, RefreshPrOptions } from './pr-r
 
 export {
   decideDependabotRefresh,
-  parseDependabotCommand,
   isRebaseRefusal,
   DEFAULT_DEPENDABOT_REFRESH_POLICY,
 } from './dependabot-refresh.js';
 export type {
-  DependabotCommand,
   DependabotCommandRequest,
   DependabotReply,
   DependabotTimeline,
@@ -106,11 +104,17 @@ export {
   DEPENDABOT_LOGIN,
   bodyRebaseMarker,
   isDependabotRequest,
+  parseDependabotCommand,
   readDependabotSnapshot,
+  readDependabotActivity,
 } from './dependabot-state.js';
 export type {
   RebaseMarker,
   PrState,
+  DependabotCommand,
+  DependabotCommandComment,
+  DependabotComment,
+  DependabotActivity,
   DependabotRequest,
   DependabotSnapshot,
 } from './dependabot-state.js';

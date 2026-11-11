@@ -156,8 +156,10 @@ call re-derives its decision from the PR, so concurrent agents converge.
   reaction only marks a request **acknowledged**, which switches it to the longer
   wait window. Defaults (`DEFAULT_DEPENDABOT_REFRESH_POLICY`): 10 minutes
   unacknowledged, 30 minutes acknowledged, 3 attempts per command.
-  `readDependabotTimeline(repo, pr, body)` assembles the timeline from the PR's
-  commits, comments and the newest request's reactions.
+  `readDependabotTimeline(repo, pr, body)` maps the shared
+  `readDependabotActivity(repo, pr)` read (the same one `readDependabotSnapshot`
+  uses) — request comments, Dependabot's replies, its last commit and the newest
+  request's reactions — onto the timeline.
 
 - **Every other PR** goes through GitHub's `update-branch` API, pinned to the head
   SHA that was read (`expected_head_sha`). A conflicting PR is `escalate` instead:

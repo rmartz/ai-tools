@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   decideDependabotRefresh,
   isRebaseRefusal,
-  parseDependabotCommand,
   type DependabotCommandRequest,
   type DependabotTimeline,
 } from '../src/dependabot-refresh.js';
@@ -31,24 +30,6 @@ const POLICY = { pendingMinutes: 10, acknowledgedPendingMinutes: 30, maxAttempts
 
 const decide = (over: Partial<DependabotTimeline>) =>
   decideDependabotRefresh(makeTimeline(over), NOW, POLICY);
-
-describe('parseDependabotCommand', () => {
-  it('reads a rebase command', () => {
-    expect(parseDependabotCommand('@dependabot rebase')).toBe('rebase');
-  });
-
-  it('reads a recreate command after leading whitespace', () => {
-    expect(parseDependabotCommand('\n@dependabot recreate')).toBe('recreate');
-  });
-
-  it('ignores a command mentioned mid-comment', () => {
-    expect(parseDependabotCommand('I posted @dependabot rebase earlier')).toBeNull();
-  });
-
-  it('ignores other Dependabot commands', () => {
-    expect(parseDependabotCommand('@dependabot merge')).toBeNull();
-  });
-});
 
 describe('isRebaseRefusal', () => {
   it('matches the edited-by-someone-else refusal', () => {

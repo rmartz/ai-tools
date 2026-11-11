@@ -10,9 +10,7 @@
  * The response patterns are a TS port of dotfiles' `lib/dependabot_state.py`.
  */
 
-import { bodyRebaseMarker } from './dependabot-state.js';
-
-export type DependabotCommand = 'rebase' | 'recreate';
+import { bodyRebaseMarker, type DependabotCommand } from './dependabot-state.js';
 
 /** A `@dependabot rebase|recreate` request comment, with Dependabot's 👍 acknowledgement time. */
 export interface DependabotCommandRequest {
@@ -57,12 +55,6 @@ export type DependabotDecision =
   | { action: 'escalate'; reason: string };
 
 const REFUSAL_PATTERNS = ['edited by someone other than Dependabot', 'already up-to-date with'];
-
-/** The command a comment body issues, or `null` when it is not a Dependabot command. */
-export function parseDependabotCommand(body: string): DependabotCommand | null {
-  const m = body.trimStart().match(/^@dependabot (rebase|recreate)\b/);
-  return m ? (m[1] as DependabotCommand) : null;
-}
 
 /** True when a Dependabot reply refuses a rebase in a way only a recreate clears. */
 export function isRebaseRefusal(body: string): boolean {
