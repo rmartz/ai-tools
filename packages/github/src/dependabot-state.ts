@@ -15,7 +15,7 @@ import { ghCall, type GhCallOptions } from './gh-call.js';
 
 export const DEPENDABOT_LOGIN = 'dependabot[bot]';
 
-const REQUEST_PREFIXES = ['@dependabot rebase', '@dependabot recreate'] as const;
+export type DependabotCommand = 'rebase' | 'recreate';
 
 /** Dependabot's own PR-body status line while it works on the branch. */
 export type RebaseMarker = 'in_progress' | 'failed' | 'none';
@@ -29,6 +29,31 @@ export interface DependabotRequest {
   acknowledged: boolean;
 }
 
+/** One `@dependabot rebase|recreate` comment and when Dependabot reacted to it. */
+export interface DependabotCommandComment {
+  commentId: number;
+  command: DependabotCommand;
+  createdAt: string;
+  /** When `dependabot[bot]` reacted, or `null`. Only the newest request's reactions are read. */
+  acknowledgedAt: string | null;
+}
+
+/** A comment `dependabot[bot]` posted on the PR. */
+export interface DependabotComment {
+  createdAt: string;
+  body: string;
+}
+
+/** The Dependabot-related timeline of an open PR, from one read. */
+export interface DependabotActivity {
+  /** Every request comment, oldest first. */
+  requests: DependabotCommandComment[];
+  /** Comments `dependabot[bot]` posted, oldest first. */
+  replies: DependabotComment[];
+  /** ISO timestamp of the latest `dependabot[bot]` commit, or `''`. */
+  lastBotCommitAt: string;
+}
+
 export interface DependabotSnapshot {
   state: PrState;
   rebaseMarker: RebaseMarker;
@@ -40,7 +65,7 @@ export interface DependabotSnapshot {
   lastBotCommentAt: string;
 }
 
-interface RawPull {
+export interface RawPull {
   state: string;
   merged?: boolean;
   merged_at?: string | null;
@@ -61,6 +86,7 @@ interface RawCommit {
 
 interface RawReaction {
   user: { login: string } | null;
+  created_at: string;
 }
 
 /** Classify a Dependabot PR body's rebase-status line. */
@@ -70,13 +96,18 @@ export function bodyRebaseMarker(body: string): RebaseMarker {
   return 'none';
 }
 
-/** True when a comment body is a `@dependabot rebase` / `recreate` command. */
-export function isDependabotRequest(body: string): boolean {
-  const trimmed = body.trimStart();
-  return REQUEST_PREFIXES.some((prefix) => trimmed.startsWith(prefix));
+/** The command a comment body issues, or `null` when it is not a Dependabot command. */
+export function parseDependabotCommand(body: string): DependabotCommand | null {
+  const m = body.trimStart().match(/^@dependabot (rebase|recreate)\b/);
+  return m ? (m[1] as DependabotCommand) : null;
 }
 
-async function readJson<T>(
+/** True when a comment body is a `@dependabot rebase` / `recreate` command. */
+export function isDependabotRequest(body: string): boolean {
+  return parseDependabotCommand(body) !== null;
+}
+
+export async function readJson<T>(
   path: string,
   paginate: boolean,
   call: GhCallOptions,
@@ -91,7 +122,7 @@ async function readJson<T>(
   }
 }
 
-function prState(pull: RawPull): PrState {
+export function prState(pull: RawPull): PrState {
   if (pull.state === 'open') return 'open';
   return pull.merged || pull.merged_at ? 'merged' : 'closed';
 }
@@ -101,8 +132,62 @@ function latest(timestamps: string[]): string {
 }
 
 /**
+ * Read the Dependabot timeline of one open PR: its request comments, Dependabot's
+ * replies, and its last commit. Returns `null` when any read fails. Reactions are
+ * fetched only for the newest request, the one callers classify.
+ */
+export async function readDependabotActivity(
+  repo: string,
+  prNumber: number,
+  call: GhCallOptions = {},
+): Promise<DependabotActivity | null> {
+  const comments = await readJson<RawComment[]>(
+    `repos/${repo}/issues/${prNumber}/comments`,
+    true,
+    call,
+  );
+  const commits = await readJson<RawCommit[]>(
+    `repos/${repo}/pulls/${prNumber}/commits`,
+    true,
+    call,
+  );
+  if (comments === null || commits === null) return null;
+
+  // The comments endpoint returns comments oldest-first.
+  const requests: DependabotCommandComment[] = comments.flatMap((c) => {
+    const command = parseDependabotCommand(c.body ?? '');
+    return command && c.user?.login !== DEPENDABOT_LOGIN
+      ? [{ commentId: c.id, command, createdAt: c.created_at, acknowledgedAt: null }]
+      : [];
+  });
+  const newest = requests.at(-1);
+  if (newest) {
+    const reactions = await readJson<RawReaction[]>(
+      `repos/${repo}/issues/comments/${newest.commentId}/reactions`,
+      true,
+      call,
+    );
+    if (reactions === null) return null;
+    newest.acknowledgedAt =
+      reactions.find((r) => r.user?.login === DEPENDABOT_LOGIN)?.created_at ?? null;
+  }
+
+  return {
+    requests,
+    replies: comments
+      .filter((c) => c.user?.login === DEPENDABOT_LOGIN)
+      .map((c) => ({ createdAt: c.created_at, body: c.body ?? '' })),
+    lastBotCommitAt: latest(
+      commits
+        .filter((c) => c.author?.login === DEPENDABOT_LOGIN)
+        .map((c) => c.commit.committer?.date ?? ''),
+    ),
+  };
+}
+
+/**
  * Read one PR's Dependabot lifecycle snapshot. Returns `null` when any read
- * fails. Reactions are fetched only for the latest request comment.
+ * fails.
  */
 export async function readDependabotSnapshot(
   repo: string,
@@ -117,47 +202,21 @@ export async function readDependabotSnapshot(
     return { state, rebaseMarker, request: null, lastBotCommitAt: '', lastBotCommentAt: '' };
   }
 
-  const comments = await readJson<RawComment[]>(
-    `repos/${repo}/issues/${prNumber}/comments`,
-    true,
-    call,
-  );
-  const commits = await readJson<RawCommit[]>(
-    `repos/${repo}/pulls/${prNumber}/commits`,
-    true,
-    call,
-  );
-  if (comments === null || commits === null) return null;
-
-  // The comments endpoint returns comments oldest-first, so the last match is the latest.
-  const requestComment = comments.filter((c) => isDependabotRequest(c.body ?? '')).at(-1);
-
-  let request: DependabotRequest | null = null;
-  if (requestComment) {
-    const reactions = await readJson<RawReaction[]>(
-      `repos/${repo}/issues/comments/${requestComment.id}/reactions`,
-      true,
-      call,
-    );
-    if (reactions === null) return null;
-    request = {
-      commentId: requestComment.id,
-      createdAt: requestComment.created_at,
-      acknowledged: reactions.some((r) => r.user?.login === DEPENDABOT_LOGIN),
-    };
-  }
-
+  const activity = await readDependabotActivity(repo, prNumber, call);
+  if (activity === null) return null;
+  const newest = activity.requests.at(-1);
+  const request: DependabotRequest | null = newest
+    ? {
+        commentId: newest.commentId,
+        createdAt: newest.createdAt,
+        acknowledged: newest.acknowledgedAt !== null,
+      }
+    : null;
   return {
     state,
     rebaseMarker,
     request,
-    lastBotCommitAt: latest(
-      commits
-        .filter((c) => c.author?.login === DEPENDABOT_LOGIN)
-        .map((c) => c.commit.committer?.date ?? ''),
-    ),
-    lastBotCommentAt: latest(
-      comments.filter((c) => c.user?.login === DEPENDABOT_LOGIN).map((c) => c.created_at),
-    ),
+    lastBotCommitAt: activity.lastBotCommitAt,
+    lastBotCommentAt: latest(activity.replies.map((r) => r.createdAt)),
   };
 }

@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const boundedRun = vi.fn();
 vi.mock('@rmartz/agent-runtime', () => ({ boundedRun }));
 
-const { bodyRebaseMarker, isDependabotRequest, readDependabotSnapshot } =
+const { bodyRebaseMarker, isDependabotRequest, parseDependabotCommand, readDependabotSnapshot } =
   await import('../src/dependabot-state.js');
 
 const noWait = { sleep: async () => {} };
@@ -65,6 +65,24 @@ describe('bodyRebaseMarker', () => {
   });
 });
 
+describe('parseDependabotCommand', () => {
+  it('reads a rebase command', () => {
+    expect(parseDependabotCommand('@dependabot rebase')).toBe('rebase');
+  });
+
+  it('reads a recreate command after leading whitespace', () => {
+    expect(parseDependabotCommand('\n@dependabot recreate')).toBe('recreate');
+  });
+
+  it('ignores a command mentioned mid-comment', () => {
+    expect(parseDependabotCommand('I posted @dependabot rebase earlier')).toBeNull();
+  });
+
+  it('ignores other Dependabot commands', () => {
+    expect(parseDependabotCommand('@dependabot merge')).toBeNull();
+  });
+});
+
 describe('isDependabotRequest', () => {
   it('matches rebase and recreate commands', () => {
     expect(['@dependabot rebase', '  @dependabot recreate'].map(isDependabotRequest)).toEqual([
@@ -87,7 +105,9 @@ describe('readDependabotSnapshot', () => {
         comment(2, 'rmartz', '@dependabot rebase', '2026-11-11T19:17:00Z'),
       ],
       commits: [],
-      reactions: [{ user: { login: 'dependabot[bot]' }, content: '+1' }],
+      reactions: [
+        { user: { login: 'dependabot[bot]' }, content: '+1', created_at: '2026-11-11T19:17:05Z' },
+      ],
     });
     const snapshot = await readDependabotSnapshot('o/r', 42, noWait);
     expect(snapshot?.request).toEqual({
