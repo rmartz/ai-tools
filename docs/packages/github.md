@@ -156,6 +156,28 @@ creates (`mcp__github__create_pull_request`, `mcp__github__issue_write`).
   parse → resolve → fetch body → apply → edit. **Soft-fails** to a `skipped`/`error`
   outcome and never throws, so the hook always exits 0 and never blocks creation.
 
+### Dependabot request waiting (`dependabot-state.ts`, `dependabot-response.ts`, `wait-for-dependabot.ts`)
+
+TS port of dotfiles' `wait-for-dependabot.py` + `lib/dependabot_state.py`, plus
+**missed-request detection**.
+
+- `readDependabotSnapshot(repo, pr)` — one REST read of a PR's Dependabot
+  lifecycle: state (`open`/`closed`/`merged`), body rebase marker, the latest
+  `@dependabot rebase|recreate` request (and whether `dependabot[bot]` reacted to
+  it), and the latest `dependabot[bot]` commit and comment times. `null` on a
+  failed read.
+- `classifyDependabotResponse(snapshot, { now, ackGraceMs? })` — pure. `answered`
+  when the PR closed, Dependabot pushed or commented after the request, or a
+  self-started rebase finished/failed; `missed` when the request is older than the
+  ack grace (default 180 s) and Dependabot never reacted; otherwise `pending`.
+  Dependabot acks a command it picks up with a 👍 within seconds, so no reaction
+  means it dropped the request. An acknowledged request stays `pending`.
+- `waitForDependabot(repo, prs, { all?, intervalMs?, timeoutMs?, ackGraceMs? })` —
+  polls until the first PR resolves (or every PR with `all`). Outcome is
+  `answered` / `missed` / `timeout` / `error` (5 consecutive failed reads); with
+  `all`, any missed PR makes the outcome `missed`. Clock, sleeper and reader are
+  injectable.
+
 ### Discussions (`discussions.ts`)
 
 The GraphQL Discussions client (no REST / `gh` equivalent), targeting `rmartz/ai`
@@ -202,7 +224,10 @@ Thin `bin/` wrappers; all logic stays in the library:
 `ai-resolve-thread <id>…`, `ai-dismiss-thread <id> <reply>`,
 `ai-post-json-marker [--repo <owner/repo>] <pr> <kind> <json-file-or-literal>` (post
 a record as a hidden marker), `ai-read-json-marker [--repo <owner/repo>]
-[--match-pr-head <sha>] <pr> <kind>` (print the latest such record, exit 1 if none).
+[--match-pr-head <sha>] <pr> <kind>` (print the latest such record, exit 1 if none),
+`ai-wait-for-dependabot [--repo <owner/repo>] [--all] [--interval <s>] [--timeout <s>]
+[--ack-grace <s>] <pr>…` (exit 0 answered · 1 timeout · 2 read failure/usage ·
+3 missed — Dependabot never acknowledged the request; re-request or check the PR).
 
 `ai-origin-stamp` is the odd one out — not an interactive command but a
 `PostToolUse` **hook** entrypoint. It reads the hook payload as JSON on stdin,
