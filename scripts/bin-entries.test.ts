@@ -24,11 +24,14 @@ const expectedEntry = (target: string): string =>
   target.replace(/^\.\/dist\//, 'src/').replace(/\.js$/, '.ts');
 
 describe('package bin targets', () => {
-  it.each(packagesWithBins)('$name builds every declared bin via a tsup entry', ({ dir, targets }) => {
-    const tsupConfig = readFileSync(join(dir, 'tsup.config.ts'), 'utf8');
-    const missing = targets
-      .map(expectedEntry)
-      .filter((entry) => !tsupConfig.includes(`'${entry}'`));
-    expect(missing).toEqual([]);
-  });
+  it.each(packagesWithBins)(
+    '$name builds every declared bin via a tsup entry',
+    ({ dir, targets }) => {
+      const tsupConfig = readFileSync(join(dir, 'tsup.config.ts'), 'utf8');
+      const missing = targets
+        .map(expectedEntry)
+        .filter((entry) => !tsupConfig.includes(`'${entry}'`));
+      expect(missing).toEqual([]);
+    },
+  );
 });
