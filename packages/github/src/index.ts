@@ -106,6 +106,30 @@ export { resolveSignatureContext } from './discuss-signature.js';
 export type { SignatureFlags } from './discuss-signature.js';
 
 export {
+  DEPENDABOT_LOGIN,
+  bodyRebaseMarker,
+  isDependabotRequest,
+  readDependabotSnapshot,
+} from './dependabot-state.js';
+export type {
+  RebaseMarker,
+  PrState,
+  DependabotRequest,
+  DependabotSnapshot,
+} from './dependabot-state.js';
+
+export { DEFAULT_ACK_GRACE_MS, classifyDependabotResponse } from './dependabot-response.js';
+export type { DependabotResponse, ClassifyOptions } from './dependabot-response.js';
+
+export { CONSECUTIVE_FAILURE_LIMIT, waitForDependabot } from './wait-for-dependabot.js';
+export type {
+  WaitOutcome,
+  PrOutcome,
+  WaitResult,
+  WaitForDependabotOptions,
+} from './wait-for-dependabot.js';
+
+export {
   parseHookPayload,
   extractCreatedNumber,
   renderStamp,

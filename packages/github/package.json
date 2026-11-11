@@ -25,7 +25,8 @@
     "ai-post-json-marker": "./dist/bin/post-json-marker.js",
     "ai-read-json-marker": "./dist/bin/read-json-marker.js",
     "ai-origin-stamp": "./dist/bin/origin-stamp.js",
-    "ai-pr-refresh": "./dist/bin/pr-refresh.js"
+    "ai-pr-refresh": "./dist/bin/pr-refresh.js",
+    "ai-wait-for-dependabot": "./dist/bin/wait-for-dependabot.js"
   },
   "files": [
     "dist"
@@ -46,7 +47,7 @@
     "@rmartz/agent-runtime": "workspace:^"
   },
   "devDependencies": {
-    "tsup": "^8.3.0",
+    "tsup": "^9.0.0",
     "typescript": "^6.0.3"
   }
 }

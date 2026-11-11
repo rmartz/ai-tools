@@ -19,6 +19,7 @@ export default defineConfig({
     'src/bin/post-json-marker.ts',
     'src/bin/read-json-marker.ts',
     'src/bin/pr-refresh.ts',
+    'src/bin/wait-for-dependabot.ts',
   ],
   format: ['esm'],
   dts: { entry: 'src/index.ts' },
