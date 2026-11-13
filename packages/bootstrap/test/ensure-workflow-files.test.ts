@@ -310,6 +310,16 @@ describe('goldenWorkflowFiles — the seeded Dependabot config', () => {
     const filters = content.match(/update-types:\n\s+- minor\n\s+- patch/g) ?? [];
     expect([groups.length, filters.length]).toEqual([3, 3]);
   });
+
+  // @types/node's major must track the Node runtime, which Dependabot never bumps,
+  // so the npm entry ignores its semver-major updates.
+  it('ignores semver-major @types/node bumps in the npm ecosystem', () => {
+    const content = dependabotConfig?.content ?? '';
+    const npmEntry = content.slice(content.indexOf('package-ecosystem: npm'));
+    expect(npmEntry).toContain(
+      '    ignore:\n      - dependency-name: "@types/node"\n        update-types:\n          - "version-update:semver-major"\n',
+    );
+  });
 });
 
 // #278 — the seeded repo-hygiene CI is a thin consumer of the rmartz/repo-hygiene-action
