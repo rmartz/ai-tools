@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/rmartz/ai-tools/compare/github-v0.7.0...github-v0.8.0) (2026-11-13)
+
+
+### Features
+
+* **github:** add refreshPr / ai-pr-refresh to bring a PR current, Dependabot-aware ([#407](https://github.com/rmartz/ai-tools/issues/407)) ([c445293](https://github.com/rmartz/ai-tools/commit/c44529386acd52d76851942f71a0b85436a90090))
+
 ## [0.7.0](https://github.com/rmartz/ai-tools/compare/github-v0.6.0...github-v0.7.0) (2026-11-11)
 
 
