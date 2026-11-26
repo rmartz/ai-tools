@@ -48,6 +48,24 @@ export type {
   MergeMethod,
 } from './pr-ops.js';
 
+export { refreshPr, PR_REFRESH_OUTCOMES } from './pr-refresh.js';
+export type { PrRefreshOutcome, PrRefreshResult, RefreshPrOptions } from './pr-refresh.js';
+
+export {
+  decideDependabotRefresh,
+  isRebaseRefusal,
+  DEFAULT_DEPENDABOT_REFRESH_POLICY,
+} from './dependabot-refresh.js';
+export type {
+  DependabotCommandRequest,
+  DependabotReply,
+  DependabotTimeline,
+  DependabotRefreshPolicy,
+  DependabotDecision,
+} from './dependabot-refresh.js';
+
+export { readDependabotTimeline } from './pr-refresh-reads.js';
+
 export { findOpenIssue, createIssue, addIssueComment, addAssignees } from './issue-ops.js';
 export type { FindOpenIssueOptions, CreateIssueOptions } from './issue-ops.js';
 
@@ -81,6 +99,36 @@ export type { CommentSignature, DiscussionTarget } from './discuss-helpers.js';
 
 export { resolveSignatureContext } from './discuss-signature.js';
 export type { SignatureFlags } from './discuss-signature.js';
+
+export {
+  DEPENDABOT_LOGIN,
+  bodyRebaseMarker,
+  isDependabotRequest,
+  parseDependabotCommand,
+  readDependabotSnapshot,
+  readDependabotActivity,
+} from './dependabot-state.js';
+export type {
+  RebaseMarker,
+  PrState,
+  DependabotCommand,
+  DependabotCommandComment,
+  DependabotComment,
+  DependabotActivity,
+  DependabotRequest,
+  DependabotSnapshot,
+} from './dependabot-state.js';
+
+export { DEFAULT_ACK_GRACE_MS, classifyDependabotResponse } from './dependabot-response.js';
+export type { DependabotResponse, ClassifyOptions } from './dependabot-response.js';
+
+export { CONSECUTIVE_FAILURE_LIMIT, waitForDependabot } from './wait-for-dependabot.js';
+export type {
+  WaitOutcome,
+  PrOutcome,
+  WaitResult,
+  WaitForDependabotOptions,
+} from './wait-for-dependabot.js';
 
 export {
   parseHookPayload,

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.5](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.4...bootstrap-v0.22.5) (2026-11-13)
+
+
+### Bug Fixes
+
+* **bootstrap:** ignore semver-major @types/node bumps in the seeded Dependabot config ([#420](https://github.com/rmartz/ai-tools/issues/420)) ([e1565b5](https://github.com/rmartz/ai-tools/commit/e1565b56290e3bee54e49648cd4fbba92732588e))
+
 ## [0.22.4](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.3...bootstrap-v0.22.4) (2026-10-26)
 
 
