@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/rmartz/ai-tools/compare/github-v0.8.0...github-v0.8.1) (2026-11-26)
+
+
+### Bug Fixes
+
+* **github:** build the ai-origin-stamp bin ([#422](https://github.com/rmartz/ai-tools/issues/422)) ([df08330](https://github.com/rmartz/ai-tools/commit/df083307565b2ec84660f6de774aa43e787bccf7))
+
 ## [0.8.0](https://github.com/rmartz/ai-tools/compare/github-v0.7.0...github-v0.8.0) (2026-11-13)
 
 
