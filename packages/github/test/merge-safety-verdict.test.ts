@@ -54,10 +54,14 @@ describe('classifyMergeSafety', () => {
     });
   });
 
-  it('reports a merged PR as closed', () => {
+  it('reports a merged PR as merged', () => {
     expect(classifyMergeSafety(makeSnapshot(null, { state: 'merged' }))).toEqual({
-      status: 'closed',
+      status: 'merged',
       reason: 'PR is merged',
     });
+  });
+
+  it('reports a PR closed without merging as closed', () => {
+    expect(classifyMergeSafety(makeSnapshot(null, { state: 'closed' })).status).toBe('closed');
   });
 });

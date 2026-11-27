@@ -34,12 +34,22 @@ export function classifyDependabotResponse(
   if (snapshot.state !== 'open') {
     return { status: 'answered', reason: `PR is ${snapshot.state}` };
   }
-  // Dependabot also rebases on its own (e.g. after the base branch moves), leaving
-  // no request comment; its PR body marker is the only signal. While the marker
-  // says it is rebasing, nothing is answered yet — even when an older request
-  // exists, whose push or comment predates this rebase and answers nothing now.
-  if (snapshot.rebaseMarker === 'in_progress') return { status: 'pending' };
   const { request } = snapshot;
+  // Dependabot also rebases on its own (e.g. after the base branch moves), leaving
+  // no request comment; its PR body marker is the only signal. A rebase that began
+  // after the latest request was already answered (Dependabot pushed or replied
+  // since) is a new, self-started one: that earlier answer says nothing about it.
+  // A request still unanswered falls through, so a stale marker never hides a
+  // missed request.
+  if (snapshot.rebaseMarker === 'in_progress') {
+    if (request === null) return { status: 'pending' };
+    if (
+      snapshot.lastBotCommitAt > request.createdAt ||
+      snapshot.lastBotCommentAt > request.createdAt
+    ) {
+      return { status: 'pending' };
+    }
+  }
   if (request === null) {
     if (snapshot.rebaseMarker === 'failed') {
       return { status: 'answered', reason: 'Dependabot rebase failed (see the PR)' };

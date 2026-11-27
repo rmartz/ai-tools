@@ -65,7 +65,10 @@ describe('readMergeSafetySnapshot', () => {
     });
     await readMergeSafetySnapshot('o/r', 7, noWait);
     // After a rebase, the old head's `Update required` must never count for the new one.
-    expect(paths.slice(1).every((p) => p.includes(`/commits/${HEAD}/`))).toBe(true);
+    expect(paths.slice(1)).toEqual([
+      `repos/o/r/commits/${HEAD}/status?per_page=100`,
+      `repos/o/r/commits/${HEAD}/check-runs?check_name=merge-safety&filter=all&per_page=100`,
+    ]);
   });
 
   it('prefers the commit status, which is what the merge gate relies on', async () => {
@@ -127,7 +130,7 @@ describe('readMergeSafetySnapshot', () => {
     routeGh({
       pull: openPull,
       status: { statuses: [] },
-      checkRuns: { check_runs: [checkRun(3, 'completed', 'neutral', '')] },
+      checkRuns: { check_runs: [checkRun(3, 'completed', 'neutral', 'No update required')] },
     });
     expect((await readMergeSafetySnapshot('o/r', 7, noWait))?.report?.state).toBe('success');
   });
@@ -141,10 +144,46 @@ describe('readMergeSafetySnapshot', () => {
     });
   });
 
+  it('reports a merged PR as merged', async () => {
+    routeGh({ pull: { ...openPull, state: 'closed', merged: true } });
+    expect((await readMergeSafetySnapshot('o/r', 7, noWait))?.state).toBe('merged');
+  });
+
   it('skips the verdict reads for a merged PR', async () => {
     const paths = routeGh({ pull: { ...openPull, state: 'closed', merged: true } });
-    const snapshot = await readMergeSafetySnapshot('o/r', 7, noWait);
-    expect([snapshot?.state, paths.length]).toEqual(['merged', 1]);
+    await readMergeSafetySnapshot('o/r', 7, noWait);
+    expect(paths).toEqual(['repos/o/r/pulls/7']);
+  });
+
+  // A consumer's Actions job is often named `merge-safety` too; its title-less job
+  // entries (including a transient-error `cancelled` one) are not verdicts.
+  it('ignores title-less job entries that share the check name', async () => {
+    routeGh({
+      pull: openPull,
+      status: { statuses: [] },
+      checkRuns: {
+        check_runs: [
+          checkRun(5, 'in_progress', null, 'Update required'),
+          checkRun(9, 'completed', 'success', ''),
+        ],
+      },
+    });
+    expect((await readMergeSafetySnapshot('o/r', 7, noWait))?.report?.title).toBe(
+      'Update required',
+    );
+  });
+
+  it('reports no verdict when the only run is a cancelled job entry', async () => {
+    routeGh({
+      pull: openPull,
+      status: { statuses: [] },
+      checkRuns: {
+        check_runs: [
+          { id: 4, status: 'completed', conclusion: 'cancelled', output: { title: null } },
+        ],
+      },
+    });
+    expect((await readMergeSafetySnapshot('o/r', 7, noWait))?.report).toBeNull();
   });
 
   it('returns null when the status read fails', async () => {

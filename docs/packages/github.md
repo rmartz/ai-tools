@@ -232,20 +232,25 @@ timing in prose.
 
 - `readMergeSafetySnapshot(repo, pr)` — the PR's state, head SHA and the
   `merge-safety` verdict **on that head**: the commit status first (what the merge
-  gate relies on), else the newest `merge-safety` check-run. A verdict on an older
-  head never counts, and the `update required` label (which lags) is never read.
-  `null` on a failed read.
+  gate relies on), else the newest titled `merge-safety` check-run. Title-less runs
+  are the consumer's Actions job entries, not verdicts, and are skipped. A verdict
+  on an older head never counts, and the `update required` label (which lags) is
+  never read. `null` on a failed read.
 - `classifyMergeSafety(snapshot)` — pure. `passed` (success), `failed` (failure:
   `Merge conflict`, `Base CI failing`, `Could not evaluate`), `blocked` (pending with
   the title `Update required`: the branch is behind its base and merge-safety will
-  not re-run until it is updated), `closed`, or `waiting` (no verdict yet, or
-  `Re-evaluating`).
-- `waitForMergeSafety(repo, pr, { intervalMs?, timeoutMs?, noVerdictGraceMs? })` —
-  polls until the verdict is final. Outcome is `passed` / `failed` / `blocked` /
-  `closed`, `no-verdict` (the current head got no verdict within the grace, default
-  600 s, which restarts when the head moves: a cancelled first evaluation posts
-  none), `timeout` (still pending, default 1800 s) or `error` (5 consecutive failed
-  reads). `blocked` ends the wait at once. Clock, sleeper and reader are injectable.
+  not re-run until it is updated), `merged`, `closed` (without merging), or
+  `waiting` (no verdict yet, or `Re-evaluating`).
+- `waitForMergeSafety(repo, pr, { intervalMs?, timeoutMs?, noVerdictGraceMs?,
+previousHead? })` — polls until the verdict is final. Outcome is one of the above,
+  `no-verdict` (the current head went the grace, default 600 s, without a final
+  verdict: nothing posted, as after a cancelled first evaluation, or a
+  `Re-evaluating` that never resolved; the grace restarts when the head moves),
+  `timeout` (default 1800 s; the head kept moving) or `error` (5 consecutive failed
+  reads). `blocked` ends the wait at once. Pass `previousHead` (full or abbreviated
+  SHA) right after updating the branch: GitHub applies the update asynchronously,
+  and until the head moves off it, its old `Update required` reads as "update not
+  landed yet" instead of `blocked`. Clock, sleeper and reader are injectable.
 
 ### Discussions (`discussions.ts`)
 
@@ -301,9 +306,9 @@ prints the outcome and reason, exits 0 for a settled outcome, 1 for `failed`, 3 
 [--ack-grace <s>] <pr>…` (exit 0 answered · 1 timeout · 2 read failure/usage ·
 3 missed — Dependabot never acknowledged the request; re-request or check the PR),
 `ai-wait-for-merge-safety [--repo <owner/repo>] [--interval <s>] [--timeout <s>]
-[--no-verdict-grace <s>] [--json] <pr>` (exit 0 passed · 1 timeout · 2 read
-failure/usage · 3 failed · 4 blocked — `Update required`, update the branch ·
-5 no verdict on the head · 6 PR closed or merged).
+[--no-verdict-grace <s>] [--previous-head <sha>] [--json] <pr>` (exit 0 passed ·
+1 timeout · 2 read failure/usage · 3 failed · 4 blocked — `Update required`, update
+the branch · 5 no verdict on the head · 6 merged · 7 closed unmerged).
 
 `ai-origin-stamp` is the odd one out — not an interactive command but a
 `PostToolUse` **hook** entrypoint. It reads the hook payload as JSON on stdin,

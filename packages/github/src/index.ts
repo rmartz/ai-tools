@@ -145,6 +145,7 @@ export {
   waitForMergeSafety,
 } from './wait-for-merge-safety.js';
 export type {
+  MergeSafetyFinalOutcome,
   MergeSafetyOutcome,
   MergeSafetyWaitResult,
   WaitForMergeSafetyOptions,

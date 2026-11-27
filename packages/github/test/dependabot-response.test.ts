@@ -88,6 +88,15 @@ describe('classifyDependabotResponse', () => {
     expect(classifyDependabotResponse(snapshot, at(3600))).toEqual({ status: 'pending' });
   });
 
+  // A marker left over from an earlier rebase must not hide a newer request that
+  // Dependabot never picked up.
+  it('flags an unanswered request as missed even while a stale rebasing marker lingers', () => {
+    const snapshot = makeSnapshot({ rebaseMarker: 'in_progress' });
+    expect(classifyDependabotResponse(snapshot, { ...at(121), ackGraceMs: 120_000 }).status).toBe(
+      'missed',
+    );
+  });
+
   it('answers a self-started rebase that failed', () => {
     const snapshot = makeSnapshot({ request: null, rebaseMarker: 'failed' });
     expect(classifyDependabotResponse(snapshot, at(5))).toEqual({

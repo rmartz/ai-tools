@@ -87,25 +87,30 @@ async function readStatusReport(
   return { source: 'status', state: statusState(status.state), title: status.description ?? '' };
 }
 
-/** The newest `merge-safety` check-run on `sha`, or `undefined` / `null` (failed read). */
+/** The newest `merge-safety` verdict check-run on `sha`, or `undefined` / `null` (failed read). */
 async function readCheckRunReport(
   repo: string,
   sha: string,
   call: GhCallOptions,
 ): Promise<MergeSafetyReport | undefined | null> {
-  // `check_name` is an exact match, so job entries such as `merge-safety / Evaluate
-  // one PR` never qualify. Several runs can share the name after a burst of PR
-  // events; the newest (highest id) is the one GitHub resolves the check from.
+  // `check_name` is an exact match, but a consumer's Actions job is often named
+  // `merge-safety` too, and its job entries share the name. Those carry no output
+  // title (and a transient-error cancel shows up only there, as `cancelled`), while
+  // every verdict run has one, so only titled runs count. Several verdict runs can
+  // share the name after a burst of PR events; GitHub resolves the check from the
+  // newest (highest id).
   const list = await readJson<{ check_runs: RawCheckRun[] }>(
-    `repos/${repo}/commits/${sha}/check-runs?check_name=${MERGE_SAFETY_CHECK_NAME}&filter=latest`,
+    `repos/${repo}/commits/${sha}/check-runs?check_name=${MERGE_SAFETY_CHECK_NAME}&filter=all&per_page=100`,
     false,
     call,
   );
   if (list === null) return null;
-  const run = list.check_runs.reduce<RawCheckRun | undefined>(
-    (newest, r) => (newest === undefined || r.id > newest.id ? r : newest),
-    undefined,
-  );
+  const run = list.check_runs
+    .filter((r) => (r.output?.title ?? '').trim() !== '')
+    .reduce<RawCheckRun | undefined>(
+      (newest, r) => (newest === undefined || r.id > newest.id ? r : newest),
+      undefined,
+    );
   if (!run) return undefined;
   return { source: 'check-run', state: checkRunState(run), title: run.output?.title ?? '' };
 }

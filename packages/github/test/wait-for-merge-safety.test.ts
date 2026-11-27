@@ -108,22 +108,80 @@ describe('waitForMergeSafety', () => {
     expect(result.outcome).toBe('passed');
   });
 
-  // A `Re-evaluating` mark whose dispatch failed never completes on its own.
-  it('times out on a verdict that stays pending', async () => {
+  // A `Re-evaluating` mark whose dispatch failed or was cancelled never completes
+  // on its own; it gets the same grace as a head with nothing posted.
+  it('returns no-verdict on a Re-evaluating mark that never resolves', async () => {
     const read = sequence(makeSnapshot(pending('Re-evaluating')));
     const result = await waitForMergeSafety('o/r', 7, {
       ...makeClock(),
       ...fast,
       read,
+      noVerdictGraceMs: 120_000,
+      timeoutMs: 600_000,
+    });
+    expect([result.outcome, result.elapsedSeconds]).toEqual(['no-verdict', 120]);
+  });
+
+  it('times out when the head keeps moving', async () => {
+    let n = 0;
+    const read: Reader = async () => makeSnapshot(null, { headSha: `head-${n++}` });
+    const result = await waitForMergeSafety('o/r', 7, {
+      ...makeClock(),
+      ...fast,
+      read,
+      noVerdictGraceMs: 60_000,
       timeoutMs: 120_000,
     });
     expect([result.outcome, result.elapsedSeconds]).toEqual(['timeout', 120]);
   });
 
-  it('returns closed when the PR is merged during the wait', async () => {
+  // GitHub applies a branch update asynchronously, so right after updating, the PR
+  // can still show the old head and its old `Update required`.
+  it('does not report blocked on the previous head while an update lands', async () => {
+    const read = sequence(
+      makeSnapshot(pending('Update required'), { headSha: 'head-old' }),
+      makeSnapshot(null, { headSha: 'head-new' }),
+      makeSnapshot(success, { headSha: 'head-new' }),
+    );
+    const result = await waitForMergeSafety('o/r', 7, {
+      ...makeClock(),
+      ...fast,
+      read,
+      previousHead: 'head-old',
+    });
+    expect([result.outcome, result.headSha]).toEqual(['passed', 'head-new']);
+  });
+
+  it('returns no-verdict when an expected update never lands', async () => {
+    const read = sequence(makeSnapshot(pending('Update required'), { headSha: 'head-old' }));
+    const result = await waitForMergeSafety('o/r', 7, {
+      ...makeClock(),
+      ...fast,
+      read,
+      previousHead: 'head-old',
+      noVerdictGraceMs: 120_000,
+    });
+    expect(result.outcome).toBe('no-verdict');
+  });
+
+  it('matches an abbreviated previous head', async () => {
+    const read = sequence(
+      makeSnapshot(pending('Update required'), { headSha: 'abcdef1234' }),
+      makeSnapshot(success, { headSha: 'fedcba9876' }),
+    );
+    const result = await waitForMergeSafety('o/r', 7, {
+      ...makeClock(),
+      ...fast,
+      read,
+      previousHead: 'abcdef1',
+    });
+    expect(result.outcome).toBe('passed');
+  });
+
+  it('returns merged when the PR is merged during the wait', async () => {
     const read = sequence(makeSnapshot(null), makeSnapshot(null, { state: 'merged' }));
     const result = await waitForMergeSafety('o/r', 7, { ...makeClock(), ...fast, read });
-    expect(result.outcome).toBe('closed');
+    expect(result.outcome).toBe('merged');
   });
 
   it('gives up with error after repeated read failures', async () => {

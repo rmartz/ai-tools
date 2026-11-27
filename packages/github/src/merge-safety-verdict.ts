@@ -10,19 +10,20 @@ import type { MergeSafetySnapshot } from './merge-safety-state.js';
  *   merge-safety will not run again until the branch is updated. merge-safety posts
  *   it as an incomplete (`in_progress` / `pending`) check, so it looks like a run in
  *   progress; only the title tells it apart, and waiting on it never ends.
- * - `closed` — the PR was merged or closed.
+ * - `merged` / `closed` — the PR was merged, or closed without merging.
  * - `waiting` — no verdict on the current head yet, or an incomplete check with any
  *   other title (`Re-evaluating`: a verdict is on its way).
  */
 export type MergeSafetyVerdict =
   | { status: 'waiting'; reason: string }
-  | { status: 'passed' | 'failed' | 'blocked' | 'closed'; reason: string };
+  | { status: 'passed' | 'failed' | 'blocked' | 'merged' | 'closed'; reason: string };
 
 /** The pending title merge-safety posts on a stale-only PR. */
 export const UPDATE_REQUIRED_TITLE = 'Update required';
 
 export function classifyMergeSafety(snapshot: MergeSafetySnapshot): MergeSafetyVerdict {
-  if (snapshot.state !== 'open') return { status: 'closed', reason: `PR is ${snapshot.state}` };
+  if (snapshot.state !== 'open')
+    return { status: snapshot.state, reason: `PR is ${snapshot.state}` };
   const head = snapshot.headSha.slice(0, 7);
   const { report } = snapshot;
   if (report === null) {
