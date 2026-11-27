@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/rmartz/ai-tools/compare/github-v0.8.1...github-v0.9.0) (2026-11-27)
+
+
+### Features
+
+* **github:** add ai-wait-for-merge-safety and fix a false answered in ai-wait-for-dependabot ([#436](https://github.com/rmartz/ai-tools/issues/436)) ([f95bc6e](https://github.com/rmartz/ai-tools/commit/f95bc6ec51302f6d8fea64726461166470f85de0))
+
+
+### Bug Fixes
+
+* **github:** ai-wait-for-dependabot no longer reports a self-started ([f95bc6e](https://github.com/rmartz/ai-tools/commit/f95bc6ec51302f6d8fea64726461166470f85de0))
+
 ## [0.8.1](https://github.com/rmartz/ai-tools/compare/github-v0.8.0...github-v0.8.1) (2026-11-26)
 
 
