@@ -21,6 +21,7 @@ export default defineConfig({
     'src/bin/origin-stamp.ts',
     'src/bin/pr-refresh.ts',
     'src/bin/wait-for-dependabot.ts',
+    'src/bin/wait-for-merge-safety.ts',
   ],
   format: ['esm'],
   dts: { entry: 'src/index.ts' },
