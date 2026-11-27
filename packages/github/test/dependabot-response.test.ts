@@ -76,6 +76,18 @@ describe('classifyDependabotResponse', () => {
     expect(classifyDependabotResponse(snapshot, at(5))).toEqual({ status: 'pending' });
   });
 
+  it('stays pending on a self-started rebase when an older, answered request exists', () => {
+    // The old request was answered by an earlier push; Dependabot has since started
+    // a rebase of its own. That push predates the rebase, so it answers nothing now.
+    const snapshot = makeSnapshot({
+      rebaseMarker: 'in_progress',
+      request: { commentId: 1, createdAt: REQUESTED_AT, acknowledged: true },
+      lastBotCommitAt: '2026-11-11T19:17:40Z',
+      lastBotCommentAt: '2026-11-11T19:17:20Z',
+    });
+    expect(classifyDependabotResponse(snapshot, at(3600))).toEqual({ status: 'pending' });
+  });
+
   it('answers a self-started rebase that failed', () => {
     const snapshot = makeSnapshot({ request: null, rebaseMarker: 'failed' });
     expect(classifyDependabotResponse(snapshot, at(5))).toEqual({
