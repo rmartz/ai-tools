@@ -24,8 +24,7 @@ the desktop app); the `createIssue` library path is the fallback and the one lib
 The skill describes the **judgment** only. It does **not** bake in a
 coordinator's `<!-- skill-outcome -->` marker or its own posting. In direct-harness mode it creates the issue via
 `mcp__github__issue_write` (preferred; detected by the desktop app), falling back
-to `@rmartz/github`'s `createIssue` / `ai-create-issue` when MCP is unavailable;
-under a coordinator the engine renders and posts the outcome via the library path.
+to `@rmartz/github`'s `createIssue` / `ai-create-issue` when MCP is unavailable.
 
 ## See also
 

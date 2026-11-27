@@ -55,8 +55,7 @@ Pick the category that best fits; it shapes the issue's guidance:
   `createDependabotFixIssue` does this via `findOpenIssue`); if one is open,
   report it and stop.
 - The body must carry the back-link line `Fixes Dependabot PR #<N>` so the
-  eventual fix PR links to the bump (this is the convention the Dependabot
-  mechanics parse).
+  eventual fix PR links to the bump.
 - State the **manifest scope** explicitly. By **default the fix PR advances the
   offending bumped package itself** (plus any sibling that must move in lockstep)
   **to the version Dependabot targets, together with the code fix** — update
