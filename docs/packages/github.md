@@ -214,8 +214,12 @@ TS port of dotfiles' `wait-for-dependabot.py` + `lib/dependabot_state.py`, plus
   when the PR closed, Dependabot pushed or commented after the request, the body
   shows `Dependabot rebase failed`, or a self-started rebase finished; `missed` when the request is older than the
   ack grace (default 180 s) and Dependabot never reacted; otherwise `pending`. While
-  the body says `Dependabot is rebasing this PR` it is always `pending`, even when an
-  older request exists: that request's push or reply predates the rebase.
+  the body says `Dependabot is rebasing this PR` it is `pending` when there is no
+  request, or when Dependabot already pushed or replied after the latest one (a new,
+  self-started rebase that the earlier answer says nothing about). An unanswered
+  request still falls through to `missed`. The marker has no timestamp, so one that
+  never clears after an answered request reads `pending` until the wait times out:
+  a slower outcome, but never a false `answered`.
   Dependabot acks a command it picks up with a 👍 within seconds, so no reaction
   means it dropped the request. An acknowledged request stays `pending`.
 - `waitForDependabot(repo, prs, { all?, intervalMs?, timeoutMs?, ackGraceMs? })` —
@@ -249,8 +253,9 @@ previousHead? })` — polls until the verdict is final. Outcome is one of the ab
   `timeout` (default 1800 s; the head kept moving) or `error` (5 consecutive failed
   reads). `blocked` ends the wait at once. Pass `previousHead` (full or abbreviated
   SHA) right after updating the branch: GitHub applies the update asynchronously,
-  and until the head moves off it, its old `Update required` reads as "update not
-  landed yet" instead of `blocked`. Clock, sleeper and reader are injectable.
+  and until the head moves off it, its old `Update required` (or any non-final or
+  `failed` verdict) reads as "update not landed yet" instead of `blocked`. A
+  `passed` verdict there still counts: the update had nothing to do. Clock, sleeper and reader are injectable.
 
 ### Discussions (`discussions.ts`)
 

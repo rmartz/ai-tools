@@ -178,6 +178,19 @@ describe('waitForMergeSafety', () => {
     expect(result.outcome).toBe('passed');
   });
 
+  // A refused or no-op update leaves the head where it was; a `passed` verdict
+  // there is still final.
+  it('reports passed on the previous head without waiting for it to move', async () => {
+    const read = sequence(makeSnapshot(success, { headSha: 'head-old' }));
+    const result = await waitForMergeSafety('o/r', 7, {
+      ...makeClock(),
+      ...fast,
+      read,
+      previousHead: 'head-old',
+    });
+    expect([result.outcome, result.elapsedSeconds]).toEqual(['passed', 0]);
+  });
+
   it('returns merged when the PR is merged during the wait', async () => {
     const read = sequence(makeSnapshot(null), makeSnapshot(null, { state: 'merged' }));
     const result = await waitForMergeSafety('o/r', 7, { ...makeClock(), ...fast, read });

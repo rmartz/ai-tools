@@ -105,12 +105,9 @@ async function readCheckRunReport(
     call,
   );
   if (list === null) return null;
-  const run = list.check_runs
+  const [run] = list.check_runs
     .filter((r) => (r.output?.title ?? '').trim() !== '')
-    .reduce<RawCheckRun | undefined>(
-      (newest, r) => (newest === undefined || r.id > newest.id ? r : newest),
-      undefined,
-    );
+    .sort((a, b) => b.id - a.id);
   if (!run) return undefined;
   return { source: 'check-run', state: checkRunState(run), title: run.output?.title ?? '' };
 }

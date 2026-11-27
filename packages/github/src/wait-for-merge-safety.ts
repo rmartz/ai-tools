@@ -22,7 +22,8 @@ import { CONSECUTIVE_FAILURE_LIMIT } from './wait-for-dependabot.js';
  * `previousHead` covers a caller that has just updated the branch: GitHub applies
  * an update (and Dependabot a rebase) asynchronously, so the PR can still show the
  * old head and its old `Update required` for a while. While the head is still
- * `previousHead`, the wait treats it as "update not landed yet" instead of `blocked`.
+ * `previousHead`, a `blocked`, `failed` or pending verdict reads as "update not
+ * landed yet"; a `passed` one still counts, since the update had nothing to do.
  */
 
 export type MergeSafetyOutcome = MergeSafetyVerdict['status'] | 'no-verdict' | 'timeout' | 'error';
@@ -63,13 +64,18 @@ const realSleep: Sleeper = (ms) => new Promise((resolve) => setTimeout(resolve, 
 
 /** Classify a snapshot, holding a head the caller has already moved past at `waiting`. */
 function verdictFor(snapshot: MergeSafetySnapshot, previousHead?: string): MergeSafetyVerdict {
-  if (snapshot.state === 'open' && previousHead && snapshot.headSha.startsWith(previousHead)) {
+  const verdict = classifyMergeSafety(snapshot);
+  // Only a verdict the update could change is held: `passed` on the old head means
+  // the update had nothing to do, and a merged or closed PR is final either way.
+  const holdable =
+    verdict.status === 'blocked' || verdict.status === 'failed' || verdict.status === 'waiting';
+  if (holdable && previousHead && snapshot.headSha.startsWith(previousHead)) {
     return {
       status: 'waiting',
       reason: `head is still ${previousHead.slice(0, 7)}; waiting for the branch update to land`,
     };
   }
-  return classifyMergeSafety(snapshot);
+  return verdict;
 }
 
 export async function waitForMergeSafety(

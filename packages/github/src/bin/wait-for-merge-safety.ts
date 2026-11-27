@@ -43,6 +43,8 @@ interface Args {
   pr?: number;
 }
 
+const MAX_SECONDS = 2_000_000;
+
 function usageError(message: string): never {
   console.error(`${message}\n${USAGE}`);
   process.exit(2);
@@ -54,6 +56,8 @@ function millis(flag: string, value: string | undefined, positive = false): numb
   if (value === undefined || value.trim() === '' || !Number.isFinite(n) || n < 0)
     usageError(`${flag} needs a number of seconds`);
   if (positive && n === 0) usageError(`${flag} must be more than 0 seconds`);
+  // setTimeout fires at once past ~24.8 days, which would make the poll spin.
+  if (n > MAX_SECONDS) usageError(`${flag} must be at most ${MAX_SECONDS} seconds`);
   return n * 1000;
 }
 
@@ -86,7 +90,7 @@ function parse(argv: string[]): Args & { pr: number } {
     else if (a === '--no-verdict-grace') args.noVerdictGraceMs = millis(a, argv[++i]);
     else if (a === '--previous-head') args.previousHead = sha(a, argv[++i]);
     else if (a === '--json') args.json = true;
-    else if (a !== undefined && /^\d+$/.test(a) && args.pr === undefined) args.pr = Number(a);
+    else if (a !== undefined && /^[1-9]\d*$/.test(a) && args.pr === undefined) args.pr = Number(a);
     else usageError(`unexpected argument: ${a}`);
   }
   if (args.pr === undefined) usageError('a PR number is required');
