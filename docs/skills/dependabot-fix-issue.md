@@ -18,8 +18,8 @@ bump into the fix PR by default — closing the regression window between the fi
 merging and Dependabot's bump — keeping the manifest change minimal).
 
 It owns only the **judgment**. The Dependabot _mechanics_ (sweep, spawn fix PR,
-rebase/recreate, merge arbitration) belong to the calling session and are
-explicitly out of scope.
+rebase/recreate, merge arbitration) are explicitly out of
+scope.
 
 ## Backed by the library
 

@@ -27,8 +27,7 @@ edit`). A direct run expresses the record and a thin executor performs the
 posting/resolving; a coordinator renders and posts it. No labels, no
 UAT decision, no coordinator marker format.
 
-The verdict maps onto the same outcome enum the coordinator's Skill Outcome
-Protocol consumes: `approve` / `soft_reject` /
+The verdict is a skill-outcome enum: `approve` / `soft_reject` /
 `hard_reject` / `no_op` / `error`.
 
 ## Flow
@@ -58,7 +57,7 @@ with `ai-read-json-marker --match-pr-head <head> <pr> review-findings`; the verd
 **action-list** hand-off is emitted as a `review-synthesis` record via
 `ai-post-json-marker <pr> review-synthesis <file>`. Both are hidden PR-comment
 markers keyed by `prHead`, which serve as the review-cycle store. The verdict enum and the "express, don't post" seam
-are stable; the runner maps the verdict onto the Skill-Outcome Protocol and performs
+are stable; the runner acts on the verdict and performs
 all posting.
 
 ## See also

@@ -170,5 +170,4 @@ terminal action:
 JSON file and hand it to the runner with
 `ai-post-json-marker <pr> review-synthesis <file>`. The runner maps the verdict to
 `post-review-verdict.py`, posts `reviewBody`, applies the thread dispositions and
-UAT label, and dispatches `fix-review` with the action list. (Under a coordinator the
-engine performs this emission with your credentials scrubbed.)
+UAT label, and dispatches `fix-review` with the action list.

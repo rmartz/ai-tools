@@ -13,8 +13,8 @@ does not assume a coordinator. When run directly by the harness, **prefer the
 first-party `mcp__github__issue_write` MCP tool** to create the issue (a thin 1:1
 op that also sets labels/milestone/assignees, and is what the desktop app detects);
 `ai-create-issue` (which calls `@rmartz/github`'s `createIssue` and falls back to
-`gh issue create`) is the fallback when MCP is unavailable. Under a coordinator, express the drafted issue and
-let the engine emit — the library path uses `createIssue` directly.
+`gh issue create`) is the fallback when MCP is unavailable. The library path uses `createIssue`
+directly.
 
 ## Before writing anything: dedup
 

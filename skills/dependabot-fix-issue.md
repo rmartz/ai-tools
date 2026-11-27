@@ -12,8 +12,7 @@ compatibility shim. This skill is the **judgment + authoring craft** for turning
 such a failure into a clear, deduped fix issue.
 
 It owns only the judgment. The Dependabot **mechanics** — sweeping PRs, spawning
-fix PRs, rebasing/recreating branches, merge arbitration — belong to the calling session
-and are **not** in scope here. This skill is runner-agnostic: it expresses a
+fix PRs, rebasing/recreating branches, merge arbitration — are **not** in scope here. This skill is runner-agnostic: it expresses a
 drafted issue (or a "no fix issue warranted" verdict) and does not bake in a
 coordinator's outcome marker or its own posting. Direct-harness mode posts via
 `@rmartz/github`.

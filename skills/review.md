@@ -192,5 +192,4 @@ the runner with `ai-post-json-marker <pr> review-findings <file>`: that posts th
 record as a hidden marker `synthesize-review` reads, and changes **no** labels and
 posts **no** review event. Deciding the verdict is `synthesize-review`'s; posting it
 is the runner's. Do not rank, dedupe against existing threads, or decide what is
-deferrable — `synthesize-review` does that. (Under a coordinator the engine renders
-and posts the record with your credentials scrubbed; the record content is identical.)
+deferrable — `synthesize-review` does that.
