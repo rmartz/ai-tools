@@ -213,8 +213,9 @@ file**, not a block spliced into user content.
     below).
 
   - **Retired: `pr-lifecycle.yml`.** Bootstrap no longer seeds the retired PR
-    automation's labels-only caller. As with `pr-title-lint.yml`, a repo that still
-    has a copy keeps it until someone deletes it.
+    automation's labels-only caller. As with `pr-title-lint.yml`, it never deletes
+    an existing copy, but that copy now calls an action that no longer resolves,
+    so it fails on every run: delete it.
 
   **Check-name convention (#299).** The check names these templates produce follow
   one fleet-wide rule, and the casing encodes _who owns the check_: a check supplied

@@ -16,8 +16,8 @@ checklist](https://github.com/rmartz/ai/blob/main/docs/guidance/repository-check
 the single source of truth, applied by audit + self-manage rather than by bootstrap
 re-asserting golden files (#263). It composes `@rmartz/github` (label CRUD) and
 `@rmartz/agent-runtime` (`boundedRun`, for the bins' git shell-out) and nothing else
-internal. It owns no PR status/gate labels — the roster here is the cross-cutting + meta
-set plus the labels its seeded checks apply.
+internal. It excludes the fleet's PR status/gate label roster — the roster here is the
+cross-cutting + meta set plus the labels its seeded checks apply.
 
 ## Surface
 
@@ -44,7 +44,7 @@ set plus the labels its seeded checks apply.
   `hotfix`) are workflow labels and stay in that roster (`ensure-labels.py`). The
   dotfiles `workflow` set (PR status/gate labels) and per-app `projects`
   families are deliberately excluded —
-  this layer owns no PR status labels, and project families live with
+  this layer seeds only the status labels its own checks apply, and project families live with
   their projects. Colors are kept verbatim as 6-hex without a leading `#` (REST
   contract). Every label that also appears in `labels.yml` copies its color and
   description verbatim, since both reconcilers run on the same repos and any
