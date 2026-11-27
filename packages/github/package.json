@@ -26,7 +26,8 @@
     "ai-read-json-marker": "./dist/bin/read-json-marker.js",
     "ai-origin-stamp": "./dist/bin/origin-stamp.js",
     "ai-pr-refresh": "./dist/bin/pr-refresh.js",
-    "ai-wait-for-dependabot": "./dist/bin/wait-for-dependabot.js"
+    "ai-wait-for-dependabot": "./dist/bin/wait-for-dependabot.js",
+    "ai-wait-for-merge-safety": "./dist/bin/wait-for-merge-safety.js"
   },
   "files": [
     "dist"

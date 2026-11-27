@@ -213,7 +213,13 @@ TS port of dotfiles' `wait-for-dependabot.py` + `lib/dependabot_state.py`, plus
 - `classifyDependabotResponse(snapshot, { now, ackGraceMs? })` — pure. `answered`
   when the PR closed, Dependabot pushed or commented after the request, the body
   shows `Dependabot rebase failed`, or a self-started rebase finished; `missed` when the request is older than the
-  ack grace (default 180 s) and Dependabot never reacted; otherwise `pending`.
+  ack grace (default 180 s) and Dependabot never reacted; otherwise `pending`. While
+  the body says `Dependabot is rebasing this PR` it is `pending` when there is no
+  request, or when Dependabot already pushed or replied after the latest one (a new,
+  self-started rebase that the earlier answer says nothing about). An unanswered
+  request still falls through to `missed`. The marker has no timestamp, so one that
+  never clears after an answered request reads `pending` until the wait times out:
+  a slower outcome, but never a false `answered`.
   Dependabot acks a command it picks up with a 👍 within seconds, so no reaction
   means it dropped the request. An acknowledged request stays `pending`.
 - `waitForDependabot(repo, prs, { all?, intervalMs?, timeoutMs?, ackGraceMs? })` —
@@ -221,6 +227,35 @@ TS port of dotfiles' `wait-for-dependabot.py` + `lib/dependabot_state.py`, plus
   `answered` / `missed` / `timeout` / `error` (5 consecutive failed reads); with
   `all`, any missed PR makes the outcome `missed`. Clock, sleeper and reader are
   injectable.
+
+### Merge-safety waiting (`merge-safety-state.ts`, `merge-safety-verdict.ts`, `wait-for-merge-safety.ts`)
+
+Waits on the `merge-safety` check (rmartz/merge-safety, whose
+`docs/check-run-contract.md` defines the verdicts) so a caller doesn't encode the
+timing in prose.
+
+- `readMergeSafetySnapshot(repo, pr)` — the PR's state, head SHA and the
+  `merge-safety` verdict **on that head**: the commit status first (what the merge
+  gate relies on), else the newest titled `merge-safety` check-run. Title-less runs
+  are the consumer's Actions job entries, not verdicts, and are skipped. A verdict
+  on an older head never counts, and the `update required` label (which lags) is
+  never read. `null` on a failed read.
+- `classifyMergeSafety(snapshot)` — pure. `passed` (success), `failed` (failure:
+  `Merge conflict`, `Base CI failing`, `Could not evaluate`), `blocked` (pending with
+  the title `Update required`: the branch is behind its base and merge-safety will
+  not re-run until it is updated), `merged`, `closed` (without merging), or
+  `waiting` (no verdict yet, or `Re-evaluating`).
+- `waitForMergeSafety(repo, pr, { intervalMs?, timeoutMs?, noVerdictGraceMs?,
+previousHead? })` — polls until the verdict is final. Outcome is one of the above,
+  `no-verdict` (the current head went the grace, default 600 s, without a final
+  verdict: nothing posted, as after a cancelled first evaluation, or a
+  `Re-evaluating` that never resolved; the grace restarts when the head moves),
+  `timeout` (default 1800 s; the head kept moving) or `error` (5 consecutive failed
+  reads). `blocked` ends the wait at once. Pass `previousHead` (full or abbreviated
+  SHA) right after updating the branch: GitHub applies the update asynchronously,
+  and until the head moves off it, its old `Update required` (or any non-final or
+  `failed` verdict) reads as "update not landed yet" instead of `blocked`. A
+  `passed` verdict there still counts: the update had nothing to do. Clock, sleeper and reader are injectable.
 
 ### Discussions (`discussions.ts`)
 
@@ -274,7 +309,11 @@ prints the outcome and reason, exits 0 for a settled outcome, 1 for `failed`, 3 
 `escalate`),
 `ai-wait-for-dependabot [--repo <owner/repo>] [--all] [--interval <s>] [--timeout <s>]
 [--ack-grace <s>] <pr>…` (exit 0 answered · 1 timeout · 2 read failure/usage ·
-3 missed — Dependabot never acknowledged the request; re-request or check the PR).
+3 missed — Dependabot never acknowledged the request; re-request or check the PR),
+`ai-wait-for-merge-safety [--repo <owner/repo>] [--interval <s>] [--timeout <s>]
+[--no-verdict-grace <s>] [--previous-head <sha>] [--json] <pr>` (exit 0 passed ·
+1 timeout · 2 read failure/usage · 3 failed · 4 blocked — `Update required`, update
+the branch · 5 no verdict on the head · 6 merged · 7 closed unmerged).
 
 `ai-origin-stamp` is the odd one out — not an interactive command but a
 `PostToolUse` **hook** entrypoint. It reads the hook payload as JSON on stdin,

@@ -130,6 +130,27 @@ export type {
   WaitForDependabotOptions,
 } from './wait-for-dependabot.js';
 
+export { MERGE_SAFETY_CHECK_NAME, readMergeSafetySnapshot } from './merge-safety-state.js';
+export type {
+  MergeSafetyReport,
+  MergeSafetySnapshot,
+  MergeSafetyState,
+} from './merge-safety-state.js';
+export { UPDATE_REQUIRED_TITLE, classifyMergeSafety } from './merge-safety-verdict.js';
+export type { MergeSafetyVerdict } from './merge-safety-verdict.js';
+export {
+  DEFAULT_MERGE_SAFETY_INTERVAL_MS,
+  DEFAULT_MERGE_SAFETY_TIMEOUT_MS,
+  DEFAULT_NO_VERDICT_GRACE_MS,
+  waitForMergeSafety,
+} from './wait-for-merge-safety.js';
+export type {
+  MergeSafetyFinalOutcome,
+  MergeSafetyOutcome,
+  MergeSafetyWaitResult,
+  WaitForMergeSafetyOptions,
+} from './wait-for-merge-safety.js';
+
 export {
   parseHookPayload,
   extractCreatedNumber,
