@@ -34,11 +34,13 @@ export function classifyDependabotResponse(
   if (snapshot.state !== 'open') {
     return { status: 'answered', reason: `PR is ${snapshot.state}` };
   }
+  // Dependabot also rebases on its own (e.g. after the base branch moves), leaving
+  // no request comment; its PR body marker is the only signal. While the marker
+  // says it is rebasing, nothing is answered yet — even when an older request
+  // exists, whose push or comment predates this rebase and answers nothing now.
+  if (snapshot.rebaseMarker === 'in_progress') return { status: 'pending' };
   const { request } = snapshot;
   if (request === null) {
-    // Dependabot also rebases on its own (e.g. after the base branch moves),
-    // leaving no request comment; its PR body marker is the only signal.
-    if (snapshot.rebaseMarker === 'in_progress') return { status: 'pending' };
     if (snapshot.rebaseMarker === 'failed') {
       return { status: 'answered', reason: 'Dependabot rebase failed (see the PR)' };
     }
