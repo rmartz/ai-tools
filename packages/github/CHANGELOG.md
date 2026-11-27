@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/rmartz/ai-tools/compare/github-v0.9.0...github-v0.9.1) (2026-11-27)
+
+
+### Bug Fixes
+
+* drop references to the retired PR automation repos ([#438](https://github.com/rmartz/ai-tools/issues/438)) ([43bfe1e](https://github.com/rmartz/ai-tools/commit/43bfe1e560a1b486d5c4a809cb7f47a4d257315f))
+
 ## [0.9.0](https://github.com/rmartz/ai-tools/compare/github-v0.8.1...github-v0.9.0) (2026-11-27)
 
 
