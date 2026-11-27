@@ -16,7 +16,7 @@ export const DISCUSSIONS_REPO_ENV = 'AI_DISCUSSIONS_REPO';
  * when neither is given — use {@link requireDiscussionsRepo} to fail instead.
  */
 export function resolveDiscussionsRepo(
-  flag: string | undefined,
+  flag?: string,
   env: NodeJS.ProcessEnv = process.env,
 ): string | undefined {
   return flag?.trim() || env[DISCUSSIONS_REPO_ENV]?.trim() || undefined;
@@ -27,7 +27,7 @@ export const MISSING_DISCUSSIONS_REPO = `no Discussions repo configured: pass --
 
 /** {@link resolveDiscussionsRepo}, but throws a clear error when neither is set. */
 export function requireDiscussionsRepo(
-  flag: string | undefined,
+  flag?: string,
   env: NodeJS.ProcessEnv = process.env,
 ): string {
   const repo = resolveDiscussionsRepo(flag, env);

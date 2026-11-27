@@ -57,7 +57,7 @@ incident, so future occurrences land on the same thread. Prefer a noun phrase:
 ## 2. Find or create the thread
 
 ```
-findOrCreateDiscussion(requireDiscussionsRepo(undefined), 'q-a', title, body)
+findOrCreateDiscussion(requireDiscussionsRepo(), 'q-a', title, body)
 ```
 
 - It searches by **exact title** first and returns the existing thread if one

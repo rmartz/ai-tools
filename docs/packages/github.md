@@ -270,6 +270,14 @@ The GraphQL Discussions client (no REST / `gh` equivalent), targeting any
   `getDiscussion(repo, number)` return `DiscussionCommentDetail` (body,
   `authorLogin`, `createdAt`, `isAnswer`, `upvoteCount`) so a curator can evaluate
   prior approaches and pick an answer.
+- Target repo (`discuss-helpers.ts`): no repo is built in.
+  `resolveDiscussionsRepo(flag?, env?)` returns the explicit flag, else the
+  `AI_DISCUSSIONS_REPO` env var (`DISCUSSIONS_REPO_ENV`), else `undefined`;
+  `requireDiscussionsRepo` throws `MISSING_DISCUSSIONS_REPO` instead.
+  `parseDiscussionRef(arg, defaultRepo)` takes a discussions URL (repo from the
+  URL) or a bare number (needs `defaultRepo`, and throws the missing-repo error
+  without one). `signComment` and `framingBody` shape the comment footer and a new
+  thread's body.
 
 ### Shared
 

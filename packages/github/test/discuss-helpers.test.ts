@@ -103,12 +103,20 @@ describe('resolveDiscussionsRepo', () => {
     );
   });
 
+  it('falls back to the env var when the flag is blank', () => {
+    expect(resolveDiscussionsRepo('  ', { AI_DISCUSSIONS_REPO: 'env/repo' })).toBe('env/repo');
+  });
+
   it('treats a blank env var as unset', () => {
     expect(resolveDiscussionsRepo(undefined, { AI_DISCUSSIONS_REPO: '  ' })).toBeUndefined();
   });
 });
 
 describe('requireDiscussionsRepo', () => {
+  it('returns the configured repo', () => {
+    expect(requireDiscussionsRepo(undefined, { AI_DISCUSSIONS_REPO: 'env/repo' })).toBe('env/repo');
+  });
+
   it('throws a message naming the flag and env var when neither is set', () => {
     expect(() => requireDiscussionsRepo(undefined, {})).toThrow(
       'no Discussions repo configured: pass --repo owner/repo or set AI_DISCUSSIONS_REPO',

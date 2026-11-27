@@ -25,4 +25,4 @@ the sibling [`discuss-curate`](./discuss-curate.md) skill.
 ## See also
 
 - Client: [`@rmartz/github`](../packages/github.md) (Discussions section).
-- Behavioural spec: "Discussion etiquette (for agents)" in the agent knowledge base's CLAUDE.md.
+- Behavioural spec: "Discussion etiquette (for agents)" in the knowledge repo's root CLAUDE.md.

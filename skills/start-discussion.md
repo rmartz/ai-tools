@@ -45,7 +45,7 @@ ai-start-discussion "<title>" <question-body-file>
 
 It find-or-creates on the Discussions repo (`$AI_DISCUSSIONS_REPO`) / `q-a` (an existing exact-title thread is reused,
 not forked) and prints the discussion URL + number. TS callers:
-`findOrCreateDiscussion(requireDiscussionsRepo(undefined), 'q-a', title, questionBody)`.
+`findOrCreateDiscussion(requireDiscussionsRepo(), 'q-a', title, questionBody)`.
 
 ## 4. Hand off for crowdsourcing
 

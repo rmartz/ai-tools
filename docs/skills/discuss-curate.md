@@ -16,7 +16,7 @@ framed problem, and marks the current best comment as the Q&A answer
 adequate. **Never edits prior comments**; the attempt history is preserved.
 
 When the answer is stable, it outputs **PR-ready content** for a
-knowledge-base guidance page (`~/.claude/knowledge/guidance/<topic>.md` locally) (with a link back to the source
+knowledge-base guidance page, `~/.claude/knowledge/guidance/<topic>.md` locally (with a link back to the source
 discussion) so the knowledge graduates from the thread into curated guidance. The
 guidance commit lands in the knowledge repo, not ai-tools — this skill produces the
 material and hands it off.
@@ -27,4 +27,4 @@ sibling [`discuss`](./discuss.md) skill.
 ## See also
 
 - Client: [`@rmartz/github`](../packages/github.md) (Discussions section).
-- Behavioural spec: "Discussion etiquette (for agents)" in the agent knowledge base's CLAUDE.md.
+- Behavioural spec: "Discussion etiquette (for agents)" in the knowledge repo's root CLAUDE.md.

@@ -21,7 +21,8 @@ async function main(): Promise<void> {
     else if (a !== undefined) positional.push(a);
   }
   const [refArg, bodyFile] = positional;
-  const target = refArg ? parseDiscussionRef(refArg, resolveDiscussionsRepo(repoFlag)) : null;
+  const target =
+    refArg && bodyFile ? parseDiscussionRef(refArg, resolveDiscussionsRepo(repoFlag)) : null;
   if (!target || !bodyFile) {
     console.error(
       'usage: ai-discussion-comment <number|discussion-url> <body-file> [--repo owner/repo (default: $AI_DISCUSSIONS_REPO)] [--model <model>] [--project owner/repo] [--commit <sha>]',
