@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Thin CLI wrapper over `runNewWorktree`. Args are parsed here; all logic lives
-// in the library so PR Shepherd and the harness share one implementation. On
+// in the library so every consumer and the harness share one implementation. On
 // success the worktree's absolute path is the final stdout line (progress logs
 // go to stderr), so callers can chain into `cd "$(ai-new-worktree …)"`.
 //

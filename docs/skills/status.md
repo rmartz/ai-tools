@@ -17,7 +17,7 @@ unblocked issue, and present the plan grouped by epic.
 
 It is **read-only** — it reports and recommends, acting only after you confirm.
 The coordinator's per-PR routing/gate flags (CI, approval, idle, merge-candidate)
-are **not** recomputed here; those belong to PR Shepherd, so a direct run gives
+are **not** recomputed here; they are out of this skill's scope, so a direct run gives
 the lighter PR overview `ai-repo-status` + `gh pr list` provide.
 
 ## Flow

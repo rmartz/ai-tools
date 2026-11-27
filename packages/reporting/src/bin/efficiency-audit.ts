@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Thin CLI over `auditPrEfficiency`. Derives the efficiency event for a PR from
 // GitHub history and prints it as JSON (the EfficiencyEvent wire shape). All
-// detection lives in the library; PR Shepherd imports it directly and may pass
+// detection lives in the library; a consumer importing it directly may pass
 // durationsMs enrichment in-process (not exposed on this CLI — derivation only).
 //
 // Usage: ai-efficiency-audit <pr> [--repo <owner/repo>] [--merged-at <iso>]

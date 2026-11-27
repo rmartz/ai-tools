@@ -9,10 +9,10 @@ import {
 /**
  * PR efficiency audit: derive an {@link EfficiencyEvent} for a PR **standalone**
  * from GitHub history. ai-tools owns the count detectors (a cross-repo, all-PRs
- * profiler); PR Shepherd never emits the *derived* counts — it would
+ * profiler); a caller never emits the *derived* counts — it would
  * double-implement the detectors. It may **optionally enrich** the event with
  * data history can't reconstruct: `durationsMs` (timing) and an authoritative
- * `mergeAttempts` (from its durable per-(PR, head-SHA) failed-squash markers).
+ * `mergeAttempts` (e.g. from its own record of failed squash attempts).
  * This module merges those in verbatim but never computes them — the derived
  * `mergeAttempts` is only a proxy (see {@link AuditPrEfficiencyOptions}).
  *
@@ -25,8 +25,8 @@ import {
 export type { EfficiencyCounts } from './efficiency-derive.js';
 
 /**
- * Optional PR-Shepherd timing enrichment. Names match its `StepMetricsSchema`
- * 1:1; units are milliseconds. ai-tools never computes these — a caller passes
+ * Optional caller-supplied timing enrichment. Each field doc names the source
+ * metric it maps from; units are milliseconds. ai-tools never computes these — a caller passes
  * what it measured (any subset) and {@link auditPrEfficiency} merges it in.
  */
 export interface EfficiencyDurationsMs {
@@ -58,11 +58,11 @@ export interface AuditPrEfficiencyOptions {
   repo?: string;
   /** ISO-8601 merge timestamp, surfaced verbatim on the event. */
   mergedAt?: string;
-  /** Optional PR-Shepherd timing enrichment (partial accepted; merged 1:1). */
+  /** Optional caller-supplied timing enrichment (partial accepted; merged 1:1). */
   durationsMs?: Partial<EfficiencyDurationsMs>;
   /**
-   * Authoritative `mergeAttempts` from PR Shepherd (failed-squash markers + 1).
-   * When supplied — i.e. the PR was daemon-driven — it **overrides** the derived
+   * Authoritative `mergeAttempts` from the caller (failed squash attempts + 1).
+   * When supplied it **overrides** the derived
    * history proxy, which over-counts branch syncs and is blind to failed squashes.
    */
   mergeAttempts?: number;
@@ -93,7 +93,7 @@ function mergeDurations(
  * Compute an {@link EfficiencyEvent} for one PR. Derives `counts` from GitHub
  * history (review iterations, fix-review iterations, CI runs, preventable CI
  * failures, redundant reviews, flaky retries, and a `mergeAttempts` proxy), then
- * applies any PR-Shepherd enrichment — an authoritative `mergeAttempts` override
+ * applies any caller enrichment — an authoritative `mergeAttempts` override
  * and `durationsMs` — without computing those itself. `repo` defaults to the
  * current git remote.
  *
@@ -110,7 +110,7 @@ export async function auditPrEfficiency(
   }
 
   const counts = await deriveCounts(repo, pr, opts.reader ?? ghReader);
-  // Authoritative override: PR Shepherd's marker-based count beats the proxy.
+  // Authoritative override: the caller's recorded count beats the proxy.
   if (opts.mergeAttempts !== undefined) counts.mergeAttempts = opts.mergeAttempts;
   const durationsMs = mergeDurations(opts.durationsMs);
 

@@ -5,7 +5,7 @@ import { ghCall, type GhCallOptions, type Transport } from './gh-call.js';
  * conversation (issue) comments. Like the rest of the client these are REST-first
  * via `ghCall` and soft-fail to `[]` — a context gap degrades a caller (e.g. the
  * `review` skill) rather than crashing it. They know nothing about verdict labels
- * or gate state; that contract lives in PR Shepherd.
+ * or gate state; that contract belongs to the caller.
  */
 
 export interface PrReview {

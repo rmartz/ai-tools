@@ -14,7 +14,7 @@ Show open PR status and identify actionable issues across all epics: $ARGUMENTS
 > `@rmartz/github`'s `ai-repo-status` (`gatherRepoStatus`) for the raw issue /
 > milestone / PR data. It is **read-only**: it reports and recommends, and only
 > acts after you confirm. The **coordinator's per-PR routing view** (the CI /
-> approval / idle / merge-candidate flags computed by PR Shepherd) is not part of
+> approval / idle / merge-candidate flags) is not part of
 > this skill — a direct run presents the lighter PR overview `ai-repo-status` and
 > `gh pr list` provide, and defers the full routing triage to the coordinator.
 

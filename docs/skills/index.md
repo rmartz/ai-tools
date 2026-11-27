@@ -1,8 +1,9 @@
 # Skills
 
 Skill _definitions_ live in the top-level `skills/` directory; each has an OKF
-page here. Skills express judgment/craft and stay runner-agnostic about emission
-(see the [PR Shepherd handoff](../pr-shepherd-handoff.md)).
+page here. Skills express judgment/craft and stay runner-agnostic about emission:
+a skill expresses its findings or outcome, and whichever runner invoked it posts
+them.
 
 | Skill                  | Page                                            |
 | ---------------------- | ----------------------------------------------- |

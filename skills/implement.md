@@ -109,7 +109,7 @@ desktop app's session list — the app otherwise auto-summarizes a terse
 `mcp__ccd_session_mgmt__set_session_title` tool is available, call it with
 `session_id: "self"` and a title of the form `#<number> <issue title>` (e.g.
 `#1509 Add --repo to the cwd-only PR scripts`). Skip this **silently** when the
-tool is absent — a headless / CI / PR-Shepherd run has no session to name, so it
+tool is absent — a headless / CI / orchestrator run has no session to name, so it
 is a convenience, never a gate. When Step 0 dispatched several issues to parallel
 workers, each worker names its own session this way from its single issue.
 

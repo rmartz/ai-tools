@@ -11,15 +11,15 @@ Each `@rmartz/*` package has an OKF page, listed in the [packages index](package
 (layers 0–2: `agent-runtime`, `github`, `worktree`, `verify`, `bootstrap`,
 `pr-review`, `issues`, `reporting`).
 
-`@rmartz/reporting`'s `anomaly` + `efficiency-audit` modules are deferred pending
-taxonomy coordination with PR Shepherd's self-observability work (see
-[PR Shepherd handoff](pr-shepherd-handoff.md)).
+`@rmartz/reporting`'s `anomaly` + `efficiency-audit` modules implement the shared
+[reporting-schema](reporting-schema.md).
 
 ## Skills
 
 Skill _definitions_ live in the top-level `skills/` directory; each has an OKF
 page listed in the [skills index](skills/index.md). Skills express judgment/craft
-and stay runner-agnostic about emission (see [PR Shepherd handoff](pr-shepherd-handoff.md)).
+and stay runner-agnostic about emission: a skill expresses its findings or
+outcome, and whichever runner invoked it posts them.
 
 Make the skills invocable as slash commands with
 [`pnpm run install:skills`](install-skills.md) — it symlinks `skills/*.md` into
@@ -30,8 +30,7 @@ Make the skills invocable as slash commands with
 - [install-clis](install-clis.md) — install/update the published `ai-*` CLIs globally.
 - [install-skills](install-skills.md) — symlink the skills into `~/.claude/commands`.
 - [releasing](releasing.md) — how packages are versioned and published with release-please.
-- [reporting-schema](reporting-schema.md) — the shared anomaly/efficiency event contract with PR Shepherd.
-- [pr-shepherd-handoff](pr-shepherd-handoff.md) — the ai-tools → PR Shepherd delegation contract.
+- [reporting-schema](reporting-schema.md) — the shared anomaly/efficiency event contract for emitters.
 
 ## Guidance
 

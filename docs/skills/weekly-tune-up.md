@@ -14,7 +14,7 @@ method, the **routing judgment** (which repo an artifact belongs in), the
 cross-repo drift classification, and the diagnosis of each cluster into a gap
 type. It does **not** own the coordination around it: the exact
 transcript-extraction command, label vocabulary, PR/issue-body formatting, and
-merge are the coordinator's (PR Shepherd), which spawns this skill by name.
+merge are the coordinator's, which spawns this skill by name.
 
 The routing _decision_ is craft and stays in the skill; the routing _plumbing_
 (labels, body sections, merge) is abstracted out. The hard rule that anchors the
@@ -75,4 +75,3 @@ The split-aware destinations the skill routes to:
 
 - `/review` — the sibling craft skill, and the reference for the runner-agnostic
   emission pattern (`docs/skills/review.md`).
-- The delegation contract — `docs/pr-shepherd-handoff.md`.

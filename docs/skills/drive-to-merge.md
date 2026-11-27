@@ -9,10 +9,10 @@ tags: [drive-to-merge, review, merge, stacked, escape-hatch]
 # `/drive-to-merge`
 
 `drive-to-merge` is the **human-invoked escape hatch** that drives PRs to merge
-**without** the coordinator (PR Shepherd) — for when the coordinator can't drive a
+**without** the coordinator — for when the coordinator can't drive a
 PR itself (e.g. a breaking change to the coordinator that must land first), when a
 PR must merge immediately and the coordinator isn't running, or to step through the
-loop by hand. It is _not_ owned by PR Shepherd; it is the manual alternative to it.
+loop by hand. It is _not_ owned by the coordinator; it is the manual alternative to it.
 
 It **composes the skills** `/review`, `/fix-review`, and `/merge` (by name) and — the
 key ai-tools adaptation — reads each `/review`'s **runner-agnostic outcome**

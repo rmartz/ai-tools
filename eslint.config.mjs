@@ -13,8 +13,8 @@ import importPlugin from 'eslint-plugin-import';
  *   layer-1  tooling      worktree, verify, bootstrap
  *   layer-2  composed     pr-review, reporting, issues
  *
- * PR Shepherd lives in its own repo and may import any of these as published
- * packages; nothing here imports it. Rules are NOT type-aware (no `project`),
+ * Consumers in other repos may import any of these as published packages;
+ * nothing here imports them. Rules are NOT type-aware (no `project`),
  * so a file does not need to live in a tsconfig to be linted — but cross-package
  * imports are resolved via the TypeScript resolver so `boundaries` and
  * `no-cycle` can follow `@rmartz/*` workspace imports to their source.

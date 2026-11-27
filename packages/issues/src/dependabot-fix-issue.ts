@@ -8,12 +8,12 @@ import type { GhCallOptions } from '@rmartz/github';
  * stricter types now demand, a compatibility shim. This module owns only the
  * authoring *judgment* (when a fix issue is warranted, what a good one says, and
  * dedup); the Dependabot *mechanics* (sweeping PRs, spawning fix PRs, rebasing,
- * merge arbitration) belong to PR Shepherd, never here.
+ * merge arbitration) belong to the caller, never here.
  *
  * Extracted from dotfiles' `dependabot.md` fix-PR craft. It is runner-agnostic:
- * in direct-harness mode it writes via `@rmartz/github`; under PR Shepherd the
- * engine decides what to do with the returned verdict. Nothing here knows about
- * PR Shepherd's gate/verdict labels or the skill-outcome marker.
+ * in direct-harness mode it writes via `@rmartz/github`; under an orchestrator,
+ * the orchestrator decides what to do with the returned verdict. Nothing here
+ * knows about gate/verdict labels or the skill-outcome marker.
  */
 
 /** The stable marker linking a fix issue back to its Dependabot PR. */

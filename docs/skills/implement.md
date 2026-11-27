@@ -37,7 +37,7 @@ Early in Step 1, once the issue's title is known, the run **names the session**
 after it (`mcp__ccd_session_mgmt__set_session_title`, `session_id: "self"`, title
 `#<number> <issue title>`) so a terse `/implement <number>` kickoff shows a
 descriptive label in the desktop app instead of the app's auto-summary. It is
-skipped silently when the tool is absent (headless / CI / PR-Shepherd runs).
+skipped silently when the tool is absent (headless / CI / orchestrator runs).
 
 ## Hand-off
 
@@ -45,7 +45,7 @@ The skill produces a **ready branch and an outcome** — implemented-and-ready, 
 stuck-with-a-diagnosis — and opens the PR itself: **ready for review on the done
 path** (no draft step), and a `[WIP]` **draft only** on the stuck / told-to-abort
 path, to preserve unfinished work. That branch-plus-outcome is the contract any
-downstream coordinator (e.g. [PR Shepherd](../pr-shepherd-handoff.md)) consumes;
+downstream coordinator or session consumes;
 the skill itself never applies gate/verdict labels or drives the post-hand-off
 lifecycle.
 
@@ -90,5 +90,4 @@ implement / implement-all / drive-to-merge is tracked in ai-tools #145.)
 ## See also
 
 - Sibling authoring skill: [`create-issue`](./create-issue.md).
-- The delegation contract — [`pr-shepherd-handoff`](../pr-shepherd-handoff.md).
 - Downstream of the hand-off: [`review`](./review.md).

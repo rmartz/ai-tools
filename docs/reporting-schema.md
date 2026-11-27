@@ -1,49 +1,48 @@
 ---
 type: Design
 title: Reporting event schema (anomaly + efficiency)
-description: Agreed shared contract for the ai-tools ↔ PR Shepherd reporting seam — the anomaly-category enum, the occurrence record, the filing API, and the efficiency-event schema. Confirmed by PR Shepherd 2026-06-23.
-tags: [reporting, anomaly, efficiency, pr-shepherd, schema, contract]
+description: Shared contract for the reporting seam between ai-tools and its emitters — the anomaly-category enum, the occurrence record, the filing API, and the efficiency-event schema. Agreed with the (now retired) PR automation orchestrator 2026-06-23.
+tags: [reporting, anomaly, efficiency, schema, contract]
 ---
 
 # Reporting event schema (anomaly + efficiency)
 
 The shared contract for `@rmartz/reporting`'s `anomaly` (#29) and
-`efficiency-audit` (#30) modules, which overlap PR Shepherd's self-observability
-(#109) / circuit-breaker (#107) work. **Status: agreed — PR Shepherd confirmed
-2026-06-23** (grounded in merged PR Shepherd code: #104 merge/branch-currency,
-#107 breakers, #109 observability, #151 skill-outcome). See
-[PR Shepherd handoff](pr-shepherd-handoff.md) for the broader delegation contract.
+`efficiency-audit` (#30) modules. It was agreed on 2026-06-23 with the retired PR
+automation orchestrator, whose self-observability and circuit-breaker layers were
+its first non-harness emitter. The schema stands for any emitter; names below that
+came from that orchestrator are kept so records stay compatible.
 
 ## The seam (who emits, who files)
 
-- **PR Shepherd detects** engine anomalies and **emits an `AnomalyOccurrence`**;
-  #109 files through an injectable **`IssueFiler` seam** (deduped by
-  `Anomaly.dedupeKey`). PR Shepherd implements `IssueFiler` as an adapter over
-  `@rmartz/reporting.reportAnomaly`, mapping its `AnomalyKind` → `category`/
-  `subject`, once the package is published.
+- **An orchestrator detects** engine anomalies and **emits an
+  `AnomalyOccurrence`**, filing through an injectable **`IssueFiler` seam**
+  (deduped by `Anomaly.dedupeKey`). The emitter implements `IssueFiler` as an
+  adapter over `@rmartz/reporting.reportAnomaly`, mapping its own anomaly kind →
+  `category`/`subject`.
 - **ai-tools `@rmartz/reporting` files it** — it owns the category→ledger-title
   mapping and the find-or-create-or-append I/O into **`rmartz/ai-reports`**
-  (`tracking` label). PR Shepherd never writes reports into its own issues; the
-  deprecated `coordinator-self-report` pattern (PR Shepherd #168) is retired.
+  (`tracking` label). Emitters never write reports into their own issues; the
+  deprecated `coordinator-self-report` pattern is retired.
 - Harness/agents emit the same record shape for harness-observed anomalies
   (flaky tests, failed local validation) directly via `@rmartz/reporting`.
 
-ai-tools is the single authority for category→title, so both sides dedup onto
+ai-tools is the single authority for category→title, so every emitter dedups onto
 identical ledgers.
 
 ## AnomalyCategory (closed enum, kebab-case)
 
-| Category                  | Emitter (PR Shepherd layer)               | Stable ledger title (ai-tools-owned)                               |
+| Category                  | Emitter (orchestrator layer)              | Stable ledger title (ai-tools-owned)                               |
 | ------------------------- | ----------------------------------------- | ------------------------------------------------------------------ |
-| `duration-outlier`        | #109 observability                        | `tracking: step duration outlier (duration-outlier)`               |
-| `merge-failure`           | #109 observability                        | `tracking: merge failure (merge-failure)`                          |
-| `mass-blocking`           | #109 observability                        | `tracking: mass PR blocking (mass-blocking)`                       |
-| `timeout-then-fast-retry` | #109 observability                        | `tracking: step timeout then fast retry (timeout-then-fast-retry)` |
-| `fix-review-loop`         | #109 observability                        | `tracking: non-converging fix-review loop (fix-review-loop)`       |
-| `high-retry-rate`         | #109 observability                        | `tracking: high step retry rate (high-retry-rate)`                 |
-| `ci-budget-exhausted`     | #107 breaker layer                        | `tracking: CI budget exhausted (ci-budget-exhausted)`              |
-| `main-broken`             | #107 breaker layer                        | `tracking: main branch broken (main-broken)`                       |
-| `same-action-reroute`     | gate/convergence (#105) — not wired yet   | `tracking: same-action reroute (same-action-reroute)`              |
+| `duration-outlier`        | observability                             | `tracking: step duration outlier (duration-outlier)`               |
+| `merge-failure`           | observability                             | `tracking: merge failure (merge-failure)`                          |
+| `mass-blocking`           | observability                             | `tracking: mass PR blocking (mass-blocking)`                       |
+| `timeout-then-fast-retry` | observability                             | `tracking: step timeout then fast retry (timeout-then-fast-retry)` |
+| `fix-review-loop`         | observability                             | `tracking: non-converging fix-review loop (fix-review-loop)`       |
+| `high-retry-rate`         | observability                             | `tracking: high step retry rate (high-retry-rate)`                 |
+| `ci-budget-exhausted`     | breaker layer                             | `tracking: CI budget exhausted (ci-budget-exhausted)`              |
+| `main-broken`             | breaker layer                             | `tracking: main branch broken (main-broken)`                       |
+| `same-action-reroute`     | gate/convergence — not wired yet          | `tracking: same-action reroute (same-action-reroute)`              |
 | `max-iterations`          | convergence (Escalate) — not wired yet    | `tracking: coordinator max iterations (max-iterations)`            |
 | `human-intervention`      | gate (hard_reject / Park) — not wired yet | `tracking: human intervention required (human-intervention)`       |
 | `flaky-test`              | harness/agents                            | `tracking: flaky test (flaky-test)`                                |
@@ -53,15 +52,14 @@ Notes:
 
 - The `(<category>)` suffix is the stable dedup key. Identical title ⇒ same ledger.
 - **`premature-exit`** is folded into the emitters above — the Skill Outcome
-  Protocol (#151) makes "no outcome record ⇒ retry" uniform, so a premature exit
+  Protocol makes "no outcome record ⇒ retry" uniform, so a premature exit
   surfaces via `timeout-then-fast-retry` / `high-retry-rate` rather than its own
   category. (The three dotfiles `premature_exit_*` categories are retired.)
-- The `… — not wired yet` rows are valid PR Shepherd concepts in the
-  gate/convergence layer (`detectSameActionLoop` #105, `resolveConvergence →
-Escalate`, `SkillOutcome.hard_reject` / gate `Park`) but do **not** emit
-  occurrences yet. The slugs are reserved.
-- `#107` breakers latch/quarantine at runtime and #109 emits nothing when they
-  trip; PR Shepherd emits these two from the **breaker layer** (strongest
+- The `… — not wired yet` rows are gate/convergence-layer concepts (same-action
+  loop detection, convergence `Escalate`, `SkillOutcome.hard_reject` / gate
+  `Park`) that no emitter produces yet. The slugs are reserved.
+- Breakers latch/quarantine at runtime and the observability layer emits nothing
+  when they trip; these two come from the **breaker layer** (strongest
   "systemically wrong" signal). `main-broken` carries the bad SHA in `evidence`.
 
 ## AnomalyOccurrence record
@@ -72,24 +70,24 @@ interface AnomalyOccurrence {
   subject?: string; // refines the ledger (kebab-case), e.g. skill name for fix-review-loop
   summary: string; // one-line human description
   detail?: string; // longer body: what was observed, where, expected vs actual
-  sourceRepo: string; // 'owner/repo'  (PR Shepherd maps from its `repo`)
-  pr?: number; //          (PR Shepherd maps from its `prNumber`)
+  sourceRepo: string; // 'owner/repo'  (an emitter maps from its own `repo`)
+  pr?: number; //          (an emitter maps from its own `prNumber`)
   evidence?: Record<string, string | number>; // structured specifics (retryCount, badSha, durationMs, …)
-  // correlation (all optional; supply what the emitter has — names match PR Shepherd verbatim):
+  // correlation (all optional; supply what the emitter has):
   runId?: string;
   stepInstanceId?: string;
   headSha?: string;
-  gitHash?: string; // provenance: commit the PR Shepherd bundle was built from
+  gitHash?: string; // provenance: commit the emitter was built from
   skillVersion?: string; // optional skill-def version
-  transcriptId?: string; // dispatched-agent transcript (not persisted by PR Shepherd; from run context when available)
-  timestamp: string; // ISO-8601 UTC (PR Shepherd converts its epoch-ms EventRecord.createdAt at emit)
+  transcriptId?: string; // dispatched-agent transcript (from run context when available)
+  timestamp: string; // ISO-8601 UTC (an emitter with epoch-ms timestamps converts at emit)
 }
 ```
 
-Envelope mapping (PR Shepherd record → this wire format): `repo → sourceRepo`,
+Envelope mapping (emitter record → this wire format): `repo → sourceRepo`,
 `prNumber → pr`, epoch-ms `createdAt → ISO timestamp`. `runId` / `stepInstanceId`
-/ `headSha` / `gitHash` / `skillVersion` are verbatim from `SkillOutcomeRecord` /
-`EventRecord`.
+/ `headSha` / `gitHash` / `skillVersion` pass through verbatim from the emitter's
+`SkillOutcomeRecord` / `EventRecord`.
 
 ## Filing API
 
@@ -103,19 +101,19 @@ function reportAnomaly(
 
 Maps `category` (+ `subject`) → the stable title, renders the body via the
 existing `formatOccurrence` header, and calls `reportToTracking`
-(find-or-create-or-append). **PR Shepherd's `IssueFiler` adapter passes a
+(find-or-create-or-append). **An emitter's `IssueFiler` adapter passes a
 category + occurrence; it never constructs the title.** Also shipped as the
 `ai-report-anomaly` CLI for non-TS emitters.
 
 ## EfficiencyEvent schema
 
 **Mode (agreed): ai-tools derives the counts standalone** from GitHub PR history
-(a cross-repo, all-PRs profiler — PR Shepherd's "derive-from-GitHub / never
-durably store" principle means its event stream is not a historical archive).
-PR Shepherd may **optionally enrich** a record with data history can't
-reconstruct — `durationsMs` (timing) and an authoritative `mergeAttempts` — via
-the same emit seam as anomalies. It does **not** emit the _derived_ counts (that
-would double-implement detectors).
+(a cross-repo, all-PRs profiler — an orchestrator that derives state from GitHub
+and never durably stores it has no historical archive to offer). An orchestrator
+may **optionally enrich** a record with data history can't reconstruct —
+`durationsMs` (timing) and an authoritative `mergeAttempts` — via the same emit
+seam as anomalies. It does **not** emit the _derived_ counts (that would
+double-implement detectors).
 
 ```ts
 interface EfficiencyEvent {
@@ -133,7 +131,7 @@ interface EfficiencyEvent {
     mergeAttempts: number; // see "merge attempts" below — derived value is a proxy
   };
   durationsMs?: {
-    // optional PR-Shepherd enrichment; names match its StepMetricsSchema 1:1:
+    // optional orchestrator enrichment; names match a StepMetricsSchema 1:1:
     claude: number; // claudeMs
     active: number; // activeMs
     scheduleWait: number; // scheduleWaitMs
@@ -142,10 +140,10 @@ interface EfficiencyEvent {
 }
 ```
 
-Caveat: at merge granularity PR Shepherd's `MergeEfficiencyMetrics` surfaces only
+Caveat: at merge granularity a `MergeEfficiencyMetrics` record surfaces only
 `claudeMs` + `externalWaitMs`; all four buckets exist at step/run level.
 
-### Merge attempts (authoritative model — PR Shepherd, 2026-06-29)
+### Merge attempts (authoritative model, 2026-06-29)
 
 A **merge attempt is an actual squash-merge _invocation_ that fails** — accounted
 durably per-`(PR, head-SHA)` via hidden marker comments on the PR (so it survives
@@ -167,19 +165,18 @@ review/fix); and defers (CI-running / Copilot-pending — re-poll).
   a branch sync from an attempt — so the proxy **over-counts syncs and under-counts
   true attempts**. Resolution:
 
-* **Daemon-driven PRs** → the authoritative count comes from PR Shepherd, which
-  emits `mergeAttempts` (failed markers + 1) on `MergeEfficiencyMetrics`;
-  `auditPrEfficiency`'s `mergeAttempts` enrichment **overrides** the proxy.
-* **PRs PR Shepherd didn't drive** → the `(branch-sync commits) + 1` proxy stands,
-  understood to diverge as above.
+* **Orchestrator-driven PRs** → the authoritative count comes from the
+  orchestrator, which emits `mergeAttempts` (failed markers + 1) on
+  `MergeEfficiencyMetrics`; `auditPrEfficiency`'s `mergeAttempts` enrichment
+  **overrides** the proxy.
+* **Any other PR** → the `(branch-sync commits) + 1` proxy stands, understood to
+  diverge as above.
 
-**Status (2026-06-29):** PR Shepherd's merge coordinator (#104) currently records
-failures as `merge_failed` events (#109); the durable per-SHA retry-budget +
-threshold-escalation + operator-actionable classification (mirroring dotfiles
-#1393–#1397) is incoming. Until it lands, the emitted signal is the `merge_failed`
-event count, not the durable marker count.
+**Status:** the PR automation that would have emitted the authoritative count is
+retired, so in practice every PR now uses the proxy. The enrichment path stays
+for any future emitter.
 
-## PR Shepherd vocabulary (confirmed, verbatim from merged code)
+## Emitter vocabulary (agreed names)
 
 - **`SkillOutcome`**: `approve`, `error`, `hard_reject`, `no_op`, `soft_reject`.
 - **`SkillOutcomeRecord`**: `skill, skillVersion, gitHash, outcome, runId,
@@ -191,22 +188,22 @@ failed/retried`, `merge_completed/failed`.
 eventType, stepInstanceId?, attempts, outcome?, logs[], createdAt` (epoch-ms).
 - **`AnomalyKind`**: `duration_outlier, fix_review_loop, high_retry_rate,
 mass_blocking, merge_failure, timeout_then_fast_retry`;
-  `Anomaly = { kind, dedupeKey, title, body }`. PR Shepherd's `IssueFiler` adapter
+  `Anomaly = { kind, dedupeKey, title, body }`. An emitter's `IssueFiler` adapter
   maps `AnomalyKind` (snake_case) → this enum's `category` (kebab-case).
 - **Timing**: step `{ claudeMs, activeMs, scheduleWaitMs, externalWaitMs }`; run
   `{ total*Ms }`; merge `MergeEfficiencyMetrics { runId, repo, prNumber, headSha?,
 wallClockMs, claudeMs, externalWaitMs, reviewCycles, retries, mergedFirstTry }`.
 
-## Resolutions (PR Shepherd, 2026-06-23)
+## Resolutions (2026-06-23)
 
 1. **premature-exit** — collapsed (retired); surfaces via `timeout-then-fast-retry`
    / `high-retry-rate`. ✅
 2. **Coverage** — added `timeout-then-fast-retry`, `fix-review-loop`,
-   `high-retry-rate` (#109) + `ci-budget-exhausted`, `main-broken` (#107). ✅
-3. **Efficiency** — ai-tools derives counts standalone; PR Shepherd optionally
+   `high-retry-rate` (observability) + `ci-budget-exhausted`, `main-broken`
+   (breakers). ✅
+3. **Efficiency** — ai-tools derives counts standalone; an orchestrator optionally
    enriches `durationsMs`. Four bucket names match 1:1. ✅
 4. **Correlation** — `runId`/`stepInstanceId`/`headSha` exact; `engineVersion →
 gitHash`; added optional `skillVersion`; envelope mappings documented. ✅
-5. **Filing** — #109 calls `reportAnomaly` via its `IssueFiler` seam; #168
-   retired. ✅ (Wiring is a PR Shepherd follow-up, gated on publishing
-   `@rmartz/reporting`.)
+5. **Filing** — emitters call `reportAnomaly` via an `IssueFiler` seam; the
+   self-report pattern is retired. ✅

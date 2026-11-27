@@ -10,7 +10,7 @@ tags: [tooling, ci, pre-push, verification]
 
 Layer-1 tooling: the local-verification half of the PR-efficiency loop. It
 imports only `@rmartz/agent-runtime` (for `boundedRun` and `classifyCommand`) and
-the `yaml` parser — nothing about PR Shepherd's gate/verdict labels. Library
+the `yaml` parser — nothing about any consumer's gate/verdict labels. Library
 first; the two CLIs are thin wrappers.
 
 ## Surface

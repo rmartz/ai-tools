@@ -191,12 +191,12 @@ export interface EfficiencyCounts {
  * - **redundantReviews** — `/review` posted twice on the same SHA.
  * - **flakyRetries** — a check that failed then passed at the same SHA.
  * - **mergeAttempts** — a **proxy** only: `(branch-sync commits) + 1`. A true
- *   merge attempt is a *failed squash invocation* (per-PR/head-SHA, tracked by PR
- *   Shepherd's durable marker comments), which leaves no commit in history — so a
+ *   merge attempt is a *failed squash invocation* (per-PR/head-SHA, tracked only by
+ *   whatever drove the merge), which leaves no commit in history — so a
  *   history-only profiler can neither see failed squashes nor distinguish a
  *   branch sync (not an attempt) from one. This count over-counts syncs and
- *   under-counts true attempts; the authoritative value is supplied by PR
- *   Shepherd's enrichment when the PR was daemon-driven. See `reporting-schema.md`.
+ *   under-counts true attempts; the authoritative value, when a caller has
+ *   one, is supplied as enrichment. See `reporting-schema.md`.
  */
 export async function deriveCounts(
   repo: string,
@@ -243,6 +243,6 @@ export async function deriveCounts(
     preventableCiFailures,
     redundantReviews: countRedundantReviews(reviews),
     flakyRetries,
-    mergeAttempts: branchSyncs + 1, // proxy — overridden by PR-Shepherd enrichment
+    mergeAttempts: branchSyncs + 1, // proxy — overridden by caller enrichment
   };
 }

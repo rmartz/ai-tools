@@ -4,7 +4,7 @@
 // discovery layer finds under ~/.claude/projects modified in the last N days —
 // extracts friction events from each, and prints the Markdown report. Library
 // code (`extractFrictionFromText` / `formatFrictionReport` / `discoverTranscripts`)
-// owns all logic; the harness/PR Shepherd import the library directly.
+// owns all logic; the harness and other consumers import the library directly.
 //
 // Usage: ai-extract-friction [--days N] [<transcript.jsonl> ...]
 //

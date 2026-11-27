@@ -6,7 +6,7 @@
 // passes it through to `postPrComment`. The marker is *rendered* with
 // `renderSkillMeta` from @rmartz/agent-runtime — but resolving its fields
 // (PR-head, the dispatcher's skill-file hash, the coordinator transcript/start
-// time) is the dispatcher's job (PR Shepherd), since those are coordinator- and
+// time) is the dispatcher's job, since those are coordinator- and
 // harness-specific. So the CLI takes the rendered string rather than auto-resolving.
 import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { postPrComment } from '../pr-comment.js';

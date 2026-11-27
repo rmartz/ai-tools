@@ -29,8 +29,8 @@ A package may only import from layers at or below its own:
 - **layer-1 — tooling:** `@rmartz/worktree`, `@rmartz/verify`, `@rmartz/bootstrap`
 - **layer-2 — composed:** `@rmartz/pr-review`, `@rmartz/reporting`, `@rmartz/issues`
 
-PR Shepherd is a separate repo that imports these packages. **Nothing in ai-tools
-may import PR Shepherd, and no package may know about PR Shepherd's gate/verdict
+Other repos import these packages as published libraries. **Nothing in ai-tools
+may import a consumer, and no package may know about a consumer's gate/verdict
 labels.** A new package is named for the **concept** it models, never for a
 consumer — the dotfiles `foo-bar.py` → `foo_bar.py` mirror-naming smell is banned
 here too.
@@ -39,7 +39,7 @@ here too.
 
 Every package is a library first. A CLI lives in `src/bin/<name>.ts` as a **thin
 wrapper** that only parses args and prints — all logic stays in the importable
-library so PR Shepherd and the harness share one implementation.
+library so every consumer and the harness share one implementation.
 
 ## File size
 

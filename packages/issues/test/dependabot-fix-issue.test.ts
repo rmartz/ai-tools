@@ -20,7 +20,7 @@ describe('buildDependabotFixIssue', () => {
     });
     expect(title).toContain('Dependabot #42');
     expect(title).toContain('eslint');
-    // The back-link line PR Shepherd / the dotfiles convention parses.
+    // The back-link line the dotfiles convention parses.
     expect(body).toContain(`${FIXES_DEPENDABOT_PREFIX}42`);
     // Bump range is shown in full when both versions are known.
     expect(body).toContain('8.0.0 → 9.0.0');

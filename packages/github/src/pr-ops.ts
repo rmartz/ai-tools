@@ -5,7 +5,7 @@ import { ghCall, issueNumber, type GhCallOptions, type Transport } from './gh-ca
  * are thin, label-free, gate-free GitHub API wrappers — the shared client, same
  * posture as `issue-ops` (REST-first + GraphQL fallback on rate-limit, soft-fail
  * to `null`). The *verdict-recording protocol* and *gated merge orchestration*
- * (mutex, idempotency, pre-merge re-validation) are PR Shepherd's, not here. TS
+ * (mutex, idempotency, pre-merge re-validation) are the caller's, not here. TS
  * port of the `submit_review` / `merge_pull_request` helpers from dotfiles'
  * `gh_issue_ops.py`.
  */
@@ -103,8 +103,8 @@ export type MergeMethod = 'merge' | 'squash' | 'rebase';
 /**
  * Merge a PR using `method` (default `squash`). Returns the merge commit `sha`,
  * `true` when the SHA is absent but the merge succeeded, or `null` on failure /
- * an unparseable PR ref. This is the raw merge call — the gated, serialized merge
- * path belongs to PR Shepherd.
+ * an unparseable PR ref. This is the raw merge call — any gated, serialized merge
+ * path belongs to the caller.
  */
 export async function mergePullRequest(
   repo: string,

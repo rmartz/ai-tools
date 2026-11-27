@@ -22,7 +22,7 @@ Synthesize the reviews on the pull request: $ARGUMENTS
 > `ai-resolve-thread` / `ai-dismiss-thread`; for every title/description rewrite
 > you emit the replacement _text_, never `gh pr edit`. A direct-harness run
 > expresses this record and a thin executor performs the posting/resolving; a
-> coordinator (PR Shepherd) renders and posts it. Never emit a coordinator's
+> coordinator renders and posts it. Never emit a coordinator's
 > marker format, and never apply gate/UAT/verdict labels — those belong to the
 > runner. **UAT is not your call** either: whether a human must test is a separate
 > gate the coordinator owns.
@@ -170,5 +170,4 @@ terminal action:
 JSON file and hand it to the runner with
 `ai-post-json-marker <pr> review-synthesis <file>`. The runner maps the verdict to
 `post-review-verdict.py`, posts `reviewBody`, applies the thread dispositions and
-UAT label, and dispatches `fix-review` with the action list. (Under PR Shepherd the
-engine performs this emission with your credentials scrubbed.)
+UAT label, and dispatches `fix-review` with the action list.

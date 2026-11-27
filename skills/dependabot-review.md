@@ -79,5 +79,4 @@ action), in the **same `review-findings` schema `review` emits** (with
 **Emit it — do not post a verdict.** Write the record to a JSON file and hand it to
 the runner with `ai-post-json-marker <pr> review-findings <file>` (posts a hidden
 marker, changes no labels, posts no review event). Do not reach a verdict, resolve
-threads, or fix the PR. (Under PR Shepherd the engine posts the record with your
-credentials scrubbed; the content is identical.)
+threads, or fix the PR.

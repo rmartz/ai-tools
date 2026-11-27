@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Thin CLI over `createDependabotFixIssue`. Parses args, resolves the repo from
 // the git remote, and prints the resulting issue URL; all authoring/dedup logic
-// stays in the library so PR Shepherd and the harness share one implementation.
+// stays in the library so every consumer and the harness share one implementation.
 import { readFileSync } from 'node:fs';
 import { createDependabotFixIssue } from '../dependabot-fix-issue.js';
 import type { FixCategory } from '../dependabot-fix-issue.js';
