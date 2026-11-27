@@ -16,8 +16,8 @@ checklist](https://github.com/rmartz/ai/blob/main/docs/guidance/repository-check
 the single source of truth, applied by audit + self-manage rather than by bootstrap
 re-asserting golden files (#263). It composes `@rmartz/github` (label CRUD) and
 `@rmartz/agent-runtime` (`boundedRun`, for the bins' git shell-out) and nothing else
-internal. It knows nothing about PR Shepherd's gate/verdict labels — the roster here
-is the cross-cutting + meta set plus the labels its seeded checks apply.
+internal. It excludes the fleet's PR status/gate label roster — the roster here is the
+cross-cutting + meta set plus the labels its seeded checks apply.
 
 ## Surface
 
@@ -42,9 +42,9 @@ is the cross-cutting + meta set plus the labels its seeded checks apply.
   (`CI change approved`, `no UAT needed`, `UAT passed`/`tested`, `do not merge`,
   `blocked`, `escalation needed`, `contained break`, `epic`, `breaking change`,
   `hotfix`) are workflow labels and stay in that roster (`ensure-labels.py`). The
-  dotfiles `workflow` set (PR-Shepherd gate/verdict labels) and per-app `projects`
+  dotfiles `workflow` set (PR status/gate labels) and per-app `projects`
   families are deliberately excluded —
-  this layer must not know PR Shepherd's labels, and project families live with
+  this layer seeds only the status labels its own checks apply, and project families live with
   their projects. Colors are kept verbatim as 6-hex without a leading `#` (REST
   contract). Every label that also appears in `labels.yml` copies its color and
   description verbatim, since both reconcilers run on the same repos and any
@@ -154,7 +154,7 @@ file into that state.
 
 **Relationship to the `/dependabot` flow:** native auto-merge silently clears
 trivial _green_ patch/minor bumps with no agent tokens; the agent-driven
-`/dependabot` + PR Shepherd path still owns _red_ and _major_ bumps. The two
+`/dependabot` path still owns _red_ and _major_ bumps. The two
 complement rather than overlap.
 
 ### Fleet audit (`fleet-audit.ts`)

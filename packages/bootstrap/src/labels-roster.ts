@@ -5,10 +5,10 @@
  *
  * Per the ai-tools migration plan, only the cross-cutting roster carries over
  * here, plus the `discussion` and `tracking` meta labels. The dotfiles
- * `workflow`/`projects` sets — PR-Shepherd gate/verdict labels and per-app
- * domain families — are deliberately NOT included: nothing in ai-tools may know
- * about PR Shepherd's labels, and project-specific families live with their
- * projects.
+ * `workflow`/`projects` sets — the fleet's PR status/gate labels and per-app
+ * domain families — are deliberately NOT included, apart from the few labels
+ * bootstrap's own seeded checks apply (below): the workflow roster stays with
+ * dotfiles, and project-specific families live with their projects.
  *
  * Source of truth: for every label defined both here and in `labels.yml`, the
  * YAML wins — copy its name, color, and description verbatim. Both rosters are
