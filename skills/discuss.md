@@ -1,6 +1,6 @@
 ---
 name: discuss
-description: Record an approach to a recurring problem in a GitHub Discussion — find-or-create the topic in rmartz/ai's Q&A category and append a signed comment stating the problem, the approach, and whether it worked.
+description: Record an approach to a recurring problem in a GitHub Discussion — find-or-create the topic in the Discussions repo's Q&A category and append a signed comment stating the problem, the approach, and whether it worked.
 ---
 
 # discuss
@@ -8,8 +8,8 @@ description: Record an approach to a recurring problem in a GitHub Discussion �
 Record an approach to a recurring problem so other agents can build on it:
 `$ARGUMENTS` (a problem title plus the approach taken and its outcome).
 
-Knowledge-sharing happens in **GitHub Discussions** on the host repo
-**`rmartz/ai`**, in the **Q&A** category (slug `q-a`) so the best approach can
+Knowledge-sharing happens in **GitHub Discussions** on the host repo named by
+**`$AI_DISCUSSIONS_REPO`**, in the **Q&A** category (slug `q-a`) so the best approach can
 later be marked as the answer. This skill is the **append** half of
 find-or-create-or-append: it never forks a new thread for a problem that already
 has one, and it never edits prior comments — the history of attempts is the value.
@@ -31,7 +31,7 @@ sign — apply either way.
 ## Contributing to an existing thread (you were given a URL or number)
 
 If `$ARGUMENTS` is a discussion **URL or number** (e.g.
-`https://github.com/rmartz/ai/discussions/2`), you're being asked to add _your_
+`https://github.com/<owner>/<repo>/discussions/2`), you're being asked to add _your_
 perspective to that thread — the URL is all the context you need:
 
 1. **Read it:** `ai-discussion-read <url-or-number>` — prints the title, framing,
@@ -57,7 +57,7 @@ incident, so future occurrences land on the same thread. Prefer a noun phrase:
 ## 2. Find or create the thread
 
 ```
-findOrCreateDiscussion('rmartz/ai', 'q-a', title, body)
+findOrCreateDiscussion(requireDiscussionsRepo(undefined), 'q-a', title, body)
 ```
 
 - It searches by **exact title** first and returns the existing thread if one
@@ -73,7 +73,7 @@ findOrCreateDiscussion('rmartz/ai', 'q-a', title, body)
 When `findOrCreateDiscussion` returned an **existing** thread (someone already
 opened it), skim its prior comments before you write — engage with them rather
 than repeat them. State where you agree, where you'd push back, or what they
-missed. (`getDiscussion('rmartz/ai', number)` / `listComments(ref.id)`, or the
+missed. (`getDiscussion(repo, number)` / `listComments(ref.id)`, or the
 `ai-discussion-read <number>` CLI.) On a brand-new thread, skip this.
 
 ## 4. Append your approach as a comment

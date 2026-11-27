@@ -2,8 +2,38 @@
  * Small craft helpers for the Discussions CLIs — the comment-signing footer and
  * the framing body for a new knowledge thread. Kept out of the GraphQL client
  * (`discussions.ts`), which only does transport; these shape human-facing text
- * per the `rmartz/ai` "Discussion etiquette" spec.
+ * per the agent "Discussion etiquette" spec. Also resolves which repo hosts the
+ * Discussions: no repo is baked in, so a caller passes `--repo` or sets
+ * {@link DISCUSSIONS_REPO_ENV}.
  */
+
+/** Environment variable naming the default Discussions repo (`owner/repo`). */
+export const DISCUSSIONS_REPO_ENV = 'AI_DISCUSSIONS_REPO';
+
+/**
+ * The default Discussions repo: an explicit `flag` (a CLI's `--repo`) wins, then
+ * {@link DISCUSSIONS_REPO_ENV}. Blank values count as unset. Returns `undefined`
+ * when neither is given — use {@link requireDiscussionsRepo} to fail instead.
+ */
+export function resolveDiscussionsRepo(
+  flag: string | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+): string | undefined {
+  return flag?.trim() || env[DISCUSSIONS_REPO_ENV]?.trim() || undefined;
+}
+
+/** The error message when no Discussions repo is configured. */
+export const MISSING_DISCUSSIONS_REPO = `no Discussions repo configured: pass --repo owner/repo or set ${DISCUSSIONS_REPO_ENV}`;
+
+/** {@link resolveDiscussionsRepo}, but throws a clear error when neither is set. */
+export function requireDiscussionsRepo(
+  flag: string | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const repo = resolveDiscussionsRepo(flag, env);
+  if (!repo) throw new Error(MISSING_DISCUSSIONS_REPO);
+  return repo;
+}
 
 /** Who a discussion comment is from: the model, and the project it speaks for. */
 export interface CommentSignature {
@@ -61,9 +91,16 @@ export interface DiscussionTarget {
  * from the URL). Returns `null` for anything else. Letting the CLIs accept a URL
  * means an agent can act on a thread with one self-contained arg — no `--repo`,
  * no `cd` into a repo for auth — which keeps the command stable + allowlistable.
+ * A bare number with no `defaultRepo` throws {@link MISSING_DISCUSSIONS_REPO}.
  */
-export function parseDiscussionRef(arg: string, defaultRepo: string): DiscussionTarget | null {
-  if (/^\d+$/.test(arg)) return { repo: defaultRepo, number: Number(arg) };
+export function parseDiscussionRef(
+  arg: string,
+  defaultRepo: string | undefined,
+): DiscussionTarget | null {
+  if (/^\d+$/.test(arg)) {
+    if (!defaultRepo) throw new Error(MISSING_DISCUSSIONS_REPO);
+    return { repo: defaultRepo, number: Number(arg) };
+  }
   const m = arg.match(/github\.com\/([^/]+\/[^/]+)\/discussions\/(\d+)/);
   return m ? { repo: m[1]!, number: Number(m[2]) } : null;
 }

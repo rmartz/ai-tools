@@ -46,13 +46,13 @@ describe('findDiscussionByTitle', () => {
         },
       }),
     );
-    const found = await findDiscussionByTitle('rmartz/ai', 'Flaky tests');
+    const found = await findDiscussionByTitle('octo/knowledge', 'Flaky tests');
     expect(found?.id).toBe('D_1');
   });
 
   it('returns null when nothing matches', async () => {
     boundedRun.mockResolvedValueOnce(ok({ search: { nodes: [] } }));
-    expect(await findDiscussionByTitle('rmartz/ai', 'nope')).toBeNull();
+    expect(await findDiscussionByTitle('octo/knowledge', 'nope')).toBeNull();
   });
 });
 
@@ -69,7 +69,7 @@ describe('addComment', () => {
 describe('getRepositoryId', () => {
   it('returns the repo node id', async () => {
     boundedRun.mockResolvedValueOnce(ok({ repository: { id: 'R_1' } }));
-    expect(await getRepositoryId('rmartz/ai')).toBe('R_1');
+    expect(await getRepositoryId('octo/knowledge')).toBe('R_1');
   });
 
   it('throws when the repo is absent', async () => {
@@ -120,14 +120,14 @@ describe('getDiscussion', () => {
         },
       }),
     );
-    const d = await getDiscussion('rmartz/ai', 7);
+    const d = await getDiscussion('octo/knowledge', 7);
     expect(d).toMatchObject({ id: 'D_1', number: 7, title: 'Flaky tests' });
     expect(d?.comments[0]?.authorLogin).toBe('octocat');
   });
 
   it('returns null when the discussion is absent', async () => {
     boundedRun.mockResolvedValueOnce(ok({ repository: { discussion: null } }));
-    expect(await getDiscussion('rmartz/ai', 999)).toBeNull();
+    expect(await getDiscussion('octo/knowledge', 999)).toBeNull();
   });
 });
 
@@ -136,7 +136,7 @@ describe('findOrCreateDiscussion', () => {
     boundedRun.mockResolvedValueOnce(
       ok({ search: { nodes: [{ id: 'D_1', number: 1, url: 'u1', title: 'T' }] } }),
     );
-    const ref = await findOrCreateDiscussion('rmartz/ai', 'q-a', 'T', 'body');
+    const ref = await findOrCreateDiscussion('octo/knowledge', 'q-a', 'T', 'body');
     expect(ref).toEqual({ id: 'D_1', number: 1, url: 'u1' });
     expect(boundedRun).toHaveBeenCalledTimes(1); // find only — no create path
   });
@@ -155,7 +155,7 @@ describe('findOrCreateDiscussion', () => {
       .mockResolvedValueOnce(
         ok({ createDiscussion: { discussion: { id: 'D_9', number: 9, url: 'u9' } } }),
       );
-    const ref = await findOrCreateDiscussion('rmartz/ai', 'q-a', 'New', 'framing');
+    const ref = await findOrCreateDiscussion('octo/knowledge', 'q-a', 'New', 'framing');
     expect(ref).toEqual({ id: 'D_9', number: 9, url: 'u9' });
   });
 
@@ -167,7 +167,7 @@ describe('findOrCreateDiscussion', () => {
         },
       }),
     );
-    await expect(findOrCreateDiscussion('rmartz/ai', 'q-a', 'New', 'framing')).rejects.toThrow(
+    await expect(findOrCreateDiscussion('octo/knowledge', 'q-a', 'New', 'framing')).rejects.toThrow(
       'discussion category not found',
     );
   });

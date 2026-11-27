@@ -76,8 +76,8 @@ export const crossCuttingLabels: readonly LabelSpec[] = [
 
 /**
  * Meta labels for the ai-tools ecosystem: `tracking` ledger issues (carried from
- * dotfiles' workflow set) and `discussion` issues (the `rmartz/ai` Discussions
- * hub) called out by the migration plan.
+ * dotfiles' workflow set) and `discussion` issues (the agent knowledge
+ * Discussions hub) called out by the migration plan.
  */
 export const metaLabels: readonly LabelSpec[] = [
   {

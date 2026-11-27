@@ -4,21 +4,20 @@
 // logic lives in the library — this only parses args, reads the body, and prints.
 import { readFileSync } from 'node:fs';
 import { findOrCreateDiscussion, addComment } from '../discussions.js';
-import { framingBody, signComment } from '../discuss-helpers.js';
+import { framingBody, signComment, requireDiscussionsRepo } from '../discuss-helpers.js';
 import { resolveSignatureContext, type SignatureFlags } from '../discuss-signature.js';
 
-const DEFAULT_REPO = 'rmartz/ai';
 const DEFAULT_CATEGORY = 'q-a';
 
 interface Args extends SignatureFlags {
   title?: string;
   bodyFile?: string;
-  repo: string;
+  repo?: string;
   category: string;
 }
 
 function parse(argv: string[]): Args {
-  const args: Args = { repo: DEFAULT_REPO, category: DEFAULT_CATEGORY };
+  const args: Args = { category: DEFAULT_CATEGORY };
   const positional: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -37,14 +36,15 @@ async function main(): Promise<void> {
   const { title, bodyFile, repo, category, model, project, commit } = parse(process.argv.slice(2));
   if (!title || !bodyFile) {
     console.error(
-      'usage: ai-discuss <title> <body-file> [--repo owner/repo] [--category slug] [--model <model>] [--project owner/repo] [--commit <sha>]',
+      'usage: ai-discuss <title> <body-file> [--repo owner/repo (default: $AI_DISCUSSIONS_REPO)] [--category slug] [--model <model>] [--project owner/repo] [--commit <sha>]',
     );
     process.exit(2);
   }
+  const discussionsRepo = requireDiscussionsRepo(repo);
   const approach = readFileSync(bodyFile, 'utf8');
   // Attribution: working repo + its mainline sha, auto-detected unless given.
   const signature = await resolveSignatureContext({ model, project, commit });
-  const ref = await findOrCreateDiscussion(repo, category, title, framingBody(title));
+  const ref = await findOrCreateDiscussion(discussionsRepo, category, title, framingBody(title));
   const comment = await addComment(ref.id, signComment(approach, signature));
   console.log(`discussion: ${ref.url}\ncomment: ${comment.url}`);
 }

@@ -5,28 +5,29 @@
 // is the *ask* counterpart to ai-discuss (which records an *approach* as a comment).
 import { readFileSync } from 'node:fs';
 import { findOrCreateDiscussion } from '../discussions.js';
+import { requireDiscussionsRepo } from '../discuss-helpers.js';
 
-const DEFAULT_REPO = 'rmartz/ai';
 const DEFAULT_CATEGORY = 'q-a';
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  let repo = DEFAULT_REPO;
+  let repoFlag: string | undefined;
   let category = DEFAULT_CATEGORY;
   const positional: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--repo') repo = argv[++i] ?? repo;
+    if (a === '--repo') repoFlag = argv[++i];
     else if (a === '--category') category = argv[++i] ?? category;
     else if (a !== undefined) positional.push(a);
   }
   const [title, bodyFile] = positional;
   if (!title || !bodyFile) {
     console.error(
-      'usage: ai-start-discussion <title> <question-body-file> [--repo owner/repo] [--category slug]',
+      'usage: ai-start-discussion <title> <question-body-file> [--repo owner/repo (default: $AI_DISCUSSIONS_REPO)] [--category slug]',
     );
     process.exit(2);
   }
+  const repo = requireDiscussionsRepo(repoFlag);
   // find-or-create: if a thread with this exact title already exists, reuse it
   // (its body is left intact) so the same question isn't forked.
   const ref = await findOrCreateDiscussion(repo, category, title, readFileSync(bodyFile, 'utf8'));

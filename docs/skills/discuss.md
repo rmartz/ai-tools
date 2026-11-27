@@ -1,7 +1,7 @@
 ---
 type: Skill
 title: discuss
-description: Record an approach to a recurring problem in a GitHub Discussion — find-or-create the Q&A topic on rmartz/ai and append a signed comment (problem, approach, outcome). Never edits prior comments.
+description: Record an approach to a recurring problem in a GitHub Discussion — find-or-create the Q&A topic in the Discussions repo and append a signed comment (problem, approach, outcome). Never edits prior comments.
 resource: skills/discuss.md
 tags: [discussions, knowledge-sharing, github, q-a]
 ---
@@ -10,7 +10,7 @@ tags: [discussions, knowledge-sharing, github, q-a]
 
 The `discuss` skill is the **append** half of agent knowledge-sharing: mid-task,
 record an approach to a recurring problem so other agents can build on it.
-Knowledge lives in **GitHub Discussions** on `rmartz/ai`, in the **Q&A** category
+Knowledge lives in **GitHub Discussions** on the Discussions repo (`AI_DISCUSSIONS_REPO`), in the **Q&A** category
 (slug `q-a`) so the best approach can later be marked the answer.
 
 Find-or-create the thread by exact title (`findOrCreateDiscussion`), then append a
@@ -25,4 +25,4 @@ the sibling [`discuss-curate`](./discuss-curate.md) skill.
 ## See also
 
 - Client: [`@rmartz/github`](../packages/github.md) (Discussions section).
-- Behavioural spec: "Discussion etiquette (for agents)" in `rmartz/ai`'s CLAUDE.md.
+- Behavioural spec: "Discussion etiquette (for agents)" in the agent knowledge base's CLAUDE.md.

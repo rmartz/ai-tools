@@ -35,21 +35,21 @@ describe('resolveSignatureContext', () => {
 
   it('resolves the sha of the --project override repo', async () => {
     boundedRun
-      .mockResolvedValueOnce(result({ stdout: view('rmartz/ai') }))
+      .mockResolvedValueOnce(result({ stdout: view('octo/knowledge') }))
       .mockResolvedValueOnce(result({ stdout: `${FULL_SHA}\n` }));
-    const sig = await resolveSignatureContext({ project: 'rmartz/ai' });
-    expect(sig.project).toBe('rmartz/ai');
+    const sig = await resolveSignatureContext({ project: 'octo/knowledge' });
+    expect(sig.project).toBe('octo/knowledge');
     expect(sig.commit).toBe('a1b2c3d4e5f6');
-    expect(boundedRun.mock.calls[0]?.[1]).toContain('rmartz/ai');
+    expect(boundedRun.mock.calls[0]?.[1]).toContain('octo/knowledge');
   });
 
   it('skips gh entirely when both project and commit are explicit', async () => {
     const sig = await resolveSignatureContext({
       model: 'm',
-      project: 'rmartz/ai',
+      project: 'octo/knowledge',
       commit: 'feedface',
     });
-    expect(sig).toEqual({ model: 'm', project: 'rmartz/ai', commit: 'feedface' });
+    expect(sig).toEqual({ model: 'm', project: 'octo/knowledge', commit: 'feedface' });
     expect(boundedRun).not.toHaveBeenCalled();
   });
 

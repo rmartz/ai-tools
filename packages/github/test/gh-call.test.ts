@@ -97,12 +97,12 @@ describe('resolveProjectRef', () => {
 
   it('queries the named repo (and its commits) when a repo is given', async () => {
     boundedRun
-      .mockResolvedValueOnce(result({ stdout: view({ nameWithOwner: 'rmartz/ai' }) }))
+      .mockResolvedValueOnce(result({ stdout: view({ nameWithOwner: 'octo/knowledge' }) }))
       .mockResolvedValueOnce(result({ stdout: 'deadbeefcafe\n' }));
-    const ref = await resolveProjectRef('rmartz/ai');
-    expect(ref?.repo).toBe('rmartz/ai');
-    expect(boundedRun.mock.calls[0]?.[1]).toContain('rmartz/ai');
-    expect(boundedRun.mock.calls[1]?.[1]).toContain('repos/rmartz/ai/commits/main');
+    const ref = await resolveProjectRef('octo/knowledge');
+    expect(ref?.repo).toBe('octo/knowledge');
+    expect(boundedRun.mock.calls[0]?.[1]).toContain('octo/knowledge');
+    expect(boundedRun.mock.calls[1]?.[1]).toContain('repos/octo/knowledge/commits/main');
   });
 
   it('soft-fails to null when the repo view fails', async () => {

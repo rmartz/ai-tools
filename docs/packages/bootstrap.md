@@ -11,8 +11,7 @@ tags: [tooling, bootstrap, labels, config, ignore-files]
 One-time (idempotent) **new-repo initializer**, layer-1 — not an ongoing manager.
 It seeds a fresh repo to a checklist-conformant starting state (labels, ignore
 blocks, golden workflow files) and then stops; keeping an _existing_ repo
-conformant is the job of the [repository conformance
-checklist](https://github.com/rmartz/ai/blob/main/docs/guidance/repository-checklist.md),
+conformant is the job of the repository conformance checklist (`~/.claude/knowledge/guidance/repository-checklist.md`),
 the single source of truth, applied by audit + self-manage rather than by bootstrap
 re-asserting golden files (#263). It composes `@rmartz/github` (label CRUD) and
 `@rmartz/agent-runtime` (`boundedRun`, for the bins' git shell-out) and nothing else
