@@ -110,8 +110,11 @@ describe('requireTrackingRepo', () => {
 describe('reportToTracking', () => {
   it('throws the missing-repo error when no ledger repo is configured', async () => {
     vi.stubEnv('AI_TRACKING_REPO', '');
-    await expect(reportToTracking('tracking: Z', 'body')).rejects.toThrow(MISSING_TRACKING_REPO);
-    vi.unstubAllEnvs();
+    try {
+      await expect(reportToTracking('tracking: Z', 'body')).rejects.toThrow(MISSING_TRACKING_REPO);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('appends a comment when an open ledger exists (find-or-append)', async () => {

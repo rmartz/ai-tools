@@ -97,7 +97,7 @@ Envelope mapping (emitter record → this wire format): `repo → sourceRepo`,
 function reportAnomaly(
   occ: AnomalyOccurrence,
   opts?: { repo?: string; cwd?: string }, // repo defaults to $AI_TRACKING_REPO
-): Promise<string | null>; // ledger URL, or null (soft-fail)
+): Promise<string | null>; // ledger URL, or null (soft-fail); throws if no ledger repo is configured
 ```
 
 Maps `category` (+ `subject`) → the stable title, renders the body via the

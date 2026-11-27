@@ -5,7 +5,8 @@ description: Analyze the last 7 days of transcripts, cluster the friction, audit
 
 Analyze the last 7 days of Claude Code transcripts, identify friction patterns,
 cross-reference them against the current directives and skills, audit the
-dotfiles → ai-tools/ai/ai-reports split for drift, and propose concrete
+split of the old dotfiles tooling across ai-tools, the knowledge repo and the
+reports repo for drift, and propose concrete
 improvements — each one routed to the repository that owns its artifact type.
 
 ---
