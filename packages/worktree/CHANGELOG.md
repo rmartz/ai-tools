@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/rmartz/ai-tools/compare/worktree-v0.3.1...worktree-v0.3.2) (2026-11-27)
+
+
+### Bug Fixes
+
+* drop references to the retired PR automation repos ([#438](https://github.com/rmartz/ai-tools/issues/438)) ([43bfe1e](https://github.com/rmartz/ai-tools/commit/43bfe1e560a1b486d5c4a809cb7f47a4d257315f))
+
 ## [0.3.1](https://github.com/rmartz/ai-tools/compare/worktree-v0.3.0...worktree-v0.3.1) (2026-09-15)
 
 
