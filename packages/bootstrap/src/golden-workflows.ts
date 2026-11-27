@@ -171,7 +171,7 @@ jobs:
 // inputs, `engines`, `.nvmrc`, `runs.using: nodeNN`, a hosting runtime), so a lone
 // types major (e.g. 24 → 26) would type-check APIs the runtime lacks. Minors and
 // patches still flow through the groups; the types major moves with the runtime,
-// by hand (rmartz/pr-lifecycle-app#50).
+// by hand.
 export const DEPENDABOT_CONFIG = `version: 2
 updates:
   - package-ecosystem: github-actions

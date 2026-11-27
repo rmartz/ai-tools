@@ -11,17 +11,17 @@ tags: [bootstrap, setup, labels, tooling]
 The `bootstrap` skill readies a repository for the PR workflow by composing
 `@rmartz/bootstrap`'s two idempotent CLIs:
 
-- **`ai-ensure-labels`** — create/reconcile the standard workflow + cross-cutting
-  domain label roster the review/route/merge skills rely on.
+- **`ai-ensure-labels`** — create/reconcile the standard label roster: the
+  cross-cutting domain labels, the meta labels, and the labels the seeded
+  checks apply.
 - **`ai-ensure-project-config`** — apply the golden-state tooling ignores
   (`.prettierignore`, ESLint ignore config, `.gitignore` baselines) **and** the
   golden whole-file workflows (`bot-automerge.yml`, `merge-safety.yml`,
-  `repo-hygiene.yml`, `commit-convention.yml`, `pr-policy.yml`, `pr-lifecycle.yml`,
-  and `dependabot.yml`), each written only if absent, so formatters/linters don't
+  `repo-hygiene.yml`, `commit-convention.yml`, `pr-policy.yml`, and
+  `dependabot.yml`), each written only if absent, so formatters/linters don't
   fight generated files and a new repo starts checklist-conformant. `pr-policy.yml`
   is seeded with `skip-uat: true`; a Next.js/Vercel app repo deletes that line to
-  keep the UAT gate. `pr-lifecycle.yml` is seeded labels-only (no auto-merge
-  arming), and its `workflow_run` list may need the repo's own CI workflow names.
+  keep the UAT gate.
 - **`ai-verify-automerge-gate`** — after the workflow is written, confirm (or
   `--apply`) the branch-protection gate native auto-merge depends on. A non-zero
   exit is a **hard block**: a seeded auto-merge file in a repo with no required

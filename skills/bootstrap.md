@@ -19,9 +19,9 @@ config have drifted. Both steps compose `@rmartz/bootstrap` and are **idempotent
 ## Step 1 — Ensure the label roster
 
 Run `ai-ensure-labels` (`@rmartz/bootstrap`). It creates (and reconciles the color
-and description of) the standard workflow and cross-cutting domain labels the
-review/route/merge skills rely on — the status labels (lowercase) and the
-cross-cutting domain labels (Title Case). It is idempotent: existing labels are
+and description of) the standard roster: the cross-cutting domain labels (Title
+Case), the `tracking` and `discussion` meta labels, and the labels the seeded
+`merge-safety` and `pr-policy` checks apply. It is idempotent: existing labels are
 updated in place, missing ones created, and nothing is deleted.
 
 Project-specific domain labels beyond the standard roster are created ad hoc when
@@ -50,11 +50,6 @@ files, **and** the golden whole-file set:
   required-check gate. Require the `pr-policy` context in the repo's ruleset only
   after the check has posted on a PR: a `pull_request_target` caller first runs on
   the PR after the one that adds it.
-- `.github/workflows/pr-lifecycle.yml` — a consumer of
-  `rmartz/pr-lifecycle-action`, seeded **labels-only**: it never arms auto-merge,
-  merges, or updates a branch (`bot-automerge.yml` keeps arming eligible bot PRs).
-  Its `workflow_run` trigger lists `CI` and `repo-hygiene`; a repo edits that list
-  to name the workflows behind its own required checks.
 - `.github/dependabot.yml` — a starting Dependabot config.
 
 Every file is **write-if-absent**: an existing file of the same name is left

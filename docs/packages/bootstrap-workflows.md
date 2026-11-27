@@ -30,7 +30,7 @@ file**, not a block spliced into user content.
   a new-repo initializer, not an ongoing manager. Every golden workflow is either a
   **self-updating reference** (a SHA-pinned reusable-workflow caller or
   composite-action consumer Dependabot bumps — `bot-automerge.yml`, `merge-safety.yml`,
-  `repo-hygiene.yml`, `pr-policy.yml`, `pr-lifecycle.yml`) or a **starting config**
+  `repo-hygiene.yml`, `pr-policy.yml`) or a **starting config**
   the repo tailors
   (`dependabot.yml`), or
   an **inline-logic** file seeded once and re-propagated by the checklist audit rather
@@ -212,47 +212,9 @@ file**, not a block spliced into user content.
     `pr-title-lint.yml` (renaming a required context is a lockstep change — see
     below).
 
-  - `pr-lifecycle.yml`: a thin consumer of the SHA-pinned
-    `rmartz/pr-lifecycle-action` composite action (`golden-pr-lifecycle.ts`), which
-    runs the `@rmartz/pr-lifecycle` reconciler: on every relevant PR event it
-    recomputes the PR's lifecycle state from its current facts and converges the
-    lifecycle labels. It is seeded **labels-only**: `arm-auto-merge: false` and no
-    real-actor `token`, so it never arms, merges, disarms, or updates a branch,
-    and `gateChecks: []`. `bot-automerge.yml` keeps arming eligible bot PRs. A repo
-    turns arming on later, after retiring `bot-automerge.yml`, following the fleet
-    cutover in [rmartz/pr-lifecycle#75](https://github.com/rmartz/pr-lifecycle/issues/75).
-    Like pr-policy it runs on `pull_request_target` and never checks out PR code.
-    Its `workflow_run` list must name the Actions workflows behind the repo's
-    required checks. Bootstrap seeds `CI` and the golden `repo-hygiene`, and a repo
-    with other required-check workflows edits its copy.
-
-    It runs with the **`rmartz-merge-bot` App token**, not `GITHUB_TOKEN`
-    (rmartz/scripts#22; reference consumer rmartz/personal-budget#553). An
-    `actions/create-github-app-token` step (SHA-pinned, `id: app-token`) mints it
-    from the same `MERGE_BOT_CLIENT_ID` / `MERGE_BOT_PRIVATE_KEY` secrets as
-    `bot-automerge.yml`, scoped to `pull-requests: write`, `contents: read`,
-    `checks: read`, `statuses: read`, and `actions: write`. The action receives it
-    as `github-token`, the token for reads and label writes, not the real-actor
-    `token`, so the run stays labels-only. The workflow sets `permissions: {}`
-    because `GITHUB_TOKEN` is unused. Labels are then attributed to the bot, and
-    API calls draw on the App's own rate-limit pool rather than the user's.
-    App-authored events, unlike `GITHUB_TOKEN` ones, trigger workflows, so the
-    job's `if:` skips `pull_request_target` `labeled` / `unlabeled` /
-    `review_requested` / `review_request_removed` events whose sender is
-    `rmartz-merge-bot[bot]`. The run that wrote them has already converged, and a
-    follow-up would only cancel it. A label from a person or another workflow
-    still re-reconciles. The login is hard-coded, like the secret names, because
-    the fleet shares one App.
-
-    **No new secrets, and no fallback.** Every bootstrapped repo already needs the
-    `MERGE_BOT_*` secrets (Actions **and** Dependabot store) and the App installed
-    for `bot-automerge.yml`, so bootstrap neither provisions nor checks for them.
-    A repo without them fails the token step closed instead of silently falling
-    back to `GITHUB_TOKEN`, the same contract as `bot-automerge.yml`. To run
-    without the App, a repo deletes the token step and `github-token` input from
-    its copy and restores the job-level `permissions` block. The file is
-    write-if-absent, so a re-run never undoes that edit, and already-seeded repos
-    are not migrated by a re-run; each moves deliberately.
+  - **Retired: `pr-lifecycle.yml`.** Bootstrap no longer seeds the retired PR
+    automation's labels-only caller. As with `pr-title-lint.yml`, a repo that still
+    has a copy keeps it until someone deletes it.
 
   **Check-name convention (#299).** The check names these templates produce follow
   one fleet-wide rule, and the casing encodes _who owns the check_: a check supplied
