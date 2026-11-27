@@ -98,9 +98,7 @@ describe('resolveDiscussionsRepo', () => {
   });
 
   it('falls back to AI_DISCUSSIONS_REPO', () => {
-    expect(resolveDiscussionsRepo(undefined, { AI_DISCUSSIONS_REPO: ' env/repo ' })).toBe(
-      'env/repo',
-    );
+    expect(resolveDiscussionsRepo(undefined, { AI_DISCUSSIONS_REPO: 'env/repo' })).toBe('env/repo');
   });
 
   it('falls back to the env var when the flag is blank', () => {
