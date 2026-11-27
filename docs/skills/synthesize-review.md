@@ -24,11 +24,11 @@ _Deciding_ a disposition and _doing_ it are separate: for every thread the skill
 emits `{ disposition, replyText }` (never an `ai-resolve-thread` call), and for
 every title/description rewrite it emits the replacement _text_ (never `gh pr
 edit`). A direct run expresses the record and a thin executor performs the
-posting/resolving; a coordinator (PR Shepherd) renders and posts it. No labels, no
+posting/resolving; a coordinator renders and posts it. No labels, no
 UAT decision, no coordinator marker format.
 
 The verdict maps onto the same outcome enum the coordinator's Skill Outcome
-Protocol consumes (`docs/pr-shepherd-handoff.md`): `approve` / `soft_reject` /
+Protocol consumes: `approve` / `soft_reject` /
 `hard_reject` / `no_op` / `error`.
 
 ## Flow
@@ -57,8 +57,7 @@ Finalized (ai-tools #176). The **findings-record** input (`review-findings`) is 
 with `ai-read-json-marker --match-pr-head <head> <pr> review-findings`; the verdict +
 **action-list** hand-off is emitted as a `review-synthesis` record via
 `ai-post-json-marker <pr> review-synthesis <file>`. Both are hidden PR-comment
-markers keyed by `prHead` — the interim form of PR Shepherd's review-cycle store
-(`docs/pr-shepherd-handoff.md`). The verdict enum and the "express, don't post" seam
+markers keyed by `prHead`, which serve as the review-cycle store. The verdict enum and the "express, don't post" seam
 are stable; the runner maps the verdict onto the Skill-Outcome Protocol and performs
 all posting.
 
@@ -66,4 +65,3 @@ all posting.
 
 - [`review`](review.md) / [`dependabot-review`](dependabot-review.md) — produce the
   findings this skill triages.
-- The delegation contract — `docs/pr-shepherd-handoff.md`.

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Thin CLI wrapper over the library API. This is the *dual interface* in action:
-// PR Shepherd imports `fetchPrSummary`; the harness invokes `ai-pr-summary`.
+// a consumer imports `fetchPrSummary`; the harness invokes `ai-pr-summary`.
 // All logic lives in the library — the bin only parses args and prints.
 import { fetchPrSummary } from '../pr-summary.js';
 import { resolveRepoTarget } from '../gh-call.js';

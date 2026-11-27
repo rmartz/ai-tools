@@ -10,14 +10,14 @@ tags: [composed, reporting, tracking, friction, anomaly, efficiency, transcripts
 
 Layer-2 composed package for **reporting** recurring agent observations. It
 composes the layer-0 `@rmartz/github` issue ops and `@rmartz/agent-runtime`
-transcript reader; nothing here knows about PR Shepherd's gate/verdict labels.
+transcript reader; nothing here knows about any consumer's gate/verdict labels.
 
 It ships four concerns — **tracking**, **friction**, **anomaly**, and
 **efficiency-audit**. The latter two implement the agreed cross-repo contract in
-[`docs/reporting-schema.md`](../reporting-schema.md) (confirmed with PR Shepherd
-2026-06-23): ai-tools owns the category→ledger-title mapping and derives
-efficiency counts standalone, while PR Shepherd emits occurrences / optionally
-enriches `durationsMs` through this package's seams.
+[`docs/reporting-schema.md`](../reporting-schema.md) (agreed 2026-06-23):
+ai-tools owns the category→ledger-title mapping and derives efficiency counts
+standalone, while an orchestrator emits occurrences / optionally enriches
+`durationsMs` through this package's seams.
 
 ## Tracking ledgers (`tracking.ts`)
 
@@ -43,7 +43,7 @@ Ledgers default to the central **`rmartz/ai-reports`** repo
 (`DEFAULT_TRACKING_REPO`), overridable per call via `repo`. A ledger usually
 lives in this central repo while occurrences arrive from many app repos, so the
 header's **Repository** line keeps each occurrence's origin unambiguous. (This
-supersedes the retired "self-report into PR Shepherd's own issues" pattern.)
+supersedes the retired "self-report into the coordinator's own issues" pattern.)
 
 ### Standardized occurrence header
 
@@ -139,7 +139,7 @@ heading. A stderr note is printed when discovery finds zero transcripts.
 
 ## Anomaly reporting (`anomaly.ts`)
 
-The ai-tools-owned bridge from an `AnomalyOccurrence` (emitted by PR Shepherd's
+The ai-tools-owned bridge from an `AnomalyOccurrence` (emitted by an orchestrator's
 `IssueFiler` adapter or by the harness for flaky tests / failed local
 validation) to a tracking ledger in `rmartz/ai-reports`. ai-tools is the
 **single authority** for the category(+subject)→ledger-title mapping, so every
@@ -189,7 +189,7 @@ unknown category or filing failure.
 ## PR efficiency audit (`efficiency-audit.ts` + `efficiency-derive.ts`)
 
 Derives an `EfficiencyEvent` for a PR **standalone** from GitHub history — a
-cross-repo, all-PRs profiler. ai-tools owns the count detectors; PR Shepherd
+cross-repo, all-PRs profiler. ai-tools owns the count detectors; an orchestrator
 never emits the counts (that would double-implement them) but may **optionally
 enrich** the event with `durationsMs` for runs it drove (timing GitHub can't
 reconstruct), which this module merges in verbatim and never computes. Reframes
@@ -213,8 +213,8 @@ through one injectable `GhReader` (default shells out via `boundedRun('gh',
 - **flakyRetries** — a check that failed then passed at the same SHA.
 - **mergeAttempts** — a **proxy**: `(branch-sync commits) + 1`. A true merge
   attempt is a failed squash invocation (which leaves no commit), so the history
-  proxy over-counts syncs and under-counts real attempts. PR Shepherd supplies the
-  authoritative count via the `mergeAttempts` enrichment for daemon-driven PRs (see
+  proxy over-counts syncs and under-counts real attempts. An orchestrator can supply
+  the authoritative count via the `mergeAttempts` enrichment for PRs it drove (see
   [reporting-schema.md](../reporting-schema.md) "Merge attempts").
 
 ### API

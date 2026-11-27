@@ -62,8 +62,8 @@ is why the agent-config `install.sh` re-runs `install:skills` right after it
 links.
 
 During the cutover, orchestration-coupled skills (`review`, `fix-review`,
-`drive-to-merge`) stay in the agent-config repo until **PR Shepherd** is live to
-own their label/verdict/merge mechanics; the self-contained craft skills
+`drive-to-merge`) stayed in the agent-config repo while the retired PR automation
+owned their label/verdict/merge mechanics; the self-contained craft skills
 (`implement`, `weekly-tech-debt`, `weekly-tune-up`, `create-issue`) overlay first.
 
 The importable `installSkills(opts)` holds the logic (hermetically tested over a

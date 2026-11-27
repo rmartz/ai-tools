@@ -3,8 +3,8 @@ import { boundedRun } from '@rmartz/agent-runtime';
 /**
  * GitHub Discussions client — the single place GraphQL/node-ID/category-ID
  * plumbing lives. Discussions have no REST API and no first-class `gh` command,
- * so everything goes through `gh api graphql`. Consumers (PR Shepherd, the
- * harness, knowledge-sharing automation) call this surface and never see a raw
+ * so everything goes through `gh api graphql`. Consumers (the harness,
+ * knowledge-sharing automation) call this surface and never see a raw
  * query. Target repo is `owner/name` (e.g. `rmartz/ai`).
  */
 

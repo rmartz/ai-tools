@@ -26,7 +26,7 @@ import {
  *
  * The pure argv/exec layer lives in `claude-invoke.ts`; the durable
  * cross-session marker layer lives in `resume.ts`. This module composes both.
- * Everything PR-Shepherd-specific is **injected** — the persistence backend
+ * Everything consumer-specific is **injected** — the persistence backend
  * (a `ResumeStore`) and the supersession `confirmationRe` — so this layer-0
  * module knows nothing about gate/verdict labels or PR comments.
  *
@@ -215,7 +215,7 @@ export interface DispatchSkillOptions {
   sessionId: string;
   /** In-memory per-run handoff registry. */
   registry: TranscriptResumeRegistry;
-  /** Durable cross-session marker backend (injected — PR Shepherd supplies its own). */
+  /** Durable cross-session marker backend (injected — a consumer may supply its own). */
   store: ResumeStore;
   /** Supersession regex narrowing the durable streak (a consumer's confirmation marker). */
   confirmationRe?: RegExp;

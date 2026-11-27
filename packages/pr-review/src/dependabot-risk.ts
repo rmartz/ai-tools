@@ -5,7 +5,7 @@
  * risk level with human-readable reasons, so the review skill (or any caller) can
  * decide whether to wave the bump through or flag a concern.
  *
- * It deliberately knows nothing about PR Shepherd's gate/verdict labels, posting,
+ * It deliberately knows nothing about gate/verdict labels, posting,
  * or the outcome marker — it produces a verdict-shaped *assessment*, and the
  * caller maps that onto whatever emission channel it owns. This is review craft,
  * not coordination.

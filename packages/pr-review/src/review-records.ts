@@ -9,7 +9,7 @@ import type { GhCallOptions } from '@rmartz/github';
  * **fix-confirmation** record. Each is carried as a hidden PR-comment marker
  * (`@rmartz/github` `renderJsonMarker`), keyed by `prHead` so a runner ignores
  * records left by an earlier head. This module owns the shapes + kinds; the marker
- * envelope + the deciding-vs-doing seam are stable, per `docs/pr-shepherd-handoff.md`.
+ * envelope + the deciding-vs-doing seam are stable.
  */
 
 /** Marker kinds — the string that identifies each record on the PR. */
@@ -39,7 +39,7 @@ export interface ReviewFindingsRecord {
   findings: ReviewFinding[];
 }
 
-/** The routing verdict enum (maps onto PR Shepherd's Skill-Outcome Protocol outcome). */
+/** The routing verdict enum (a skill-outcome: approve / reject / no-op / error). */
 export type ReviewVerdict = 'approve' | 'soft_reject' | 'hard_reject' | 'no_op' | 'error';
 
 /** What `synthesize-review` decided to do with one existing review thread. */
@@ -101,7 +101,7 @@ export function renderFixConfirmationRecord(record: FixConfirmationRecord): stri
  * **Trust**: no comment-author verification is performed — any PR commenter can post
  * a marker this returns. Callers in a trust-sensitive context (e.g. acting on
  * `actionList` / `threadDispositions` from a synthesis record) must filter comments
- * by expected authors before calling, or rely on PR Shepherd's authenticated store.
+ * by expected authors before calling, or rely on an authenticated store.
  */
 async function readLatest<T extends { prHead: string }>(
   kind: string,

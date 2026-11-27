@@ -18,7 +18,7 @@ improvements — each one routed to the repository that owns its artifact type.
 > friction report, and `ai-create-issue` (`@rmartz/github`) to file a proposal
 > into whichever repo owns it. The remaining **how** — which label to apply, how a
 > filed issue or PR body is formatted, and how the resulting change is merged —
-> belongs to the coordinator (PR Shepherd). Prefer a GitHub MCP tool
+> belongs to the coordinator. Prefer a GitHub MCP tool
 > (`mcp__github__*`) where it is richer; fall back to `gh` only where neither a CLI
 > nor an MCP tool fits. Never name a workflow/gate/verdict label — that vocabulary
 > is the coordinator's.

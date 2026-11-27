@@ -21,7 +21,7 @@ binds each one to the session (fallback: `mcp__github__create_pull_request` plus
 `ai-create-*` wrappers.
 
 It **stops once every actionable issue has a PR opened** — review, fix-review, and
-merge belong to the coordinator (PR Shepherd). The stacking _intent_ (a child PR
+merge belong to the coordinator or session that owns each PR. The stacking _intent_ (a child PR
 based on its dep's branch) is expressed; the runner orders the merges.
 
 ## Flow

@@ -2,7 +2,7 @@
 // Thin CLI over `reportAnomaly` for non-TS emitters. Parses the occurrence
 // fields from flags, files it against the category's ledger, prints the URL.
 // All category→title mapping and find-or-create-or-append logic stays in the
-// library; PR Shepherd and the harness import it directly.
+// library; the harness and other consumers import it directly.
 //
 // Usage: ai-report-anomaly --category <slug> --summary <text> --source-repo <owner/repo>
 //          --timestamp <iso> [--subject <s>] [--detail <text>] [--pr <n>]

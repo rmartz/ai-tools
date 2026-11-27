@@ -1,6 +1,6 @@
 ---
 name: dependabot-fix-issue
-description: Judge whether a red Dependabot PR needs an accompanying code change, classify why, and author a linkable fix issue — not the Dependabot mechanics (PR Shepherd owns those).
+description: Judge whether a red Dependabot PR needs an accompanying code change, classify why, and author a linkable fix issue — not the Dependabot mechanics (out of scope).
 ---
 
 # dependabot-fix-issue
@@ -12,10 +12,10 @@ compatibility shim. This skill is the **judgment + authoring craft** for turning
 such a failure into a clear, deduped fix issue.
 
 It owns only the judgment. The Dependabot **mechanics** — sweeping PRs, spawning
-fix PRs, rebasing/recreating branches, merge arbitration — belong to PR Shepherd
+fix PRs, rebasing/recreating branches, merge arbitration — belong to the calling session
 and are **not** in scope here. This skill is runner-agnostic: it expresses a
-drafted issue (or a "no fix issue warranted" verdict) and does not bake in PR
-Shepherd's outcome marker or its own posting. Direct-harness mode posts via
+drafted issue (or a "no fix issue warranted" verdict) and does not bake in a
+coordinator's outcome marker or its own posting. Direct-harness mode posts via
 `@rmartz/github`.
 
 ## Step 1 — Confirm the failure is fixable by a code change
@@ -56,7 +56,7 @@ Pick the category that best fits; it shapes the issue's guidance:
   `createDependabotFixIssue` does this via `findOpenIssue`); if one is open,
   report it and stop.
 - The body must carry the back-link line `Fixes Dependabot PR #<N>` so the
-  eventual fix PR links to the bump (this is the convention PR Shepherd's
+  eventual fix PR links to the bump (this is the convention the Dependabot
   mechanics parse).
 - State the **manifest scope** explicitly. By **default the fix PR advances the
   offending bumped package itself** (plus any sibling that must move in lockstep)

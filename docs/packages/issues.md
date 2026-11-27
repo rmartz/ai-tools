@@ -10,9 +10,8 @@ tags: [composed, issues, dependabot, github]
 
 Layer-2 (composed) home for **issue craft**: authoring well-formed GitHub issues
 and the Dependabot fix-issue judgment. It composes layer-0 `@rmartz/github`
-(`createIssue`, `findOpenIssue`) and stays out of PR Shepherd's way — it knows
-nothing about gate/verdict labels or the skill-outcome marker (see the
-[handoff](../pr-shepherd-handoff.md)).
+(`createIssue`, `findOpenIssue`) and stays out of coordination — it knows
+nothing about gate/verdict labels or the skill-outcome marker.
 
 The two halves are deliberately split between prose and code:
 

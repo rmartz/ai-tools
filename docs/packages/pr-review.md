@@ -16,7 +16,7 @@ writes) and nothing above it.
 It is **craft, not coordination**: it knows nothing about gate/verdict labels,
 routing, the merge path, or any coordinator's outcome-marker format. The companion
 `review` skill (`skills/review.md`, documented at `docs/skills/review.md`) turns
-these primitives into a verdict; PR Shepherd composes both.
+these primitives into a verdict; the caller composes both.
 
 ## Surface
 
@@ -74,7 +74,7 @@ PR-comment markers (`@rmartz/github`'s `renderJsonMarker`), keyed by `prHead`:
   `actionList` + `uat`), `FixConfirmationRecord` (`fix-review`), plus `ReviewFinding`,
   `ReviewVerdict`, `ThreadDisposition`, `ReviewActionList`, and `REVIEW_RECORD_KINDS`.
 - `renderFindingsRecord` / `renderSynthesisRecord` / `renderFixConfirmationRecord` —
-  produce the marker string (used by the `ai-post-json-marker` bin / PR Shepherd).
+  produce the marker string (used by the `ai-post-json-marker` bin).
 - `readLatestFindings` / `readLatestSynthesis` / `readLatestFixConfirmation`
   `(repo, pr, prHead, opts?)` — fetch the PR's comments and return the latest record
   of that kind for `prHead`, or `null`. The "express, don't post" seam: skills emit
@@ -85,8 +85,7 @@ PR-comment markers (`@rmartz/github`'s `renderJsonMarker`), keyed by `prHead`:
 The `review` skill maps its analysis onto the runner-agnostic outcome enum
 (`approve` / `soft_reject` / `hard_reject` / `no_op` / `error`); the Dependabot
 assessment feeds that (`safe` → `approve`, `review`/`high` → `soft_reject`). The
-library never posts or emits a marker — emission is the runner's. See
-`docs/pr-shepherd-handoff.md`.
+library never posts or emits a marker — emission is the runner's.
 
 ## Testing
 

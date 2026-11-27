@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Thin CLI over `listIssueComments` + `parseLatestJsonMarker`: print the latest record
 // of a given kind carried as a hidden marker on a PR. The review runner (the dotfiles
-// executor today, PR Shepherd later) uses this to read what a craft skill emitted.
+// executor) uses this to read what a craft skill emitted.
 // Prints the record JSON to stdout, or exits 1 with nothing on stdout if none is found.
 //
 // usage: ai-read-json-marker [--repo <owner/repo>] [--match-pr-head <sha>] <pr> <kind>

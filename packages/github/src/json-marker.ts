@@ -34,7 +34,7 @@ export interface ParseJsonMarkerOptions<T> {
  * **Trust**: no comment-author verification is performed — any PR commenter can post
  * a marker this function returns. Callers in a trust-sensitive context must filter
  * the comment list by expected authors before calling, or rely on an authenticated
- * store (e.g. PR Shepherd's engine) to supply the bodies.
+ * store to supply the bodies.
  */
 export function parseLatestJsonMarker<T = Record<string, unknown>>(
   kind: string,

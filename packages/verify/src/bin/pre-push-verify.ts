@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Thin CLI wrapper over the pre-push verify library. All logic lives in the
-// library (so PR Shepherd and the harness share one implementation); the bin
+// library (so every consumer and the harness share one implementation); the bin
 // only parses args, runs the gate, prints, and maps the outcome to an exit code.
 import { detectRepoRoot, verify, selectChecks, anyFailed } from '../index.js';
 import type { CheckResult } from '../index.js';

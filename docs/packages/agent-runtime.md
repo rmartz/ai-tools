@@ -8,9 +8,9 @@ tags: [foundation, runtime, subprocess, dispatch, resume]
 
 # @rmartz/agent-runtime
 
-The provider-agnostic foundation both the toolkit and PR Shepherd build on.
+The provider-agnostic foundation the toolkit and its consumers build on.
 Nothing imports above it; it imports nothing internal. Library-only (no CLIs):
-the harness/PR Shepherd compose these primitives. Everything soft-fails or takes
+the harness and other callers compose these primitives. Everything soft-fails or takes
 injectable boundaries (subprocess, clock, storage) so tests are hermetic.
 
 ## Subprocess (`bounded-subprocess.ts`)
@@ -30,7 +30,7 @@ injectable boundaries (subprocess, clock, storage) so tests are hermetic.
   — pin a `--session-id`, overlay the resume/traceability env, and run the
   resume-on-retry handoff. `TranscriptResumeRegistry` is the in-memory per-run
   registry; `injectSessionId` / `claudeTranscriptPath` / `dispatchEnv` are the
-  composable pieces. All PR-Shepherd-specific inputs (the `ResumeStore`, the
+  composable pieces. All caller-specific inputs (the `ResumeStore`, the
   `confirmationRe`, the session id) are injected.
 
 ## Skill-meta (`skill-meta.ts`)
@@ -46,7 +46,7 @@ injectable boundaries (subprocess, clock, storage) so tests are hermetic.
 - Pure layer: `formatMarker` / `parseMarker` / `selectActivePointer` /
   `countActiveMarkers` over `ResumeEntry[]` — storage-agnostic; a later
   confirmation (matched by an injected `confirmationRe`) supersedes a pointer.
-- I/O layer: the `ResumeStore { read, append }` seam (PR Shepherd plugs in a
+- I/O layer: the `ResumeStore { read, append }` seam (a caller can plug in a
   PR-comment store; default `FsResumeStore` is fs-backed at `RESUME_STORE_PATH`)
   plus `recordResumeMarkerOnTimeout` / `recoverResumePointer`.
 

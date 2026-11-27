@@ -1,7 +1,7 @@
 ---
 type: Skill
 title: dependabot-fix-issue
-description: Judgment for turning a red Dependabot bump that needs a code change into a deduped, linkable fix issue — not the Dependabot mechanics, which are PR Shepherd's.
+description: Judgment for turning a red Dependabot bump that needs a code change into a deduped, linkable fix issue — not the Dependabot mechanics, which are out of scope.
 resource: skills/dependabot-fix-issue.md
 tags: [issues, dependabot, judgment, ci]
 ---
@@ -18,8 +18,8 @@ bump into the fix PR by default — closing the regression window between the fi
 merging and Dependabot's bump — keeping the manifest change minimal).
 
 It owns only the **judgment**. The Dependabot _mechanics_ (sweep, spawn fix PR,
-rebase/recreate, merge arbitration) belong to PR Shepherd and are explicitly out
-of scope — see the [handoff](../pr-shepherd-handoff.md).
+rebase/recreate, merge arbitration) belong to the calling session and are
+explicitly out of scope.
 
 ## Backed by the library
 
@@ -32,8 +32,8 @@ soft-failing to `null`.
 ## Runner-agnostic emission
 
 Like every ai-tools skill, this describes the judgment and expresses a verdict
-(draft an issue, or "no fix issue warranted"); it does **not** bake in PR
-Shepherd's outcome marker or its own posting. Direct-harness mode posts via
+(draft an issue, or "no fix issue warranted"); it does **not** bake in a
+coordinator's outcome marker or its own posting. Direct-harness mode posts via
 `@rmartz/github`.
 
 ## See also

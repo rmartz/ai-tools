@@ -4,7 +4,7 @@ The general-purpose AI toolkit: a pnpm-workspace monorepo of TypeScript packages
 that agents and automation use to work on GitHub repositories. Successor to the
 `claude/scripts/` Python tooling in `rmartz/dotfiles`.
 
-Each package exposes **both** a library API (imported by PR Shepherd and other
+Each package exposes **both** a library API (imported by other repos and
 automation) and, where useful, a CLI `bin` (invoked by the Claude Code harness).
 The logic lives once in the library; the bin is a thin wrapper.
 
@@ -17,8 +17,8 @@ below its own. Enforced by `eslint-plugin-boundaries` (see `eslint.config.mjs`).
 - **layer-1 — tooling:** `@rmartz/worktree`, `@rmartz/verify`, `@rmartz/bootstrap`
 - **layer-2 — composed:** `@rmartz/pr-review`, `@rmartz/reporting`, `@rmartz/issues`
 
-PR Shepherd lives in its own repo and depends on these as published packages;
-nothing here imports it. The dependency arrow is one-way.
+Consumers in other repos depend on these as published packages; nothing here
+imports them. The dependency arrow is one-way.
 
 ## Develop
 
@@ -43,7 +43,7 @@ match the repo owner). The [release workflow](.github/workflows/release.yml)
 publishes changed packages when a `v*` tag is pushed; bump a package's `version`
 to release it.
 
-To **consume** these packages from another repo (e.g. PR Shepherd), add an
+To **consume** these packages from another repo, add an
 `.npmrc` and authenticate with a token that has `read:packages`:
 
 ```ini
@@ -53,5 +53,5 @@ To **consume** these packages from another repo (e.g. PR Shepherd), add an
 
 - **Local dev:** a personal access token with `read:packages`.
 - **CI:** the built-in `GITHUB_TOKEN` works for the _same_ repo's packages; for a
-  _different_ repo (PR Shepherd → ai-tools), either grant the package "Actions
+  _different_ repo, either grant the package "Actions
   access" to that repo (package settings → Manage Actions access) or use a PAT.

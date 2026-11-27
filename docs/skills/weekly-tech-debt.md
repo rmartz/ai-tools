@@ -67,5 +67,4 @@ names, milestone mechanics, or ledger-routing rules.
 
 ## See also
 
-- The delegation contract — `docs/pr-shepherd-handoff.md`.
 - `/review` — the PR-review craft skill, same runner-agnostic shape.

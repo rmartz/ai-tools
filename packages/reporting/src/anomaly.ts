@@ -5,15 +5,15 @@ import {
 } from './tracking.js';
 
 /**
- * Anomaly reporting: the ai-tools-owned bridge from a PR-Shepherd/harness
+ * Anomaly reporting: the ai-tools-owned bridge from an orchestrator's or harness's
  * `AnomalyOccurrence` to a tracking ledger in `rmartz/ai-reports`.
  *
  * ai-tools is the **single authority** for the category(+subject)→ledger-title
- * mapping (see {@link LEDGER_TITLE}), so PR Shepherd's `IssueFiler` adapter and
+ * mapping (see {@link LEDGER_TITLE}), so orchestrator-filed anomalies and
  * harness-observed anomalies (flaky tests, failed local validation) all dedup
  * onto identical ledgers. The wire contract — the category slugs, the stable
  * ledger titles, and the {@link AnomalyOccurrence} field names — is fixed by
- * `docs/reporting-schema.md` (confirmed with PR Shepherd 2026-06-23) and is
+ * `docs/reporting-schema.md` and is
  * spelled verbatim here.
  *
  * {@link reportAnomaly} maps category(+subject)→title, projects the
@@ -22,7 +22,7 @@ import {
  * package's `formatOccurrence`), and calls {@link reportToTracking}
  * (find-or-create-or-append). It soft-fails to `null`, mirroring the underlying
  * ops — and also returns `null` defensively for an unknown category, so a future
- * PR-Shepherd slug can never throw at the seam.
+ * emitter's slug can never throw at the seam.
  */
 
 /**
@@ -83,7 +83,7 @@ export function ledgerTitle(category: AnomalyCategory, subject?: string): string
 
 /**
  * One anomaly occurrence. Wire-contract record from `docs/reporting-schema.md`;
- * PR Shepherd's `IssueFiler` adapter and harness emitters produce this shape.
+ * orchestrator and harness emitters produce this shape.
  * Field names are verbatim from the schema (camelCase TS-native).
  */
 export interface AnomalyOccurrence {
@@ -95,9 +95,9 @@ export interface AnomalyOccurrence {
   summary: string;
   /** Longer body: what was observed, where, expected vs actual. */
   detail?: string;
-  /** `owner/repo` the occurrence is about (PR Shepherd maps from its `repo`). */
+  /** `owner/repo` the occurrence is about (emitters map from their own repo field). */
   sourceRepo: string;
-  /** PR number (PR Shepherd maps from its `prNumber`). */
+  /** PR number the occurrence is about. */
   pr?: number;
   /** Structured specifics (retryCount, badSha, durationMs, …). */
   evidence?: Record<string, string | number>;
@@ -107,13 +107,13 @@ export interface AnomalyOccurrence {
   stepInstanceId?: string;
   /** Head SHA at emit time (correlation). */
   headSha?: string;
-  /** Provenance: commit the PR Shepherd bundle was built from. */
+  /** Provenance: commit the emitting tool was built from. */
   gitHash?: string;
   /** Optional skill-def version. */
   skillVersion?: string;
   /** Dispatched-agent transcript id, when available. */
   transcriptId?: string;
-  /** ISO-8601 UTC; PR Shepherd converts its epoch-ms `createdAt` at emit. */
+  /** ISO-8601 UTC; an emitter with epoch-ms times converts them at emit. */
   timestamp: string;
 }
 

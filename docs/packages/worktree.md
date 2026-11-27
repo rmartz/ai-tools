@@ -11,7 +11,7 @@ tags: [tooling, worktree, issues, permissions, maintenance]
 Layer-1 tooling for the worktree-per-task workflow. It composes `@rmartz/github`
 (layer-0) for issue assignment and PR-state lookups, and `@rmartz/agent-runtime`
 (`boundedRun`) for every git/`gh` subprocess. Library-first: each CLI is a thin
-`bin/` wrapper so PR Shepherd and the harness share one implementation.
+`bin/` wrapper so other consumers and the harness share one implementation.
 
 ## Surface
 

@@ -14,7 +14,7 @@ reject the whole invocation if any token is not.
 ---
 
 > **Tooling**: this skill is the **human-invoked escape hatch** that drives PRs to
-> merge **without** the coordinator (PR Shepherd) — use it when the coordinator
+> merge **without** the coordinator — use it when the coordinator
 > can't drive a PR itself (e.g. a breaking change to the coordinator that must land
 > before the coordinator can be trusted to merge it), when a PR must merge
 > immediately and the coordinator isn't running, or to step through the

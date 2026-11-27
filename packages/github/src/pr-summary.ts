@@ -11,9 +11,9 @@ export interface PrSummary {
 
 /**
  * Fetch a PR's coordination-relevant metadata via `gh`. The reading half of PR
- * mechanics — review *craft*, reusable by any agent or by PR Shepherd. It knows
- * nothing about verdict labels or gate state; that contract lives in PR
- * Shepherd, which composes this with its own recording step.
+ * mechanics — review *craft*, reusable by any agent or orchestrator. It knows
+ * nothing about verdict labels or gate state; that contract belongs to the
+ * caller, which composes this with its own recording step.
  */
 export async function fetchPrSummary(repo: string, prNumber: number): Promise<PrSummary> {
   const fields = 'number,title,state,isDraft,labels,mergeable';

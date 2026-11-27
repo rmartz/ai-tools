@@ -10,7 +10,7 @@ tags: [foundation, github, issues, labels, rate-limit]
 
 The shared GitHub client every higher layer composes. Layer-0: it imports only
 `@rmartz/agent-runtime` (for `boundedRun`) and nothing else internal. It knows
-nothing about PR Shepherd's gate/verdict labels.
+nothing about any consumer's gate/verdict labels.
 
 ## Design: REST-first with GraphQL fallback
 
@@ -93,7 +93,7 @@ in `gh-call.ts`.
   `@rmartz/agent-runtime`; the `ai-pr-comment` CLI exposes it as
   `--skill-meta <marker>`. **Resolving** the marker's fields (PR-head, the
   dispatcher's skill-file hash, the coordinator transcript / start time) is the
-  dispatcher's job (PR Shepherd) — coordinator- and harness-specific — so this
+  dispatcher's job — coordinator- and harness-specific — so this
   layer renders and posts but does not auto-resolve.
 - `resolveThread(threadId)` — resolve a review thread by its `PRRT_` node ID
   (GraphQL; thread resolution has no REST equivalent).
@@ -122,7 +122,7 @@ in `gh-call.ts`.
   `COMMENT` / `REQUEST_CHANGES`). Consumed by `@rmartz/pr-review` (#23).
 - `mergePullRequest(repo, pr, method?)` — the raw merge call, returning the merge
   `sha` (or `true` when absent). The **gated, serialized** merge path (mutex,
-  idempotency, re-validation) is PR Shepherd's; this is only the primitive it
+  idempotency, re-validation) is the caller's; this is only the primitive it
   composes. All three are thin, label-free, gate-free client wrappers.
 
 ### PR refresh (`pr-refresh.ts`, `dependabot-refresh.ts`, `pr-refresh-reads.ts`)
@@ -166,7 +166,7 @@ call re-derives its decision from the PR, so concurrent agents converge.
   `update-branch` cannot resolve conflicts.
 
 This is the single-PR primitive. Deciding _which_ PRs to refresh, and when, is
-orchestration (PR Shepherd's branch-currency, the `/dependabot` skill).
+orchestration (e.g. the `/dependabot` skill).
 
 ### Origin-repo provenance stamp (`origin-stamp.ts`)
 
@@ -332,10 +332,10 @@ meaningless without it).
 
 ## Re-homing
 
-- `ci-status` (#10) and `branch-currency` (#11) — **re-homed to PR Shepherd**, not
-  this repo (decided). `ci_status.py` consumes a PR-Shepherd GraphQL projection and
-  is already implemented natively in pr-shepherd Epic 10; `branch_currency.py` is
-  orchestration (imports routing / merge / tracking), owned by pr-shepherd #104.
+- `ci-status` (#10) and `branch-currency` (#11) — **not ported** to this repo
+  (decided). `ci_status.py` consumed an orchestrator-specific GraphQL projection,
+  and `branch_currency.py` is orchestration (imports routing / merge / tracking);
+  both went to the now-retired PR automation rather than this package.
 
 ## Testing
 

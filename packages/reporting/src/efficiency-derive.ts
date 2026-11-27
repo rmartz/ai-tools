@@ -243,6 +243,6 @@ export async function deriveCounts(
     preventableCiFailures,
     redundantReviews: countRedundantReviews(reviews),
     flakyRetries,
-    mergeAttempts: branchSyncs + 1, // proxy — overridden by PR-Shepherd enrichment
+    mergeAttempts: branchSyncs + 1, // proxy — overridden by caller enrichment
   };
 }

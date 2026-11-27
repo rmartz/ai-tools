@@ -28,7 +28,7 @@ resolves a thread, or decides merge. Each finding is declarative data; _deciding
 a finding and _acting_ on it are separate responsibilities, and this skill owns
 only the deciding. It emits a `review-findings` record via
 `ai-post-json-marker <pr> review-findings <file>` — a hidden PR-comment marker
-`synthesize-review` reads (`ai-tools #176`); a coordinator (PR Shepherd) posts it
+`synthesize-review` reads (`ai-tools #176`); a coordinator posts it
 with credentials scrubbed. No label, no review event.
 
 Each finding carries a `category`, a proposed `severity`
@@ -57,4 +57,3 @@ title/description replacement or an obvious code fix).
 
 - [`synthesize-review`](synthesize-review.md) — consumes these findings.
 - `@rmartz/pr-review` library — `docs/packages/pr-review.md`.
-- The delegation contract — `docs/pr-shepherd-handoff.md`.

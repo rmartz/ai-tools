@@ -21,7 +21,7 @@ import {
  * shaping/reading lives in `resume-marker.ts`; it is re-exported below so
  * `./resume.js` remains the single public surface. The dotfiles version persisted
  * the pointer specifically as a *PR comment* via `gh`; that backend is
- * PR-Shepherd-specific, so here the storage is abstracted behind `ResumeStore`.
+ * consumer-specific, so here the storage is abstracted behind `ResumeStore`.
  */
 
 export * from './resume-marker.js';
@@ -29,7 +29,7 @@ export * from './resume-marker.js';
 /**
  * Durable backend for resume markers. The marker layer is storage-agnostic; this
  * is the seam a consumer plugs its persistence into. The dotfiles version stored
- * markers as PR comments — PR Shepherd supplies such an implementation (`read` →
+ * markers as PR comments — a consumer can supply such an implementation (`read` →
  * `gh pr view` comments, `append` → `gh pr comment`). The default
  * {@link FsResumeStore} persists to a JSON file for the harness and tests.
  *
@@ -51,7 +51,7 @@ function defaultStorePath(): string {
  * Default fs-backed {@link ResumeStore}. Reads/writes a JSON array of entries at
  * an overridable path (`RESUME_STORE_PATH`, default `<tmpdir>/resume-markers.json`),
  * appending atomically via temp-write + `rename` (mirrors `rate-limit.ts`). Suits
- * the harness and tests; PR Shepherd swaps in a PR-comment-backed store.
+ * the harness and tests; a consumer can swap in a PR-comment-backed store.
  */
 export class FsResumeStore implements ResumeStore {
   constructor(private readonly path: string = defaultStorePath()) {}
