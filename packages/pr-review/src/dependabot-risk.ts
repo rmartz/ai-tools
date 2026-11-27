@@ -114,7 +114,7 @@ function normalizeName(name: string): string {
  *
  * A `github_actions` workflow bump is assessed on the same semver risk as any
  * other bump. Whether the merging token can land it is never inferred here —
- * only a merge attempt that actually fails decides that (rmartz/dotfiles#1592).
+ * only a merge attempt that actually fails decides that.
  * - `safe`: lockfile-only refreshes and ordinary minor/patch bumps — exactly the
  *   mechanical updates the dotfiles fast path approves without manual testing.
  */

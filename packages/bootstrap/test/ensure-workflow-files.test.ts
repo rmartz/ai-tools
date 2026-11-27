@@ -159,7 +159,7 @@ describe('goldenWorkflowFiles — the seeded bot-automerge composite-action cons
     expect(botAutomerge?.content).toContain('pr: ${{ github.event.pull_request.number }}');
   });
 
-  // rmartz/scripts#22: the token comes from the rmartz-merge-bot GitHub App, not a
+  // The token comes from the rmartz-merge-bot GitHub App, not a
   // user PAT, so it draws on the App's own rate-limit pool.
   it('mints an rmartz-merge-bot App token from the MERGE_BOT secrets', () => {
     expect(botAutomerge?.content).toMatch(

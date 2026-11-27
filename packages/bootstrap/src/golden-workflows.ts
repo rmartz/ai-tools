@@ -35,7 +35,7 @@
 // also draws on its own rate-limit pool rather than the user's, so a coordinator run
 // that exhausts the user's GraphQL quota cannot fail this job, and merges are not
 // attributed to the user's account — the reason it replaced the former
-// `BOT_AUTOMERGE_TOKEN` user PAT (rmartz/scripts#22, rmartz/ai-tools#377). A
+// `BOT_AUTOMERGE_TOKEN` user PAT (#377). A
 // composite action cannot `secrets: inherit`, so the token is passed as the explicit
 // `token` input. The repo stores both secrets in the Actions **and** the Dependabot
 // store, since a Dependabot-triggered run sees only the latter; with them unset the

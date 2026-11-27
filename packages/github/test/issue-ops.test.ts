@@ -20,7 +20,7 @@ describe('findOpenIssue', () => {
         ]),
       ),
     );
-    const url = await findOpenIssue('rmartz/ai-reports', { titleEquals: 'Flaky tests' });
+    const url = await findOpenIssue('octo/reports', { titleEquals: 'Flaky tests' });
     expect(url).toBe('u-exact');
   });
 

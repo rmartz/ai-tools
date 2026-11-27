@@ -29,7 +29,7 @@ const FLAG_KEYS: Record<string, keyof ParsedFlags> = {
 };
 
 const USAGE =
-  'usage: ai-report-to-tracking <title> <body-file> [--repo <owner/repo>] ' +
+  'usage: ai-report-to-tracking <title> <body-file> [--repo <owner/repo> (default: $AI_TRACKING_REPO)] ' +
   '[--source-repo <owner/repo>] [--skill <name>] [--pr <n>] [--transcript <id>] ' +
   '[--meta <text>] [--delete-body]';
 

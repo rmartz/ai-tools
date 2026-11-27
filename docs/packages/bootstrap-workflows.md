@@ -80,8 +80,8 @@ file**, not a block spliced into user content.
     `GITHUB_TOKEN`: GitHub fires no `push` workflows for a merge whose auto-merge was
     enabled with `GITHUB_TOKEN`, so a merged Dependabot bump or release PR would never
     re-trigger the release/CD workflow (#236 / rmartz/bot-automerge-action#31). The
-    App replaced the former `BOT_AUTOMERGE_TOKEN` user PAT (rmartz/scripts#22,
-    following this repo's own switch in #377): GitHub rate-limits per user across all
+    App replaced the former `BOT_AUTOMERGE_TOKEN` user PAT (following this repo's
+    own switch in #377): GitHub rate-limits per user across all
     of a user's tokens, so the PAT shared a GraphQL pool with the agent coordinator
     and attributed merges to the user's account, while the App has its own pool.
     **Secrets a new repo needs:** both `MERGE_BOT_CLIENT_ID` and

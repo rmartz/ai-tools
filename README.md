@@ -2,7 +2,7 @@
 
 The general-purpose AI toolkit: a pnpm-workspace monorepo of TypeScript packages
 that agents and automation use to work on GitHub repositories. Successor to the
-`claude/scripts/` Python tooling in `rmartz/dotfiles`.
+earlier `claude/scripts/` Python tooling.
 
 Each package exposes **both** a library API (imported by other repos and
 automation) and, where useful, a CLI `bin` (invoked by the Claude Code harness).

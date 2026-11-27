@@ -79,11 +79,11 @@ routed to the repo that owns its artifact type before it goes any further.
 
 | Proposed-change type                                                                 | Destination repo                                                                |
 | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| System config: `settings.json`, hooks, `mcp.json`, shell config, `~/.claude/scripts` | `rmartz/dotfiles`                                                               |
+| System config: `settings.json`, hooks, `mcp.json`, shell config, `~/.claude/scripts` | the system-config repo (behind `~/.claude/settings.json` and the shell profile) |
 | Global CLAUDE.md directives, ai-tracked skills (`commands/`), scheduled-task prompts | the agent knowledge repo (behind `~/.claude/CLAUDE.md`, `~/.claude/knowledge/`) |
 | Skills / packages / CLIs (any skill ai-tools owns or should own)                     | `rmartz/ai-tools` (`skills/*`, `packages/*`)                                    |
 | Base directives & curated guidance                                                   | the agent knowledge repo (guidance docs, Discussions)                           |
-| Reports / ledgers / metrics                                                          | `rmartz/ai-reports`                                                             |
+| Reports / ledgers / metrics                                                          | the reports repo (`AI_TRACKING_REPO`)                                           |
 | Project-specific conventions                                                         | that project's own repo                                                         |
 
 Tag every proposal with its destination as part of diagnosis — no proposal

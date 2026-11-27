@@ -60,8 +60,7 @@ Feed the **diff-derived** bump to `assessDependabotRisk` (with `name`,
   bump. **Never infer merge-ability from token scope, file paths, or labels** —
   do not add a finding that the PR "cannot be merged by an automation lacking the
   `workflows` OAuth scope". Escalating for merge mechanics is `/merge`'s job, and
-  only after a merge attempt actually fails on a permission/scope error
-  (rmartz/dotfiles#1592).
+  only after a merge attempt actually fails on a permission/scope error.
 
 ## Step 4 — Emit the findings
 

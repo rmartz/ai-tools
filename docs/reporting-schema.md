@@ -21,7 +21,8 @@ came from that orchestrator are kept so records stay compatible.
   adapter over `@rmartz/reporting.reportAnomaly`, mapping its own anomaly kind →
   `category`/`subject`.
 - **ai-tools `@rmartz/reporting` files it** — it owns the category→ledger-title
-  mapping and the find-or-create-or-append I/O into **`rmartz/ai-reports`**
+  mapping and the find-or-create-or-append I/O into the central reports repo
+  (**`AI_TRACKING_REPO`**)
   (`tracking` label). Emitters never write reports into their own issues; the
   deprecated `coordinator-self-report` pattern is retired.
 - Harness/agents emit the same record shape for harness-observed anomalies
@@ -95,7 +96,7 @@ Envelope mapping (emitter record → this wire format): `repo → sourceRepo`,
 // @rmartz/reporting (anomaly.ts, #29):
 function reportAnomaly(
   occ: AnomalyOccurrence,
-  opts?: { repo?: string; cwd?: string }, // repo defaults to rmartz/ai-reports
+  opts?: { repo?: string; cwd?: string }, // repo defaults to $AI_TRACKING_REPO
 ): Promise<string | null>; // ledger URL, or null (soft-fail)
 ```
 

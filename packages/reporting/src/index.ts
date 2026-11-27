@@ -1,5 +1,8 @@
 export {
-  DEFAULT_TRACKING_REPO,
+  TRACKING_REPO_ENV,
+  MISSING_TRACKING_REPO,
+  resolveTrackingRepo,
+  requireTrackingRepo,
   TRACKING_LABEL,
   formatOccurrence,
   coordinatorGitSha,
