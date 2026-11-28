@@ -1,9 +1,9 @@
 # ai-tools
 
-The general-purpose AI toolkit (TypeScript pnpm monorepo). Successor to
-`rmartz/dotfiles` `claude/scripts/`. Cross-cutting agent knowledge and the
-`discussion` issues live in the agent knowledge repo; tracking ledgers live in
-`rmartz/ai-reports`.
+The general-purpose AI toolkit (TypeScript pnpm monorepo). Successor to the
+earlier Python `claude/scripts/` tooling. Cross-cutting agent knowledge and the
+`discussion` issues live in the agent knowledge repo (`AI_DISCUSSIONS_REPO`);
+tracking ledgers live in a reports repo (`AI_TRACKING_REPO`).
 
 ## Commands
 

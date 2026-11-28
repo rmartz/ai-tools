@@ -8,11 +8,10 @@ vi.mock('../src/tracking.js', async () => {
 });
 
 const { reportAnomaly, ledgerTitle } = await import('../src/anomaly.js');
-const { DEFAULT_TRACKING_REPO } = await import('../src/tracking.js');
 
 beforeEach(() => {
   reportToTracking.mockReset();
-  reportToTracking.mockResolvedValue('https://github.com/rmartz/ai-reports/issues/1');
+  reportToTracking.mockResolvedValue('https://github.com/octo/reports/issues/1');
 });
 
 const base = {
@@ -49,12 +48,12 @@ describe('ledgerTitle', () => {
 
 describe('reportAnomaly', () => {
   it('maps category+subject to the ledger title and files through reportToTracking', async () => {
-    const url = await reportAnomaly({ ...base, subject: '/review' });
+    const url = await reportAnomaly({ ...base, subject: '/review' }, { repo: 'octo/reports' });
 
-    expect(url).toBe('https://github.com/rmartz/ai-reports/issues/1');
+    expect(url).toBe('https://github.com/octo/reports/issues/1');
     const [title, body, opts] = reportToTracking.mock.calls[0];
     expect(title).toBe('tracking: non-converging fix-review loop (fix-review-loop): /review');
-    expect(opts.repo).toBe(DEFAULT_TRACKING_REPO);
+    expect(opts.repo).toBe('octo/reports');
     expect(opts.sourceRepo).toBe('rmartz/app');
     expect(body).toContain('fix-review did not converge');
   });

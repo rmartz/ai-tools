@@ -14,8 +14,15 @@ vi.mock('@rmartz/github', () => ({
 const boundedRun = vi.fn();
 vi.mock('@rmartz/agent-runtime', () => ({ boundedRun }));
 
-const { formatOccurrence, reportToTracking, coordinatorGitSha, resetCoordinatorShaCache } =
-  await import('../src/tracking.js');
+const {
+  formatOccurrence,
+  reportToTracking,
+  coordinatorGitSha,
+  resetCoordinatorShaCache,
+  resolveTrackingRepo,
+  requireTrackingRepo,
+  MISSING_TRACKING_REPO,
+} = await import('../src/tracking.js');
 
 beforeEach(() => {
   findOpenIssue.mockReset();
@@ -74,19 +81,57 @@ describe('coordinatorGitSha', () => {
   });
 });
 
+describe('resolveTrackingRepo', () => {
+  it('prefers the explicit repo over the env var', () => {
+    expect(resolveTrackingRepo('flag/repo', { AI_TRACKING_REPO: 'env/repo' })).toBe('flag/repo');
+  });
+
+  it('falls back to AI_TRACKING_REPO', () => {
+    expect(resolveTrackingRepo(undefined, { AI_TRACKING_REPO: 'env/repo' })).toBe('env/repo');
+  });
+
+  it('treats a blank env var as unset', () => {
+    expect(resolveTrackingRepo(undefined, { AI_TRACKING_REPO: '  ' })).toBeUndefined();
+  });
+});
+
+describe('requireTrackingRepo', () => {
+  it('returns the configured repo', () => {
+    expect(requireTrackingRepo(undefined, { AI_TRACKING_REPO: 'env/repo' })).toBe('env/repo');
+  });
+
+  it('throws a message naming the flag and env var when neither is set', () => {
+    expect(() => requireTrackingRepo(undefined, {})).toThrow(
+      'no tracking ledger repo configured: pass --repo owner/repo or set AI_TRACKING_REPO',
+    );
+  });
+});
+
 describe('reportToTracking', () => {
+  it('throws the missing-repo error when no ledger repo is configured', async () => {
+    vi.stubEnv('AI_TRACKING_REPO', '');
+    try {
+      await expect(reportToTracking('tracking: Z', 'body')).rejects.toThrow(MISSING_TRACKING_REPO);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('appends a comment when an open ledger exists (find-or-append)', async () => {
     resolveRepoTarget.mockResolvedValue('rmartz/app');
     boundedRun.mockResolvedValue({ stdout: 'sha1\n', stderr: '', code: 0, timedOut: false });
-    findOpenIssue.mockResolvedValue('https://github.com/rmartz/ai-reports/issues/9');
+    findOpenIssue.mockResolvedValue('https://github.com/octo/reports/issues/9');
     addIssueComment.mockResolvedValue('cmt-url');
 
-    const url = await reportToTracking('tracking: X (anomaly)', 'occurrence', { skill: '/merge' });
+    const url = await reportToTracking('tracking: X (anomaly)', 'occurrence', {
+      repo: 'octo/reports',
+      skill: '/merge',
+    });
 
-    expect(url).toBe('https://github.com/rmartz/ai-reports/issues/9');
+    expect(url).toBe('https://github.com/octo/reports/issues/9');
     expect(createIssue).not.toHaveBeenCalled();
     const [repo, query] = findOpenIssue.mock.calls[0];
-    expect(repo).toBe('rmartz/ai-reports');
+    expect(repo).toBe('octo/reports');
     expect(query).toEqual({ titleEquals: 'tracking: X (anomaly)', label: 'tracking' });
     const [, , body] = addIssueComment.mock.calls[0];
     expect(body).toContain('**Repository:** `rmartz/app`');
@@ -99,14 +144,17 @@ describe('reportToTracking', () => {
     resolveRepoTarget.mockResolvedValue('rmartz/app');
     boundedRun.mockResolvedValue({ stdout: 'sha1\n', stderr: '', code: 0, timedOut: false });
     findOpenIssue.mockResolvedValue(null);
-    createIssue.mockResolvedValue('https://github.com/rmartz/ai-reports/issues/10');
+    createIssue.mockResolvedValue('https://github.com/octo/reports/issues/10');
 
-    const url = await reportToTracking('tracking: Y', 'first', { extraLabels: ['DevOps'] });
+    const url = await reportToTracking('tracking: Y', 'first', {
+      repo: 'octo/reports',
+      extraLabels: ['DevOps'],
+    });
 
-    expect(url).toBe('https://github.com/rmartz/ai-reports/issues/10');
+    expect(url).toBe('https://github.com/octo/reports/issues/10');
     expect(addIssueComment).not.toHaveBeenCalled();
     const [repo, opts] = createIssue.mock.calls[0];
-    expect(repo).toBe('rmartz/ai-reports');
+    expect(repo).toBe('octo/reports');
     expect(opts.labels).toEqual(['tracking', 'DevOps']);
     expect(opts.title).toBe('tracking: Y');
   });
@@ -132,7 +180,7 @@ describe('reportToTracking', () => {
     findOpenIssue.mockResolvedValue(null);
     createIssue.mockResolvedValue('u');
 
-    await reportToTracking('t', 'b', { cwd: '/other/checkout' });
+    await reportToTracking('t', 'b', { repo: 'octo/reports', cwd: '/other/checkout' });
 
     expect(resolveRepoTarget).toHaveBeenCalledWith(
       expect.objectContaining({ cwd: '/other/checkout' }),
@@ -144,7 +192,7 @@ describe('reportToTracking', () => {
     findOpenIssue.mockResolvedValue(null);
     createIssue.mockResolvedValue('u');
 
-    await reportToTracking('t', 'b', { sourceRepo: 'rmartz/given' });
+    await reportToTracking('t', 'b', { repo: 'octo/reports', sourceRepo: 'rmartz/given' });
 
     expect(resolveRepoTarget).not.toHaveBeenCalled();
     const [, opts] = createIssue.mock.calls[0];

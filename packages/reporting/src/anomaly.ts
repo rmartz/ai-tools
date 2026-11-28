@@ -1,12 +1,8 @@
-import {
-  reportToTracking,
-  DEFAULT_TRACKING_REPO,
-  type ReportToTrackingOptions,
-} from './tracking.js';
+import { reportToTracking, type ReportToTrackingOptions } from './tracking.js';
 
 /**
  * Anomaly reporting: the ai-tools-owned bridge from an orchestrator's or harness's
- * `AnomalyOccurrence` to a tracking ledger in `rmartz/ai-reports`.
+ * `AnomalyOccurrence` to a tracking ledger in the central reports repo.
  *
  * ai-tools is the **single authority** for the category(+subject)→ledger-title
  * mapping (see {@link LEDGER_TITLE}), so orchestrator-filed anomalies and
@@ -118,7 +114,7 @@ export interface AnomalyOccurrence {
 }
 
 export interface ReportAnomalyOptions {
-  /** Ledger repo. Defaults to {@link DEFAULT_TRACKING_REPO} (`rmartz/ai-reports`). */
+  /** Ledger repo. Defaults to the `AI_TRACKING_REPO` env var. */
   repo?: string;
   /** Working directory used to resolve the coordinator sha when reporting. */
   cwd?: string;
@@ -165,8 +161,8 @@ function renderBody(occ: AnomalyOccurrence): string {
  * bundle's provenance overrides the local git HEAD), and appends-or-creates via
  * {@link reportToTracking}. Returns the ledger URL, or `null` on soft-fail —
  * including the defensive unknown-category path, so an unrecognized slug never
- * throws at this cross-repo seam. The ledger repo defaults to
- * {@link DEFAULT_TRACKING_REPO}.
+ * throws at this cross-repo seam. The ledger repo defaults to the
+ * `AI_TRACKING_REPO` env var; with neither, it throws the missing-repo error.
  */
 export async function reportAnomaly(
   occ: AnomalyOccurrence,
@@ -176,7 +172,7 @@ export async function reportAnomaly(
   if (title === null) return null; // unknown/defensive: never throw at the seam
 
   const trackingOpts: ReportToTrackingOptions = {
-    repo: opts.repo ?? DEFAULT_TRACKING_REPO,
+    repo: opts.repo,
     cwd: opts.cwd,
     sourceRepo: occ.sourceRepo,
     pr: occ.pr,

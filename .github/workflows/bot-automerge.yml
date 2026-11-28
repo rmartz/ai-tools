@@ -13,9 +13,9 @@ name: bot-automerge
 # never re-fire and nothing would publish (rmartz/bot-automerge#8,
 # rmartz/bot-automerge-action#31). App-authored events do trigger workflows, and
 # the App draws on its own rate-limit pool rather than the user's, so a coordinator
-# run that exhausts the user's GraphQL quota cannot fail this job
-# (rmartz/scripts#22). A composite action cannot `secrets: inherit`, so the token
-# is passed as the explicit `token` input.
+# run that exhausts the user's GraphQL quota cannot fail this job. A composite
+# action cannot `secrets: inherit`, so the token is passed as the explicit `token`
+# input.
 #
 # The reusable workflow's per-PR `concurrency` group is deliberately absent. GitHub
 # permits only one PENDING run per group and cancels any it supersedes, so a burst

@@ -5,7 +5,8 @@ description: Analyze the last 7 days of transcripts, cluster the friction, audit
 
 Analyze the last 7 days of Claude Code transcripts, identify friction patterns,
 cross-reference them against the current directives and skills, audit the
-dotfiles → ai-tools/ai/ai-reports split for drift, and propose concrete
+split of the old dotfiles tooling across ai-tools, the knowledge repo and the
+reports repo for drift, and propose concrete
 improvements — each one routed to the repository that owns its artifact type.
 
 ---
@@ -79,11 +80,11 @@ routed to the repo that owns its artifact type before it goes any further.
 
 | Proposed-change type                                                                 | Destination repo                                                                |
 | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| System config: `settings.json`, hooks, `mcp.json`, shell config, `~/.claude/scripts` | `rmartz/dotfiles`                                                               |
+| System config: `settings.json`, hooks, `mcp.json`, shell config, `~/.claude/scripts` | the system-config repo (behind `~/.claude/settings.json` and the shell profile) |
 | Global CLAUDE.md directives, ai-tracked skills (`commands/`), scheduled-task prompts | the agent knowledge repo (behind `~/.claude/CLAUDE.md`, `~/.claude/knowledge/`) |
 | Skills / packages / CLIs (any skill ai-tools owns or should own)                     | `rmartz/ai-tools` (`skills/*`, `packages/*`)                                    |
 | Base directives & curated guidance                                                   | the agent knowledge repo (guidance docs, Discussions)                           |
-| Reports / ledgers / metrics                                                          | `rmartz/ai-reports`                                                             |
+| Reports / ledgers / metrics                                                          | the reports repo (`AI_TRACKING_REPO`)                                           |
 | Project-specific conventions                                                         | that project's own repo                                                         |
 
 Tag every proposal with its destination as part of diagnosis — no proposal

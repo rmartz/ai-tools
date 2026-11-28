@@ -23,13 +23,36 @@ import { boundedRun } from '@rmartz/agent-runtime';
  *   the coordinator git sha, the dispatching skill, the PR, the agent transcript
  *   id, and any skill comment metadata — each field only when available.
  *
- * Ledgers default to the central **`rmartz/ai-reports`** repo (overridable via
- * `repo`). TS port of dotfiles' `tracking_issues.py` + `report-to-tracking.py`,
+ * Ledgers live in a central reports repo: `repo` when given, else the
+ * {@link TRACKING_REPO_ENV} env var. No repo is built in, so reporting with
+ * neither throws {@link MISSING_TRACKING_REPO} (a configuration error, not a
+ * soft-failed GitHub call). TS port of dotfiles' `tracking_issues.py` + `report-to-tracking.py`,
  * composed over the layer-0 `@rmartz/github` issue ops.
  */
 
-/** Default ledger repo. Tracking issues live in a central reports repo. */
-export const DEFAULT_TRACKING_REPO = 'rmartz/ai-reports';
+/** Environment variable naming the ledger repo (`owner/repo`). */
+export const TRACKING_REPO_ENV = 'AI_TRACKING_REPO';
+
+/** The error message when no ledger repo is configured. */
+export const MISSING_TRACKING_REPO = `no tracking ledger repo configured: pass --repo owner/repo or set ${TRACKING_REPO_ENV}`;
+
+/**
+ * The ledger repo: an explicit `repo` wins, then {@link TRACKING_REPO_ENV}. Blank
+ * values count as unset. Returns `undefined` when neither is given.
+ */
+export function resolveTrackingRepo(
+  repo?: string,
+  env: NodeJS.ProcessEnv = process.env,
+): string | undefined {
+  return repo?.trim() || env[TRACKING_REPO_ENV]?.trim() || undefined;
+}
+
+/** {@link resolveTrackingRepo}, but throws {@link MISSING_TRACKING_REPO} when unset. */
+export function requireTrackingRepo(repo?: string, env: NodeJS.ProcessEnv = process.env): string {
+  const resolved = resolveTrackingRepo(repo, env);
+  if (!resolved) throw new Error(MISSING_TRACKING_REPO);
+  return resolved;
+}
 
 /** The label every tracking ledger carries (external GitHub contract string). */
 export const TRACKING_LABEL = 'tracking';
@@ -100,7 +123,7 @@ export function resetCoordinatorShaCache(): void {
 }
 
 export interface ReportToTrackingOptions extends OccurrenceMeta {
-  /** Ledger repo where the tracking issue lives. Defaults to {@link DEFAULT_TRACKING_REPO}. */
+  /** Ledger repo where the tracking issue lives. Defaults to {@link TRACKING_REPO_ENV}. */
   repo?: string;
   /** The `tracking`-style label gating the ledger lookup/create. Defaults to {@link TRACKING_LABEL}. */
   label?: string;
@@ -120,7 +143,8 @@ export interface ReportToTrackingOptions extends OccurrenceMeta {
  * ledger with that body and label. `sourceRepo` defaults to the repo resolved
  * from `cwd`, and `coordinatorSha` to {@link coordinatorGitSha}, when omitted.
  *
- * Returns the ledger issue URL, or `null` on failure (soft-fail, mirroring the
+ * Throws {@link MISSING_TRACKING_REPO} when no ledger repo is configured.
+ * Otherwise returns the ledger issue URL, or `null` on failure (soft-fail, mirroring the
  * underlying `@rmartz/github` ops).
  */
 export async function reportToTracking(
@@ -128,7 +152,7 @@ export async function reportToTracking(
   body: string,
   opts: ReportToTrackingOptions = {},
 ): Promise<string | null> {
-  const repo = opts.repo ?? DEFAULT_TRACKING_REPO;
+  const repo = requireTrackingRepo(opts.repo);
   const label = opts.label ?? TRACKING_LABEL;
   const call = opts.call ?? {};
 

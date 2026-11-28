@@ -8,7 +8,7 @@ import { boundedRun } from './bounded-subprocess.js';
  * The prompt (`skill`) is always emitted **after** a `--` terminator so a
  * variadic option above it (notably `--allowedTools`, which commander.js keeps
  * consuming positionals for until the next dashed flag) cannot swallow it.
- * Regression for rmartz/dotfiles#140.
+ * Regression guard for a bug in the earlier Python tooling.
  *
  * Fields are split: `skill`, `printMode`, `allowedTools`, `binary`,
  * `extraArgs` shape the argv (pure); `cwd` only affects the subprocess.

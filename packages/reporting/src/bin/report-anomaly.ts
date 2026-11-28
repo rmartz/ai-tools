@@ -16,7 +16,7 @@ const USAGE =
   '--source-repo <owner/repo> --timestamp <iso> [--subject <s>] [--detail <text>] ' +
   '[--pr <n>] [--git-hash <sha>] [--head-sha <sha>] [--run-id <id>] ' +
   '[--step-instance-id <id>] [--skill-version <v>] [--transcript <id>] ' +
-  '[--repo <ledger owner/repo>]';
+  '[--repo <ledger owner/repo> (default: $AI_TRACKING_REPO)]';
 
 function parseFlags(argv: string[]): Record<string, string> {
   const flags: Record<string, string> = {};

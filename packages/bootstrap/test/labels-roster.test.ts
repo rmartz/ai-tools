@@ -3,7 +3,7 @@ import { defaultRoster } from '../src/labels-roster.js';
 
 /**
  * Verbatim copies of the labels bootstrap shares with the fleet workflow roster,
- * rmartz/dotfiles `claude/scripts/labels.yml` (seeded by `ensure-labels.py`).
+ * the fleet's `labels.yml` (seeded by `ensure-labels.py`).
  * That file is the source of truth: both tools reconcile these labels on the
  * same repos, so any drift makes each run revert the other's color/description.
  * When labels.yml changes one of these, update this table and the roster

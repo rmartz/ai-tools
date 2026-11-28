@@ -41,13 +41,13 @@ expressed as `{ change, destination-repo, gap-type, evidence }`.
 
 The split-aware destinations the skill routes to:
 
-| Destination repo         | Owns                                                      |
-| ------------------------ | --------------------------------------------------------- |
-| `rmartz/dotfiles`        | System config, shell config, global CLAUDE.md directives. |
-| `rmartz/ai-tools`        | Skills, packages, CLIs.                                   |
-| the agent knowledge repo | Base directives and curated guidance.                     |
-| `rmartz/ai-reports`      | Reports, ledgers, metrics.                                |
-| the project's repo       | Project-specific conventions.                             |
+| Destination repo                      | Owns                                                      |
+| ------------------------------------- | --------------------------------------------------------- |
+| the system-config repo                | System config, shell config, global CLAUDE.md directives. |
+| `rmartz/ai-tools`                     | Skills, packages, CLIs.                                   |
+| the agent knowledge repo              | Base directives and curated guidance.                     |
+| the reports repo (`AI_TRACKING_REPO`) | Reports, ledgers, metrics.                                |
+| the project's repo                    | Project-specific conventions.                             |
 
 ## Flow
 

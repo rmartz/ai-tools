@@ -39,8 +39,11 @@ matching the underlying `@rmartz/github` posture.
 
 ### Target repo
 
-Ledgers default to the central **`rmartz/ai-reports`** repo
-(`DEFAULT_TRACKING_REPO`), overridable per call via `repo`. A ledger usually
+Ledgers live in a central reports repo: `repo` per call, else the
+**`AI_TRACKING_REPO`** env var (`TRACKING_REPO_ENV`). No repo is built in:
+`reportToTracking` and `reportAnomaly` throw `MISSING_TRACKING_REPO` when
+neither is set (`resolveTrackingRepo` / `requireTrackingRepo` expose the
+lookup). A ledger usually
 lives in this central repo while occurrences arrive from many app repos, so the
 header's **Repository** line keeps each occurrence's origin unambiguous. (This
 supersedes the retired "self-report into the coordinator's own issues" pattern.)
@@ -68,7 +71,8 @@ no metadata exists:
 - `formatOccurrence(body, meta?) => string`
 - `coordinatorGitSha(cwd?) => Promise<string | null>` — short HEAD sha, cached
   for the process lifetime; best-effort.
-- `DEFAULT_TRACKING_REPO`, `TRACKING_LABEL` constants.
+- `TRACKING_REPO_ENV`, `MISSING_TRACKING_REPO`, `TRACKING_LABEL` constants;
+  `resolveTrackingRepo(repo?, env?)` and `requireTrackingRepo(repo?, env?)`.
 
 ### CLI — `ai-report-to-tracking`
 
@@ -78,7 +82,7 @@ ai-report-to-tracking <title> <body-file> [--repo <owner/repo>] \
   [--transcript <id>] [--meta <text>] [--delete-body]
 ```
 
-`--repo` is the **ledger** repo (defaults to `rmartz/ai-reports`); `--source-repo`
+`--repo` is the **ledger** repo (defaults to `$AI_TRACKING_REPO`); `--source-repo`
 is the repo the occurrence is about. `--delete-body` removes the body file, but
 only after a successful post. Prints the ledger URL on success.
 
@@ -141,7 +145,7 @@ heading. A stderr note is printed when discovery finds zero transcripts.
 
 The ai-tools-owned bridge from an `AnomalyOccurrence` (emitted by an orchestrator's
 `IssueFiler` adapter or by the harness for flaky tests / failed local
-validation) to a tracking ledger in `rmartz/ai-reports`. ai-tools is the
+validation) to a tracking ledger in the central reports repo. ai-tools is the
 **single authority** for the category(+subject)→ledger-title mapping, so every
 emitter dedups onto identical ledgers. The wire contract — the `AnomalyCategory`
 slugs, the stable titles, and the `AnomalyOccurrence` field names — is fixed by
@@ -162,14 +166,15 @@ rather than throwing at the seam.
    occurrence header (`sourceRepo`, `gitHash` → coordinator sha, `pr`,
    `transcriptId`), with the remaining specifics (run id, step instance, head
    SHA, skill version, and structured `evidence`) rendered into the body.
-3. Calls `reportToTracking` (find-or-create-or-append) into `rmartz/ai-reports`
-   by default.
+3. Calls `reportToTracking` (find-or-create-or-append) into the ledger repo
+   (`opts.repo`, else `AI_TRACKING_REPO`).
 
 ### API
 
 - `reportAnomaly(occ, opts?) => Promise<string | null>` — ledger URL, or `null`
-  on soft-fail (including the defensive unknown-category path). `opts`: `repo`
-  (ledger repo, defaults to `rmartz/ai-reports`), `cwd`.
+  on soft-fail (including the defensive unknown-category path); throws when no
+  ledger repo is configured. `opts`: `repo` (ledger repo, defaults to
+  `AI_TRACKING_REPO`), `cwd`.
 - `ledgerTitle(category, subject?) => string | null` — the stable title, or
   `null` for an unknown category.
 - `AnomalyCategory`, `AnomalyOccurrence`, `ReportAnomalyOptions` types.
