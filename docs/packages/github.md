@@ -125,8 +125,9 @@ in `gh-call.ts`.
   idempotency, re-validation) is the caller's; this is only the primitive it
   composes.
 - `closePullRequest(repo, pr)` — close a PR unmerged, returning `true` or `null`;
-  any explanatory comment is the caller's to post first. All four are thin,
-  label-free, gate-free client wrappers.
+  any explanatory comment is the caller's to post.
+
+All four are thin, label-free, gate-free client wrappers.
 
 ### PR refresh (`pr-refresh.ts`, `dependabot-refresh.ts`, `pr-refresh-reads.ts`)
 

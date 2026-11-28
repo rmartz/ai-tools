@@ -138,7 +138,7 @@ export async function mergePullRequest(
 
 /**
  * Close a PR without merging. Returns `true` on success, `null` on failure or an
- * unparseable PR ref. Any explanatory comment is the caller's to post first.
+ * unparseable PR ref. Any explanatory comment is the caller's to post.
  */
 export async function closePullRequest(
   repo: string,

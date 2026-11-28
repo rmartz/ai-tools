@@ -160,15 +160,20 @@ describe('refreshPr: untracked Dependabot PR', () => {
     expect(postedBodies()).toEqual([UNTRACKED_CLOSE_COMMENT]);
   });
 
-  it('fails without commenting when the close fails', async () => {
+  it('reports failed when the close fails', async () => {
+    failMethod('PATCH');
+    expect((await refreshPr('o/r', 7, noWait)).outcome).toBe('failed');
+  });
+
+  it('does not comment when the close fails', async () => {
     failMethod('PATCH');
     await refreshPr('o/r', 7, noWait);
     expect(postedBodies()).toEqual([]);
   });
 
-  it('still reports closed-untracked when only the comment fails', async () => {
+  it('notes a missing comment when only the comment fails', async () => {
     failMethod('POST');
-    expect((await refreshPr('o/r', 7, noWait)).outcome).toBe('closed-untracked');
+    expect((await refreshPr('o/r', 7, noWait)).reason).toContain('closing comment not posted');
   });
 });
 
