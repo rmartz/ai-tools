@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/rmartz/ai-tools/compare/github-v0.9.1...github-v0.10.0) (2026-11-28)
+
+
+### Features
+
+* **github:** close Dependabot PRs that Dependabot no longer tracks ([#445](https://github.com/rmartz/ai-tools/issues/445)) ([e815553](https://github.com/rmartz/ai-tools/commit/e8155534b937394d6b16565304a89e1df4854078))
+
 ## [0.9.1](https://github.com/rmartz/ai-tools/compare/github-v0.9.0...github-v0.9.1) (2026-11-27)
 
 
