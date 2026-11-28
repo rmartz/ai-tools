@@ -95,12 +95,12 @@ comparison so `0.10.0 > 0.9.0`),
 `resolveLatestVersions(names, listVersions)` (pair each package name with its
 highest published version via an injectable `listVersions` callback),
 `buildInstallArgs(pairs)` (the `npm install -g <name@version> …` argv from
-resolved `[name, version]` pairs), `buildViewArgs(name)` (the `npm view` argv for
-the version lookup), both carrying `SCOPE_REGISTRY_FLAG`, and
-`withPackagesToken(env, ghToken)` (inject
-the token for non-interactive callers, never overwriting an already-set one).
-`main()` runs the install from a neutral cwd (`$HOME`) so it reads the user-level
-`~/.npmrc` (for auth) and exits non-zero if any package's version cannot be resolved.
+resolved `[name, version]` pairs), `buildViewArgs(name)` (the `npm view` argv
+for the version lookup), both carrying `SCOPE_REGISTRY_FLAG`, and
+`withPackagesToken(env, ghToken)` (inject the token for non-interactive
+callers, never overwriting an already-set one). `main()` runs the install from
+a neutral cwd (`$HOME`) so it reads the user-level `~/.npmrc` (for auth) and
+exits non-zero if any package's version cannot be resolved.
 
 `npm-global.ts` holds the two guards that keep the install honest —
 `withoutInheritedPrefix(env)` and `findVersionMismatches(pairs, readVersion)` —

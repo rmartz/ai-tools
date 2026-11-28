@@ -20,9 +20,10 @@
  * Only the *names* of the bin-bearing packages are read from the workspace (stable
  * metadata); the code always comes from the registry. The `@rmartz` scope is
  * routed to GitHub Packages on the command line (`SCOPE_REGISTRY_FLAG`), not by
- * any npmrc. Requires GitHub Packages auth: `~/.npmrc` sources the token from `${GITHUB_PACKAGES_TOKEN}`; that
- * env var is only exported in interactive shells, so — for non-interactive callers
- * (the SessionStart hook, agent shells) — we self-source it from `gh auth token`.
+ * any npmrc. Requires GitHub Packages auth: `~/.npmrc` sources the token from
+ * `${GITHUB_PACKAGES_TOKEN}`; that env var is only exported in interactive
+ * shells, so — for non-interactive callers (the SessionStart hook, agent
+ * shells) — we self-source it from `gh auth token`.
  *
  * Because this script is itself run through `pnpm run`, the npm child's env is
  * sanitised (`withoutInheritedPrefix`) and the install is **verified** against
@@ -101,9 +102,9 @@ export function resolveLatestVersions(
 /**
  * Route the `@rmartz` scope to GitHub Packages on every npm call. The scope's
  * registry must not come from an npmrc: the project `.npmrc` only applies inside
- * this checkout, and `~/.npmrc` routes `@rmartz` to npmjs (where other `@rmartz`
- * packages live). Passing it explicitly makes the version lookup and the
- * install, which run from different directories, hit the same registry.
+ * this checkout, and a user-level `~/.npmrc` may route `@rmartz` elsewhere (e.g.
+ * npmjs). Passing it explicitly makes the version lookup and the install, which
+ * run from different directories, hit the same registry.
  */
 export const SCOPE_REGISTRY_FLAG = '--@rmartz:registry=https://npm.pkg.github.com';
 

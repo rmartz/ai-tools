@@ -94,14 +94,15 @@ describe('buildInstallArgs', () => {
 });
 
 describe('buildViewArgs', () => {
-  it('routes the version lookup to the same registry as the install', () => {
-    expect(buildViewArgs('@rmartz/github')).toContain(SCOPE_REGISTRY_FLAG);
-  });
-});
-
-describe('SCOPE_REGISTRY_FLAG', () => {
-  it('routes the @rmartz scope to GitHub Packages', () => {
-    expect(SCOPE_REGISTRY_FLAG).toBe('--@rmartz:registry=https://npm.pkg.github.com');
+  it('builds a JSON, online `npm view` argv on the same registry as the install', () => {
+    expect(buildViewArgs('@rmartz/github')).toEqual([
+      'view',
+      '@rmartz/github',
+      'versions',
+      '--json',
+      '--prefer-online',
+      '--@rmartz:registry=https://npm.pkg.github.com',
+    ]);
   });
 });
 
