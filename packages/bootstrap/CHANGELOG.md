@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.6](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.5...bootstrap-v0.22.6) (2026-11-27)
+
+
+### Bug Fixes
+
+* **bootstrap:** stop seeding the retired pr-lifecycle golden workflow ([#437](https://github.com/rmartz/ai-tools/issues/437)) ([0c932b4](https://github.com/rmartz/ai-tools/commit/0c932b405b5ea8dca43dab0af69b90d25753b1b4))
+
 ## [0.22.5](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.4...bootstrap-v0.22.5) (2026-11-13)
 
 

@@ -18,10 +18,12 @@
  * whereas `npm i -g` is invariant to that and reads the same `~/.npmrc` auth.
  *
  * Only the *names* of the bin-bearing packages are read from the workspace (stable
- * metadata); the code always comes from the registry. Requires `@rmartz` GitHub
- * Packages auth. `~/.npmrc` sources the token from `${GITHUB_PACKAGES_TOKEN}`; that
- * env var is only exported in interactive shells, so — for non-interactive callers
- * (the SessionStart hook, agent shells) — we self-source it from `gh auth token`.
+ * metadata); the code always comes from the registry. The `@rmartz` scope is
+ * routed to GitHub Packages on the command line (`SCOPE_REGISTRY_FLAG`), not by
+ * any npmrc. Requires GitHub Packages auth: `~/.npmrc` sources the token from
+ * `${GITHUB_PACKAGES_TOKEN}`; that env var is only exported in interactive
+ * shells, so — for non-interactive callers (the SessionStart hook, agent
+ * shells) — we self-source it from `gh auth token`.
  *
  * Because this script is itself run through `pnpm run`, the npm child's env is
  * sanitised (`withoutInheritedPrefix`) and the install is **verified** against
@@ -97,9 +99,28 @@ export function resolveLatestVersions(
   return pairs;
 }
 
+/**
+ * Route the `@rmartz` scope to GitHub Packages on every npm call. The scope's
+ * registry must not come from an npmrc: the project `.npmrc` only applies inside
+ * this checkout, and a user-level `~/.npmrc` may route `@rmartz` elsewhere (e.g.
+ * npmjs). Passing it explicitly makes the version lookup and the install, which
+ * run from different directories, hit the same registry.
+ */
+export const SCOPE_REGISTRY_FLAG = '--@rmartz:registry=https://npm.pkg.github.com';
+
 /** The `npm install -g <pkg@version> …` argv for the resolved packages. */
 export function buildInstallArgs(pairs: Array<[string, string]>): string[] {
-  return ['install', '-g', ...pairs.map(([name, version]) => `${name}@${version}`)];
+  return [
+    'install',
+    '-g',
+    SCOPE_REGISTRY_FLAG,
+    ...pairs.map(([name, version]) => `${name}@${version}`),
+  ];
+}
+
+/** The `npm view <pkg> versions` argv, reading the full (current) packument. */
+export function buildViewArgs(name: string): string[] {
+  return ['view', name, 'versions', '--json', '--prefer-online', SCOPE_REGISTRY_FLAG];
 }
 
 /**
@@ -127,10 +148,7 @@ function ghAuthToken(): string | undefined {
 /** A package's full published version list from the registry (empty on error). */
 function npmViewVersions(name: string, env: NodeJS.ProcessEnv): string[] {
   try {
-    const out = execFileSync('npm', ['view', name, 'versions', '--json', '--prefer-online'], {
-      encoding: 'utf8',
-      env,
-    });
+    const out = execFileSync('npm', buildViewArgs(name), { encoding: 'utf8', env });
     const parsed: unknown = JSON.parse(out);
     if (Array.isArray(parsed)) return parsed.filter((v): v is string => typeof v === 'string');
     return typeof parsed === 'string' ? [parsed] : [];
@@ -142,8 +160,7 @@ function npmViewVersions(name: string, env: NodeJS.ProcessEnv): string[] {
 const AUTH_HINT = [
   'error: global install failed — check @rmartz GitHub Packages auth:',
   '  gh auth refresh -h github.com -s read:packages',
-  '  ~/.npmrc:  @rmartz:registry=https://npm.pkg.github.com',
-  '             //npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}',
+  '  ~/.npmrc:  //npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}',
   '  and a valid `gh auth token` (used automatically when the env var is unset).',
 ].join('\n');
 

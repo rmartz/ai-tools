@@ -7,7 +7,9 @@ import {
   maxStableVersion,
   resolveLatestVersions,
   buildInstallArgs,
+  buildViewArgs,
   withPackagesToken,
+  SCOPE_REGISTRY_FLAG,
 } from './install-clis.js';
 
 let packagesDir: string;
@@ -81,7 +83,26 @@ describe('buildInstallArgs', () => {
         ['@rmartz/worktree', '0.1.1'],
         ['@rmartz/github', '0.2.0'],
       ]),
-    ).toEqual(['install', '-g', '@rmartz/worktree@0.1.1', '@rmartz/github@0.2.0']);
+    ).toEqual([
+      'install',
+      '-g',
+      SCOPE_REGISTRY_FLAG,
+      '@rmartz/worktree@0.1.1',
+      '@rmartz/github@0.2.0',
+    ]);
+  });
+});
+
+describe('buildViewArgs', () => {
+  it('builds a JSON, online `npm view` argv on the same registry as the install', () => {
+    expect(buildViewArgs('@rmartz/github')).toEqual([
+      'view',
+      '@rmartz/github',
+      'versions',
+      '--json',
+      '--prefer-online',
+      '--@rmartz:registry=https://npm.pkg.github.com',
+    ]);
   });
 });
 

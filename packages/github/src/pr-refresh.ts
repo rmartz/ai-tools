@@ -1,5 +1,6 @@
 import { ghCall, issueNumber, type GhCallOptions } from './gh-call.js';
 import { addIssueComment } from './issue-ops.js';
+import { closePullRequest } from './pr-ops.js';
 import {
   DEFAULT_DEPENDABOT_REFRESH_POLICY,
   decideDependabotRefresh,
@@ -19,6 +20,8 @@ import {
  *
  * - **Dependabot** owns its branch, so only a `@dependabot rebase|recreate`
  *   comment may update it. `decideDependabotRefresh` chooses which, or to wait.
+ *   A PR Dependabot has lost track of is closed (`closed-untracked`) so it can
+ *   open a fresh one on its next run.
  * - **Any other PR** goes through GitHub's `update-branch` API (a merge of the
  *   base into the head), pinned to the head SHA that was read.
  *
@@ -34,6 +37,7 @@ export const PR_REFRESH_OUTCOMES = [
   'pending',
   'escalate',
   'closed',
+  'closed-untracked',
   'failed',
 ] as const;
 export type PrRefreshOutcome = (typeof PR_REFRESH_OUTCOMES)[number];
@@ -52,6 +56,31 @@ export interface RefreshPrOptions extends GhCallOptions {
   now?: () => Date;
 }
 
+export const UNTRACKED_CLOSE_COMMENT =
+  "Closed: Dependabot no longer has any knowledge of this PR, so it can't rebase or " +
+  'recreate it. Dependabot is expected to open a fresh PR for this update on a later run ' +
+  'if it is still needed; if it does not, trigger a version-update check.';
+
+/**
+ * Close first, then explain. Once closed, any later `refreshPr` call stops at the
+ * `closed` gate, so a retry never stacks a second comment; a comment that fails
+ * to post leaves a silent close, which is the cheaper failure.
+ */
+async function closeUntracked(
+  repo: string,
+  pr: string,
+  reason: string,
+  opts: RefreshPrOptions,
+): Promise<PrRefreshResult> {
+  if ((await closePullRequest(repo, pr, opts)) === null) {
+    return { outcome: 'failed', reason: `${reason}; could not close the PR` };
+  }
+  if ((await addIssueComment(repo, pr, UNTRACKED_CLOSE_COMMENT, opts)) === null) {
+    return { outcome: 'closed-untracked', reason: `${reason}; closing comment not posted` };
+  }
+  return { outcome: 'closed-untracked', reason };
+}
+
 async function refreshDependabot(
   repo: string,
   pr: string,
@@ -64,6 +93,7 @@ async function refreshDependabot(
   const decision = decideDependabotRefresh(timeline, (opts.now ?? (() => new Date()))(), policy);
   if (decision.action === 'wait') return { outcome: 'pending', reason: decision.reason };
   if (decision.action === 'escalate') return { outcome: 'escalate', reason: decision.reason };
+  if (decision.action === 'close') return closeUntracked(repo, pr, decision.reason, opts);
   const posted = await addIssueComment(repo, pr, `@dependabot ${decision.command}`, opts);
   if (posted === null) {
     return { outcome: 'failed', reason: `could not post @dependabot ${decision.command}` };
