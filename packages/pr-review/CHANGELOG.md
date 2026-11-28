@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.0](https://github.com/rmartz/ai-tools/compare/pr-review-v0.7.2...pr-review-v0.8.0) (2026-11-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **reporting:** require a configured tracking ledger repo instead of a built-in default ([#442](https://github.com/rmartz/ai-tools/issues/442))
+
+### Features
+
+* **reporting:** require a configured tracking ledger repo instead of a built-in default ([#442](https://github.com/rmartz/ai-tools/issues/442)) ([8136d50](https://github.com/rmartz/ai-tools/commit/8136d503448e80f7464f9300916166964cb65f7b))
+
 ## [0.7.2](https://github.com/rmartz/ai-tools/compare/pr-review-v0.7.1...pr-review-v0.7.2) (2026-11-27)
 
 
