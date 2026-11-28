@@ -137,10 +137,10 @@ call re-derives its decision from the PR, so concurrent agents converge.
 - `refreshPr(repo, pr, { force?, policy?, now? })` → `{ outcome, reason }`, where
   `outcome` is one of `PR_REFRESH_OUTCOMES`: `already-current`, `requested-rebase`,
   `requested-recreate`, `updated`, `pending`, `escalate`, `closed`,
-  `closed-untracked`, `failed`. A
-  branch that is not behind its base (compare `behind_by == 0`) and not conflicting
-  is `already-current` with nothing posted; `force` skips that check (for when
-  Dependabot wrongly claims a branch is current).
+  `closed-untracked`, `failed`. A branch that is not behind its base (compare
+  `behind_by == 0`) and not conflicting is `already-current` with nothing posted;
+  `force` skips that check (for when Dependabot wrongly claims a branch is
+  current).
 - **Dependabot PRs** are only ever updated by comment command, never by
   `update-branch` or a push. `decideDependabotRefresh(timeline, now, policy?)` is
   the pure state machine over the PR's timeline since Dependabot's last
@@ -158,8 +158,12 @@ call re-derives its decision from the PR, so concurrent agents converge.
   | Any reply since the push: "I don't have any knowledge about this pull request" | close (`closed-untracked`)   |
 
   The no-knowledge reply means Dependabot has lost track of the PR: no command
-  can recover it, so `refreshPr` posts an explanatory comment and closes it
-  (`closePullRequest`), leaving Dependabot to open a fresh PR on its next run.
+  can recover it, so `refreshPr` closes it (`closePullRequest`) and then posts an
+  explanatory comment. Closing first keeps retries from stacking comments: a
+  closed PR stops at the `closed` gate. Dependabot is expected (not yet observed)
+  to open a fresh PR for the update on a later run. Like every decision here,
+  this runs only on a PR that needs refreshing; an untracked PR that is still
+  current is left alone until it falls behind.
 
   Dependabot 👍-reacts to every command it picks up — refused ones too — so the
   reaction only marks a request **acknowledged**, which switches it to the longer

@@ -56,22 +56,27 @@ export interface RefreshPrOptions extends GhCallOptions {
   now?: () => Date;
 }
 
-const UNTRACKED_CLOSE_COMMENT =
-  "Closing: Dependabot no longer has any knowledge of this PR, so it can't rebase or " +
-  'recreate it. Dependabot will open a fresh PR for this update on its next run if it is ' +
-  'still needed.';
+export const UNTRACKED_CLOSE_COMMENT =
+  "Closed: Dependabot no longer has any knowledge of this PR, so it can't rebase or " +
+  'recreate it. Dependabot is expected to open a fresh PR for this update on a later run ' +
+  'if it is still needed; if it does not, trigger a version-update check.';
 
+/**
+ * Close first, then explain. Once closed, any later `refreshPr` call stops at the
+ * `closed` gate, so a retry never stacks a second comment; a comment that fails
+ * to post leaves a silent close, which is the cheaper failure.
+ */
 async function closeUntracked(
   repo: string,
   pr: string,
   reason: string,
   opts: RefreshPrOptions,
 ): Promise<PrRefreshResult> {
-  if ((await addIssueComment(repo, pr, UNTRACKED_CLOSE_COMMENT, opts)) === null) {
-    return { outcome: 'failed', reason: `${reason}; could not post the closing comment` };
-  }
   if ((await closePullRequest(repo, pr, opts)) === null) {
     return { outcome: 'failed', reason: `${reason}; could not close the PR` };
+  }
+  if ((await addIssueComment(repo, pr, UNTRACKED_CLOSE_COMMENT, opts)) === null) {
+    return { outcome: 'closed-untracked', reason: `${reason}; closing comment not posted` };
   }
   return { outcome: 'closed-untracked', reason };
 }

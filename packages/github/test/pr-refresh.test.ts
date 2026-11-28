@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const boundedRun = vi.fn();
 vi.mock('@rmartz/agent-runtime', () => ({ boundedRun }));
 
-const { refreshPr } = await import('../src/pr-refresh.js');
+const { refreshPr, UNTRACKED_CLOSE_COMMENT } = await import('../src/pr-refresh.js');
 
 const NOW = new Date('2026-10-26T12:00:00Z');
 const noWait = { sleep: async () => {}, now: () => NOW };
@@ -109,7 +109,7 @@ describe('refreshPr: Dependabot strategy', () => {
 });
 
 describe('refreshPr: untracked Dependabot PR', () => {
-  const untrackedRoutes = (pullRoute: unknown) => ({
+  const untrackedRoutes = {
     'pulls/7/commits': [],
     'comments/11/reactions': [],
     'issues/7/comments': [
@@ -126,19 +126,48 @@ describe('refreshPr: untracked Dependabot PR', () => {
         created_at: '2026-10-26T11:51:00Z',
       },
     ],
-    'pulls/7': pullRoute,
+    'pulls/7': makePull(),
     compare: '3',
-  });
+  };
+
+  /** Route as `untrackedRoutes`, but fail every call using `method`. */
+  function failMethod(method: string): void {
+    routeGh(untrackedRoutes);
+    const routed = boundedRun.getMockImplementation();
+    boundedRun.mockImplementation(async (cmd: string, args: string[], opts: unknown) =>
+      args.includes(method) ? fail : routed?.(cmd, args, opts),
+    );
+  }
+
+  const patchCalls = () =>
+    boundedRun.mock.calls.filter(([, args]) => (args as string[]).includes('PATCH'));
 
   it('closes the PR with a PATCH to state closed', async () => {
-    routeGh(untrackedRoutes(makePull()));
+    routeGh(untrackedRoutes);
     await refreshPr('o/r', 7, noWait);
-    const call = boundedRun.mock.calls.find(([, args]) => (args as string[]).includes('PATCH'));
+    const [call] = patchCalls();
     expect(JSON.parse((call?.[2] as { input: string }).input)).toEqual({ state: 'closed' });
   });
 
   it('reports closed-untracked once closed', async () => {
-    routeGh(untrackedRoutes(makePull()));
+    routeGh(untrackedRoutes);
+    expect((await refreshPr('o/r', 7, noWait)).outcome).toBe('closed-untracked');
+  });
+
+  it('posts the explanatory comment after closing', async () => {
+    routeGh(untrackedRoutes);
+    await refreshPr('o/r', 7, noWait);
+    expect(postedBodies()).toEqual([UNTRACKED_CLOSE_COMMENT]);
+  });
+
+  it('fails without commenting when the close fails', async () => {
+    failMethod('PATCH');
+    await refreshPr('o/r', 7, noWait);
+    expect(postedBodies()).toEqual([]);
+  });
+
+  it('still reports closed-untracked when only the comment fails', async () => {
+    failMethod('POST');
     expect((await refreshPr('o/r', 7, noWait)).outcome).toBe('closed-untracked');
   });
 });
