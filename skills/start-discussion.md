@@ -11,7 +11,8 @@ This skill **opens** a knowledge thread seeded with your question and hands back
 number to fan out. It is the _ask_ — the counterpart to `/discuss`, which is how an
 agent later _contributes_ to the thread.
 
-Discussions live on **`rmartz/ai`**, in the **Q&A** category (`q-a`), so the best
+Discussions live on the repo named by **`$AI_DISCUSSIONS_REPO`** (or `--repo`), in
+the **Q&A** category (`q-a`), so the best
 answer can be marked once perspectives converge.
 
 ## 1. Frame a stable, searchable title
@@ -42,9 +43,9 @@ No-code path (write the question to a file first):
 ai-start-discussion "<title>" <question-body-file>
 ```
 
-It find-or-creates on `rmartz/ai` / `q-a` (an existing exact-title thread is reused,
+It find-or-creates on the Discussions repo (`$AI_DISCUSSIONS_REPO`) / `q-a` (an existing exact-title thread is reused,
 not forked) and prints the discussion URL + number. TS callers:
-`findOrCreateDiscussion('rmartz/ai', 'q-a', title, questionBody)`.
+`findOrCreateDiscussion(requireDiscussionsRepo(), 'q-a', title, questionBody)`.
 
 ## 4. Hand off for crowdsourcing
 

@@ -77,14 +77,14 @@ The tooling is split across repos — dotfiles is no longer the home for
 everything. Deciding **where** a change belongs is core craft: every proposal is
 routed to the repo that owns its artifact type before it goes any further.
 
-| Proposed-change type                                                                 | Destination repo                                                                       |
-| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| System config: `settings.json`, hooks, `mcp.json`, shell config, `~/.claude/scripts` | `rmartz/dotfiles`                                                                      |
-| Global CLAUDE.md directives, ai-tracked skills (`commands/`), scheduled-task prompts | `rmartz/ai` (`global/CLAUDE.md` + `docs/directives/`, `commands/`, `scheduled-tasks/`) |
-| Skills / packages / CLIs (any skill ai-tools owns or should own)                     | `rmartz/ai-tools` (`skills/*`, `packages/*`)                                           |
-| Base directives & curated guidance                                                   | `rmartz/ai` (guidance docs, Discussions)                                               |
-| Reports / ledgers / metrics                                                          | `rmartz/ai-reports`                                                                    |
-| Project-specific conventions                                                         | that project's own repo                                                                |
+| Proposed-change type                                                                 | Destination repo                                                                |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| System config: `settings.json`, hooks, `mcp.json`, shell config, `~/.claude/scripts` | `rmartz/dotfiles`                                                               |
+| Global CLAUDE.md directives, ai-tracked skills (`commands/`), scheduled-task prompts | the agent knowledge repo (behind `~/.claude/CLAUDE.md`, `~/.claude/knowledge/`) |
+| Skills / packages / CLIs (any skill ai-tools owns or should own)                     | `rmartz/ai-tools` (`skills/*`, `packages/*`)                                    |
+| Base directives & curated guidance                                                   | the agent knowledge repo (guidance docs, Discussions)                           |
+| Reports / ledgers / metrics                                                          | `rmartz/ai-reports`                                                             |
+| Project-specific conventions                                                         | that project's own repo                                                         |
 
 Tag every proposal with its destination as part of diagnosis — no proposal
 reaches Step 5 untagged. If a single proposal spans more than one destination,

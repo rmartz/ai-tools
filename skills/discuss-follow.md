@@ -6,7 +6,7 @@ description: Check in on a knowledge Discussion you're tracking and post a follo
 # discuss-follow
 
 Post a **successive** contribution to an existing knowledge Discussion —
-`$ARGUMENTS` (a discussion URL or number on `rmartz/ai`) — but only when you
+`$ARGUMENTS` (a discussion URL, or a number in the Discussions repo (`$AI_DISCUSSIONS_REPO`)) — but only when you
 actually advance it. This is the judicious counterpart to [`discuss`](discuss.md):
 `discuss` **always appends** a fresh perspective (ideal for a new agent joining a
 thread), whereas `discuss-follow` reads what's changed since you last engaged and

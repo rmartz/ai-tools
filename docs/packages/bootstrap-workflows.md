@@ -236,8 +236,7 @@ file**, not a block spliced into user content.
   divergent from the other consumers.)
 
   There is no longer a `golden-sync.yml` self-update loop or a `manage`/overwrite
-  policy: bootstrap seeds a new repo and stops, and the [repository conformance
-  checklist](https://github.com/rmartz/ai/blob/main/docs/guidance/repository-checklist.md)
+  policy: bootstrap seeds a new repo and stops, and the repository conformance checklist (`~/.claude/knowledge/guidance/repository-checklist.md`)
   is the single source of truth that keeps _existing_ repos conformant (#263).
 
   `goldenGateChecks` is the union of every entry's `gateChecks` — the cross-repo

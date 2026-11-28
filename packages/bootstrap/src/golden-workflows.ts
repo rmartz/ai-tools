@@ -162,8 +162,8 @@ jobs:
 // the npm ecosystem is the ideal for the JS repos this toolkit targets (it also
 // feeds the native auto-merge path). Patch and minor bumps are grouped so they land
 // as one auto-mergeable PR; a major matches no group, so Dependabot opens it as its
-// own PR for review instead of holding the whole group (rmartz/ai
-// repository-checklist §Supply chain). A repo without an npm manifest, or wanting
+// own PR for review instead of holding the whole group (repository checklist
+// §Supply chain). A repo without an npm manifest, or wanting
 // other ecosystems, edits its copy — which the `seed` policy then leaves untouched.
 //
 // The npm entry ignores semver-major `@types/node` bumps: the types' major must

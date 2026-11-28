@@ -246,9 +246,9 @@ describe('resolveOriginRepo', () => {
   });
 
   it('falls back to CLAUDE_PROJECT_DIR from the env', async () => {
-    runMock.mockResolvedValue(ok('https://github.com/rmartz/ai.git\n'));
+    runMock.mockResolvedValue(ok('https://github.com/octo/knowledge.git\n'));
     await expect(resolveOriginRepo({ env: { CLAUDE_PROJECT_DIR: '/proj' } })).resolves.toBe(
-      'rmartz/ai',
+      'octo/knowledge',
     );
   });
 

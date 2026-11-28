@@ -273,8 +273,7 @@ previousHead? })` — polls until the verdict is final. Outcome is one of the ab
 
 ### Discussions (`discussions.ts`)
 
-The GraphQL Discussions client (no REST / `gh` equivalent), targeting `rmartz/ai`
-— powers the `discuss` / `discuss-curate` knowledge-sharing skills.
+The GraphQL Discussions client (no REST / `gh` equivalent) behind the `discuss` / `discuss-curate` skills.
 
 - Write/find: `findDiscussionByTitle`, `createDiscussion`, `addComment`,
   `markAnswer`, `listCategories`, `getRepositoryId`.
@@ -284,6 +283,9 @@ The GraphQL Discussions client (no REST / `gh` equivalent), targeting `rmartz/ai
   `getDiscussion(repo, number)` return `DiscussionCommentDetail` (body,
   `authorLogin`, `createdAt`, `isAnswer`, `upvoteCount`) so a curator can evaluate
   prior approaches and pick an answer.
+- Target repo (`discuss-helpers.ts`, none built in): `resolveDiscussionsRepo` takes the
+  flag, else `$AI_DISCUSSIONS_REPO`; `requireDiscussionsRepo` and `parseDiscussionRef`
+  (on a bare number; a URL carries its repo) throw `MISSING_DISCUSSIONS_REPO` without one.
 
 ### Shared
 
@@ -354,7 +356,7 @@ directly in Bash (which the Claude desktop app binds to the session) and issues
 with the GitHub MCP tools. A create inside a wrapper subprocess is invisible to
 the app, so the PR would never be associated with the session.
 
-Discussions (default repo `rmartz/ai`, category `q-a`) — the no-code path for the
+Discussions (`--repo`, else `$AI_DISCUSSIONS_REPO`; category `q-a`) — the no-code path for the
 `discuss` / `discuss-curate` skills:
 `ai-discuss <title> <body-file> [--repo] [--category] [--model] [--project] [--commit]`
 (find-or-create + signed comment), `ai-start-discussion <title> <question-body-file>

@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { signComment, framingBody, parseDiscussionRef } from '../src/discuss-helpers.js';
+import {
+  signComment,
+  framingBody,
+  parseDiscussionRef,
+  resolveDiscussionsRepo,
+  requireDiscussionsRepo,
+  MISSING_DISCUSSIONS_REPO,
+} from '../src/discuss-helpers.js';
 
 describe('signComment', () => {
   it('signs with model + project, trimming trailing newlines', () => {
@@ -50,18 +57,67 @@ describe('framingBody', () => {
 
 describe('parseDiscussionRef', () => {
   it('resolves a bare number against the default repo', () => {
-    expect(parseDiscussionRef('2', 'rmartz/ai')).toEqual({ repo: 'rmartz/ai', number: 2 });
-  });
-
-  it('takes repo + number from a discussions URL (overriding the default)', () => {
-    expect(parseDiscussionRef('https://github.com/rmartz/ai/discussions/2', 'other/repo')).toEqual({
-      repo: 'rmartz/ai',
+    expect(parseDiscussionRef('2', 'octo/knowledge')).toEqual({
+      repo: 'octo/knowledge',
       number: 2,
     });
   });
 
+  it('takes repo + number from a discussions URL (overriding the default)', () => {
+    expect(
+      parseDiscussionRef('https://github.com/octo/knowledge/discussions/2', 'other/repo'),
+    ).toEqual({
+      repo: 'octo/knowledge',
+      number: 2,
+    });
+  });
+
+  it('throws the missing-repo error for a bare number with no default repo', () => {
+    expect(() => parseDiscussionRef('2', undefined)).toThrow(MISSING_DISCUSSIONS_REPO);
+  });
+
+  it('takes a discussions URL without a default repo', () => {
+    expect(
+      parseDiscussionRef('https://github.com/octo/knowledge/discussions/3', undefined),
+    ).toEqual({ repo: 'octo/knowledge', number: 3 });
+  });
+
   it('returns null for a non-discussion arg', () => {
-    expect(parseDiscussionRef('not-a-ref', 'rmartz/ai')).toBeNull();
-    expect(parseDiscussionRef('https://github.com/rmartz/ai/issues/2', 'rmartz/ai')).toBeNull();
+    expect(parseDiscussionRef('not-a-ref', 'octo/knowledge')).toBeNull();
+    expect(
+      parseDiscussionRef('https://github.com/octo/knowledge/issues/2', 'octo/knowledge'),
+    ).toBeNull();
+  });
+});
+
+describe('resolveDiscussionsRepo', () => {
+  it('prefers the explicit flag over the env var', () => {
+    expect(resolveDiscussionsRepo('flag/repo', { AI_DISCUSSIONS_REPO: 'env/repo' })).toBe(
+      'flag/repo',
+    );
+  });
+
+  it('falls back to AI_DISCUSSIONS_REPO', () => {
+    expect(resolveDiscussionsRepo(undefined, { AI_DISCUSSIONS_REPO: 'env/repo' })).toBe('env/repo');
+  });
+
+  it('falls back to the env var when the flag is blank', () => {
+    expect(resolveDiscussionsRepo('  ', { AI_DISCUSSIONS_REPO: 'env/repo' })).toBe('env/repo');
+  });
+
+  it('treats a blank env var as unset', () => {
+    expect(resolveDiscussionsRepo(undefined, { AI_DISCUSSIONS_REPO: '  ' })).toBeUndefined();
+  });
+});
+
+describe('requireDiscussionsRepo', () => {
+  it('returns the configured repo', () => {
+    expect(requireDiscussionsRepo(undefined, { AI_DISCUSSIONS_REPO: 'env/repo' })).toBe('env/repo');
+  });
+
+  it('throws a message naming the flag and env var when neither is set', () => {
+    expect(() => requireDiscussionsRepo(undefined, {})).toThrow(
+      'no Discussions repo configured: pass --repo owner/repo or set AI_DISCUSSIONS_REPO',
+    );
   });
 });

@@ -1,12 +1,12 @@
 ---
 name: discuss-curate
-description: Curate a knowledge Discussion — read the prior approaches, mark the current best as the Q&A answer (or synthesize one), and when the answer is stable, output PR-ready guidance content to promote into rmartz/ai docs/guidance.
+description: Curate a knowledge Discussion — read the prior approaches, mark the current best as the Q&A answer (or synthesize one), and when the answer is stable, output PR-ready guidance content to promote into the knowledge base's guidance.
 ---
 
 # discuss-curate
 
 Evaluate the approaches recorded on a knowledge Discussion and converge it on a
-current best answer: `$ARGUMENTS` (a discussion title or number on `rmartz/ai`).
+current best answer: `$ARGUMENTS` (a discussion title or number in the Discussions repo (`$AI_DISCUSSIONS_REPO`)).
 
 This is the **promotion, not accumulation** half of the Discussion lifecycle. A
 thread of attempts has value, but a reader needs the _current best_ surfaced —
@@ -26,7 +26,7 @@ ai-discussion-comment <url-or-number> <body-file> --model "<m>"   # post a synth
 
 - `ai-discussion-read <url-or-number>` prints the title, framing, and every comment
   (with author, timestamp, and an `✓ ANSWER` marker). TS callers:
-  `getDiscussion('rmartz/ai', number)` / `listComments(ref.id)`; resolve a title via
+  `getDiscussion(repo, number)` / `listComments(ref.id)`; resolve a title via
   `findDiscussionByTitle`.
 - Read each comment's body, author, `createdAt`, `isAnswer`, and `upvoteCount`. The
   discussion body holds the problem framing.
@@ -61,11 +61,12 @@ Pick the **current best** among the existing comments.
 ## 4. When the answer is stable, recommend promotion
 
 A settled answer should graduate from the thread into curated guidance. The
-guidance lives in the **`rmartz/ai`** repo under `docs/guidance/`, so the commit
-happens **there, not in ai-tools** — this skill produces the content and hands it
+guidance lives in the agent knowledge base (read locally at
+`~/.claude/knowledge/guidance/`), so the commit happens **in the knowledge repo,
+not in ai-tools** — this skill produces the content and hands it
 off.
 
-Output, as PR-ready material for `rmartz/ai`:
+Output, as PR-ready material for the knowledge repo:
 
 - A proposed path: `docs/guidance/<topic>.md` (kebab-case topic slug).
 - The full page content: the problem, the recommended approach, when it applies /
@@ -73,7 +74,7 @@ Output, as PR-ready material for `rmartz/ai`:
   traceable to the thread it distilled).
 - A one-line PR title (e.g. `docs(guidance): <topic> — distilled from #<n>`).
 
-State clearly that the commit is for a human/agent to land in `rmartz/ai`; this
+State clearly that the commit is for a human/agent to land in the knowledge repo; this
 skill does not write to that repo.
 
 ## 5. Report

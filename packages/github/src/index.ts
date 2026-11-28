@@ -95,7 +95,15 @@ export type {
   DiscussionDetail,
 } from './discussions.js';
 
-export { signComment, framingBody, parseDiscussionRef } from './discuss-helpers.js';
+export {
+  signComment,
+  framingBody,
+  parseDiscussionRef,
+  resolveDiscussionsRepo,
+  requireDiscussionsRepo,
+  DISCUSSIONS_REPO_ENV,
+  MISSING_DISCUSSIONS_REPO,
+} from './discuss-helpers.js';
 export type { CommentSignature, DiscussionTarget } from './discuss-helpers.js';
 
 export { resolveSignatureContext } from './discuss-signature.js';

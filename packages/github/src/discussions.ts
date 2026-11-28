@@ -5,7 +5,7 @@ import { boundedRun } from '@rmartz/agent-runtime';
  * plumbing lives. Discussions have no REST API and no first-class `gh` command,
  * so everything goes through `gh api graphql`. Consumers (the harness,
  * knowledge-sharing automation) call this surface and never see a raw
- * query. Target repo is `owner/name` (e.g. `rmartz/ai`).
+ * query. Target repo is `owner/name` (e.g. `octo/knowledge`).
  */
 
 export interface DiscussionCategory {

@@ -5,28 +5,27 @@
 import { readFileSync } from 'node:fs';
 import { getDiscussion, addComment } from '../discussions.js';
 import { resolveSignatureContext, type SignatureFlags } from '../discuss-signature.js';
-import { signComment, parseDiscussionRef } from '../discuss-helpers.js';
-
-const DEFAULT_REPO = 'rmartz/ai';
+import { signComment, parseDiscussionRef, resolveDiscussionsRepo } from '../discuss-helpers.js';
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  let defaultRepo = DEFAULT_REPO;
+  let repoFlag: string | undefined;
   const flags: SignatureFlags = {};
   const positional: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--repo') defaultRepo = argv[++i] ?? defaultRepo;
+    if (a === '--repo') repoFlag = argv[++i];
     else if (a === '--model') flags.model = argv[++i];
     else if (a === '--project') flags.project = argv[++i];
     else if (a === '--commit') flags.commit = argv[++i];
     else if (a !== undefined) positional.push(a);
   }
   const [refArg, bodyFile] = positional;
-  const target = refArg ? parseDiscussionRef(refArg, defaultRepo) : null;
+  const target =
+    refArg && bodyFile ? parseDiscussionRef(refArg, resolveDiscussionsRepo(repoFlag)) : null;
   if (!target || !bodyFile) {
     console.error(
-      'usage: ai-discussion-comment <number|discussion-url> <body-file> [--repo owner/repo] [--model <model>] [--project owner/repo] [--commit <sha>]',
+      'usage: ai-discussion-comment <number|discussion-url> <body-file> [--repo owner/repo (default: $AI_DISCUSSIONS_REPO)] [--model <model>] [--project owner/repo] [--commit <sha>]',
     );
     process.exit(2);
   }

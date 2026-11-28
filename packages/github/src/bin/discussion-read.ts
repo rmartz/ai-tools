@@ -4,9 +4,7 @@
 // the repo) — one self-contained, allowlistable command, no `cd` / `gh graphql`.
 // Readable text by default; `--json` for the structured form.
 import { getDiscussion, type DiscussionDetail } from '../discussions.js';
-import { parseDiscussionRef } from '../discuss-helpers.js';
-
-const DEFAULT_REPO = 'rmartz/ai';
+import { parseDiscussionRef, resolveDiscussionsRepo } from '../discuss-helpers.js';
 
 function renderText(d: DiscussionDetail): string {
   const lines = [
@@ -27,18 +25,22 @@ function renderText(d: DiscussionDetail): string {
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  let defaultRepo = DEFAULT_REPO;
+  let repoFlag: string | undefined;
   let json = false;
   const positional: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--repo') defaultRepo = argv[++i] ?? defaultRepo;
+    if (a === '--repo') repoFlag = argv[++i];
     else if (a === '--json') json = true;
     else if (a !== undefined) positional.push(a);
   }
-  const target = positional[0] ? parseDiscussionRef(positional[0], defaultRepo) : null;
+  const target = positional[0]
+    ? parseDiscussionRef(positional[0], resolveDiscussionsRepo(repoFlag))
+    : null;
   if (!target) {
-    console.error('usage: ai-discussion-read <number|discussion-url> [--repo owner/repo] [--json]');
+    console.error(
+      'usage: ai-discussion-read <number|discussion-url> [--repo owner/repo (default: $AI_DISCUSSIONS_REPO)] [--json]',
+    );
     process.exit(2);
   }
   const discussion = await getDiscussion(target.repo, target.number);
