@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.11.0](https://github.com/rmartz/ai-tools/compare/github-v0.10.0...github-v0.11.0) (2026-11-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **github:** require a configured Discussions repo instead of a built-in default ([#441](https://github.com/rmartz/ai-tools/issues/441))
+
+### Features
+
+* **github:** require a configured Discussions repo instead of a built-in default ([#441](https://github.com/rmartz/ai-tools/issues/441)) ([48d575b](https://github.com/rmartz/ai-tools/commit/48d575b56e0425a2b3db6847c7b1a91032c8702b))
+
 ## [0.10.0](https://github.com/rmartz/ai-tools/compare/github-v0.9.1...github-v0.10.0) (2026-11-28)
 
 
