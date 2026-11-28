@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   decideDependabotRefresh,
   isRebaseRefusal,
+  isUntrackedReply,
   type DependabotCommandRequest,
   type DependabotTimeline,
 } from '../src/dependabot-refresh.js';
@@ -150,5 +151,37 @@ describe('decideDependabotRefresh: no response', () => {
   it('escalates once the retry cap is reached', () => {
     const requests = [ago(50), ago(35), ago(20)].map((at) => makeRequest({ at }));
     expect(decide({ requests }).action).toBe('escalate');
+  });
+});
+
+const UNTRACKED_REPLY =
+  "I can't perform [the requested action](https://github.com/o/r/pull/7#issuecomment-1) because I don't have any knowledge about this pull request.";
+
+describe('isUntrackedReply', () => {
+  it('matches the no-knowledge reply', () => {
+    expect(isUntrackedReply(UNTRACKED_REPLY)).toBe(true);
+  });
+
+  it('does not match a rebase refusal', () => {
+    expect(isUntrackedReply('Looks like this PR is already up-to-date with main!')).toBe(false);
+  });
+});
+
+describe('decideDependabotRefresh: untracked PR', () => {
+  it('closes when Dependabot replies it has no knowledge of the PR', () => {
+    const requests = [makeRequest({ command: 'recreate', at: ago(5) })];
+    const replies = [{ at: ago(4), body: UNTRACKED_REPLY }];
+    expect(decide({ requests, replies }).action).toBe('close');
+  });
+
+  it('closes on an earlier no-knowledge reply even with a newer unanswered request', () => {
+    const requests = [makeRequest({ at: ago(20) }), makeRequest({ at: ago(2) })];
+    const replies = [{ at: ago(19), body: UNTRACKED_REPLY }];
+    expect(decide({ requests, replies }).action).toBe('close');
+  });
+
+  it('ignores a no-knowledge reply that predates the last Dependabot push', () => {
+    const replies = [{ at: ago(700), body: UNTRACKED_REPLY }];
+    expect(decide({ replies })).toMatchObject({ action: 'post', command: 'rebase' });
   });
 });

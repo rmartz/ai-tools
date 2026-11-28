@@ -1,7 +1,7 @@
 import { ghCall, issueNumber, type GhCallOptions, type Transport } from './gh-call.js';
 
 /**
- * Generic PR-write primitives: create a PR, submit a review, merge a PR. These
+ * Generic PR-write primitives: create a PR, submit a review, merge or close a PR. These
  * are thin, label-free, gate-free GitHub API wrappers — the shared client, same
  * posture as `issue-ops` (REST-first + GraphQL fallback on rate-limit, soft-fail
  * to `null`). The *verdict-recording protocol* and *gated merge orchestration*
@@ -134,4 +134,23 @@ export async function mergePullRequest(
   const out = await ghCall(rest, fb, call);
   if (out === null) return null;
   return out.trim() || true;
+}
+
+/**
+ * Close a PR without merging. Returns `true` on success, `null` on failure or an
+ * unparseable PR ref. Any explanatory comment is the caller's to post.
+ */
+export async function closePullRequest(
+  repo: string,
+  pr: string | number,
+  call: GhCallOptions = {},
+): Promise<true | null> {
+  const num = issueNumber(pr);
+  if (num === null) return null;
+  const rest: Transport = {
+    argv: ['gh', 'api', '-X', 'PATCH', `repos/${repo}/pulls/${num}`, '--input', '-'],
+    stdin: JSON.stringify({ state: 'closed' }),
+  };
+  const fb: Transport = { argv: ['gh', 'pr', 'close', num, '--repo', repo] };
+  return (await ghCall(rest, fb, call)) === null ? null : true;
 }
