@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.23.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.6...bootstrap-v0.23.0) (2026-11-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **github:** require a configured Discussions repo instead of a built-in default ([#441](https://github.com/rmartz/ai-tools/issues/441))
+
+### Features
+
+* **github:** require a configured Discussions repo instead of a built-in default ([#441](https://github.com/rmartz/ai-tools/issues/441)) ([48d575b](https://github.com/rmartz/ai-tools/commit/48d575b56e0425a2b3db6847c7b1a91032c8702b))
+
 ## [0.22.6](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.5...bootstrap-v0.22.6) (2026-11-27)
 
 
