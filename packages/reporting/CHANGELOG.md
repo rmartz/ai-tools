@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/rmartz/ai-tools/compare/reporting-v0.3.2...reporting-v0.4.0) (2026-11-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **reporting:** require a configured tracking ledger repo instead of a built-in default ([#442](https://github.com/rmartz/ai-tools/issues/442))
+
+### Features
+
+* **reporting:** require a configured tracking ledger repo instead of a built-in default ([#442](https://github.com/rmartz/ai-tools/issues/442)) ([8136d50](https://github.com/rmartz/ai-tools/commit/8136d503448e80f7464f9300916166964cb65f7b))
+
 ## [0.3.2](https://github.com/rmartz/ai-tools/compare/reporting-v0.3.1...reporting-v0.3.2) (2026-11-27)
 
 

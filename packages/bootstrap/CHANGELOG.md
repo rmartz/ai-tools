@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.24.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.23.0...bootstrap-v0.24.0) (2026-11-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **reporting:** require a configured tracking ledger repo instead of a built-in default ([#442](https://github.com/rmartz/ai-tools/issues/442))
+
+### Features
+
+* **reporting:** require a configured tracking ledger repo instead of a built-in default ([#442](https://github.com/rmartz/ai-tools/issues/442)) ([8136d50](https://github.com/rmartz/ai-tools/commit/8136d503448e80f7464f9300916166964cb65f7b))
+
 ## [0.23.0](https://github.com/rmartz/ai-tools/compare/bootstrap-v0.22.6...bootstrap-v0.23.0) (2026-11-28)
 
 
