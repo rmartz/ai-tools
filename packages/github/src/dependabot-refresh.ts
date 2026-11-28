@@ -52,13 +52,25 @@ export const DEFAULT_DEPENDABOT_REFRESH_POLICY: DependabotRefreshPolicy = {
 export type DependabotDecision =
   | { action: 'post'; command: DependabotCommand; reason: string }
   | { action: 'wait'; reason: string }
-  | { action: 'escalate'; reason: string };
+  | { action: 'escalate'; reason: string }
+  | { action: 'close'; reason: string };
 
 const REFUSAL_PATTERNS = ['edited by someone other than Dependabot', 'already up-to-date with'];
 
 /** True when a Dependabot reply refuses a rebase in a way only a recreate clears. */
 export function isRebaseRefusal(body: string): boolean {
   return REFUSAL_PATTERNS.some((p) => body.includes(p));
+}
+
+const UNTRACKED_PATTERN = "don't have any knowledge about this pull request";
+
+/**
+ * True when a Dependabot reply says it has lost track of the PR. No command can
+ * recover such a PR — every later request gets the same reply — so the only way
+ * forward is to close it and let Dependabot open a fresh one on its next run.
+ */
+export function isUntrackedReply(body: string): boolean {
+  return body.includes(UNTRACKED_PATTERN);
 }
 
 function firstLine(body: string): string {
@@ -90,6 +102,15 @@ export function decideDependabotRefresh(
   const latest = cycle.at(-1);
   const marker = bodyRebaseMarker(timeline.body);
 
+  // Dependabot cannot push to a PR it no longer knows, so a "no knowledge" reply
+  // since its last push is final, whichever request it answered.
+  const untracked = timeline.replies.find((r) => r.at > since && isUntrackedReply(r.body));
+  if (untracked) {
+    return {
+      action: 'close',
+      reason: `Dependabot no longer tracks this PR (${firstLine(untracked.body)})`,
+    };
+  }
   if (marker === 'in_progress') return { action: 'wait', reason: 'Dependabot is rebasing this PR' };
   if (!latest)
     return { action: 'post', command: 'rebase', reason: 'no request since the last push' };

@@ -5,7 +5,8 @@ vi.mock('@rmartz/agent-runtime', () => ({ boundedRun }));
 
 const ok = (stdout: string) => ({ stdout, stderr: '', code: 0, timedOut: false });
 
-const { createPullRequest, submitReview, mergePullRequest } = await import('../src/pr-ops.js');
+const { createPullRequest, submitReview, mergePullRequest, closePullRequest } =
+  await import('../src/pr-ops.js');
 
 describe('submitReview', () => {
   beforeEach(() => boundedRun.mockReset());
@@ -93,5 +94,27 @@ describe('mergePullRequest', () => {
   it('soft-fails to null on total failure', async () => {
     boundedRun.mockResolvedValue({ stdout: '', stderr: 'nope', code: 1, timedOut: false });
     expect(await mergePullRequest('r/r', 5, 'merge', { sleep: async () => {} })).toBeNull();
+  });
+});
+
+describe('closePullRequest', () => {
+  beforeEach(() => boundedRun.mockReset());
+
+  it('PATCHes the PR to state closed and returns true', async () => {
+    boundedRun.mockResolvedValueOnce(ok('{"state":"closed"}'));
+    expect(await closePullRequest('r/r', 5)).toBe(true);
+    const [, args, opts] = boundedRun.mock.calls[0];
+    expect(args).toContain('repos/r/r/pulls/5');
+    expect(JSON.parse(opts.input)).toEqual({ state: 'closed' });
+  });
+
+  it('returns null for an unparseable PR reference', async () => {
+    expect(await closePullRequest('r/r', 'garbage')).toBeNull();
+    expect(boundedRun).not.toHaveBeenCalled();
+  });
+
+  it('soft-fails to null on total failure', async () => {
+    boundedRun.mockResolvedValue({ stdout: '', stderr: 'nope', code: 1, timedOut: false });
+    expect(await closePullRequest('r/r', 5, { sleep: async () => {} })).toBeNull();
   });
 });

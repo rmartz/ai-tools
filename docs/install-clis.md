@@ -36,15 +36,20 @@ and reads the same `~/.npmrc` auth.
 
 ## Prerequisite: GitHub Packages auth
 
-The `@rmartz` scope is a private registry, so a token with `read:packages` is
-required (one-time):
+The ai-tools packages are published to GitHub Packages, a private registry, so a
+token with `read:packages` is required (one-time):
 
 ```
 gh auth refresh -h github.com -s read:packages
 # ~/.npmrc:
-@rmartz:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
 ```
+
+No `@rmartz:registry` line is needed in `~/.npmrc`, and one there is ignored:
+`install-clis` passes `--@rmartz:registry=https://npm.pkg.github.com` on every
+npm call (`SCOPE_REGISTRY_FLAG`). That keeps the version lookup (run inside this
+checkout, where the project `.npmrc` applies) and the install (run from `$HOME`)
+on the same registry, even when `~/.npmrc` routes `@rmartz` elsewhere.
 
 `~/.npmrc` sources the token from `${GITHUB_PACKAGES_TOKEN}`. That env var is
 typically exported only in **interactive** shells (to avoid a keychain read per
@@ -90,10 +95,12 @@ comparison so `0.10.0 > 0.9.0`),
 `resolveLatestVersions(names, listVersions)` (pair each package name with its
 highest published version via an injectable `listVersions` callback),
 `buildInstallArgs(pairs)` (the `npm install -g <name@version> …` argv from
-resolved `[name, version]` pairs), and `withPackagesToken(env, ghToken)` (inject
-the token for non-interactive callers, never overwriting an already-set one).
-`main()` runs the install from a neutral cwd (`$HOME`) so it reads the user-level
-`~/.npmrc` and exits non-zero if any package's version cannot be resolved.
+resolved `[name, version]` pairs), `buildViewArgs(name)` (the `npm view` argv
+for the version lookup), both carrying `SCOPE_REGISTRY_FLAG`, and
+`withPackagesToken(env, ghToken)` (inject the token for non-interactive
+callers, never overwriting an already-set one). `main()` runs the install from
+a neutral cwd (`$HOME`) so it reads the user-level `~/.npmrc` (for auth) and
+exits non-zero if any package's version cannot be resolved.
 
 `npm-global.ts` holds the two guards that keep the install honest —
 `withoutInheritedPrefix(env)` and `findVersionMismatches(pairs, readVersion)` —

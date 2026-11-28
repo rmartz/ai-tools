@@ -123,7 +123,11 @@ in `gh-call.ts`.
 - `mergePullRequest(repo, pr, method?)` — the raw merge call, returning the merge
   `sha` (or `true` when absent). The **gated, serialized** merge path (mutex,
   idempotency, re-validation) is the caller's; this is only the primitive it
-  composes. All three are thin, label-free, gate-free client wrappers.
+  composes.
+- `closePullRequest(repo, pr)` — close a PR unmerged, returning `true` or `null`;
+  any explanatory comment is the caller's to post.
+
+All four are thin, label-free, gate-free client wrappers.
 
 ### PR refresh (`pr-refresh.ts`, `dependabot-refresh.ts`, `pr-refresh-reads.ts`)
 
@@ -133,24 +137,34 @@ call re-derives its decision from the PR, so concurrent agents converge.
 
 - `refreshPr(repo, pr, { force?, policy?, now? })` → `{ outcome, reason }`, where
   `outcome` is one of `PR_REFRESH_OUTCOMES`: `already-current`, `requested-rebase`,
-  `requested-recreate`, `updated`, `pending`, `escalate`, `closed`, `failed`. A
-  branch that is not behind its base (compare `behind_by == 0`) and not conflicting
-  is `already-current` with nothing posted; `force` skips that check (for when
-  Dependabot wrongly claims a branch is current).
+  `requested-recreate`, `updated`, `pending`, `escalate`, `closed`,
+  `closed-untracked`, `failed`. A branch that is not behind its base (compare
+  `behind_by == 0`) and not conflicting is `already-current` with nothing posted;
+  `force` skips that check (for when Dependabot wrongly claims a branch is
+  current).
 - **Dependabot PRs** are only ever updated by comment command, never by
   `update-branch` or a push. `decideDependabotRefresh(timeline, now, policy?)` is
   the pure state machine over the PR's timeline since Dependabot's last
   force-push:
 
-  | Observed on the latest request                                              | Decision                     |
-  | --------------------------------------------------------------------------- | ---------------------------- |
-  | No request since the last Dependabot push                                   | post `rebase`                |
-  | Body says "Dependabot is rebasing this PR", or request inside its window    | wait (`pending`)             |
-  | Refusal reply ("edited by someone other than…", "already up-to-date with…") | `rebase` → post `recreate`   |
-  | Body says "Dependabot rebase failed"                                        | `rebase` → post `recreate`   |
-  | `recreate` refused or failed, or an unrecognised Dependabot reply           | `escalate`                   |
-  | No response after the window                                                | re-post the **same** command |
-  | That command already posted `maxAttempts` times this cycle                  | `escalate`                   |
+  | Observed on the latest request                                                 | Decision                     |
+  | ------------------------------------------------------------------------------ | ---------------------------- |
+  | No request since the last Dependabot push                                      | post `rebase`                |
+  | Body says "Dependabot is rebasing this PR", or request inside its window       | wait (`pending`)             |
+  | Refusal reply ("edited by someone other than…", "already up-to-date with…")    | `rebase` → post `recreate`   |
+  | Body says "Dependabot rebase failed"                                           | `rebase` → post `recreate`   |
+  | `recreate` refused or failed, or an unrecognised Dependabot reply              | `escalate`                   |
+  | No response after the window                                                   | re-post the **same** command |
+  | That command already posted `maxAttempts` times this cycle                     | `escalate`                   |
+  | Any reply since the push: "I don't have any knowledge about this pull request" | close (`closed-untracked`)   |
+
+  The no-knowledge reply means Dependabot has lost track of the PR: no command
+  can recover it, so `refreshPr` closes it (`closePullRequest`) and then posts an
+  explanatory comment. Closing first keeps retries from stacking comments: a
+  closed PR stops at the `closed` gate. Dependabot is expected (not yet observed)
+  to open a fresh PR for the update on a later run. Like every decision here,
+  this runs only on a PR that needs refreshing; an untracked PR that is still
+  current is left alone until it falls behind.
 
   Dependabot 👍-reacts to every command it picks up — refused ones too — so the
   reaction only marks a request **acknowledged**, which switches it to the longer
