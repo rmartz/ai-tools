@@ -108,6 +108,41 @@ describe('refreshPr: Dependabot strategy', () => {
   });
 });
 
+describe('refreshPr: untracked Dependabot PR', () => {
+  const untrackedRoutes = (pullRoute: unknown) => ({
+    'pulls/7/commits': [],
+    'comments/11/reactions': [],
+    'issues/7/comments': [
+      {
+        id: 11,
+        user: { login: 'rmartz' },
+        body: '@dependabot recreate',
+        created_at: '2026-10-26T11:50:00Z',
+      },
+      {
+        id: 12,
+        user: { login: 'dependabot[bot]' },
+        body: "I can't perform the requested action because I don't have any knowledge about this pull request.",
+        created_at: '2026-10-26T11:51:00Z',
+      },
+    ],
+    'pulls/7': pullRoute,
+    compare: '3',
+  });
+
+  it('closes the PR with a PATCH to state closed', async () => {
+    routeGh(untrackedRoutes(makePull()));
+    await refreshPr('o/r', 7, noWait);
+    const call = boundedRun.mock.calls.find(([, args]) => (args as string[]).includes('PATCH'));
+    expect(JSON.parse((call?.[2] as { input: string }).input)).toEqual({ state: 'closed' });
+  });
+
+  it('reports closed-untracked once closed', async () => {
+    routeGh(untrackedRoutes(makePull()));
+    expect((await refreshPr('o/r', 7, noWait)).outcome).toBe('closed-untracked');
+  });
+});
+
 describe('refreshPr: update-branch strategy', () => {
   it('updates a behind non-Dependabot PR pinned to its head SHA', async () => {
     routeGh({

@@ -40,7 +40,7 @@ export type { ParseJsonMarkerOptions } from './json-marker.js';
 export { resolveThread, dismissThread } from './threads.js';
 export type { DismissResult } from './threads.js';
 
-export { createPullRequest, submitReview, mergePullRequest } from './pr-ops.js';
+export { createPullRequest, submitReview, mergePullRequest, closePullRequest } from './pr-ops.js';
 export type {
   CreatePullRequestOptions,
   ReviewEvent,
@@ -54,6 +54,7 @@ export type { PrRefreshOutcome, PrRefreshResult, RefreshPrOptions } from './pr-r
 export {
   decideDependabotRefresh,
   isRebaseRefusal,
+  isUntrackedReply,
   DEFAULT_DEPENDABOT_REFRESH_POLICY,
 } from './dependabot-refresh.js';
 export type {
